@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
-//import '../styles/App.css';
+
 import Swal from 'sweetalert2';
 
 // Determinar la URL de la API según la url
