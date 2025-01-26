@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+      "target": "ESNext",                      // Transpila a ESNext para un navegador moderno.
+      "module": "ESNext",                      // Usa el sistema de módulos ES.
+      "lib": ["DOM", "DOM.Iterable", "ESNext"], // Habilita soporte para APIs del navegador.
+      "allowJs": true,                         // Permite archivos .js además de .ts/.tsx.
+      "skipLibCheck": true,                    // Evita verificar tipos en node_modules.
+      "esModuleInterop": true,                 // Interoperabilidad con CommonJS.
+      "strict": true,                          // Activa todas las verificaciones estrictas.
+      "forceConsistentCasingInFileNames": true,// Asegura que los nombres de archivo sean consistentes.
+      "moduleResolution": "Node",             // Usa resolución de módulos estilo Node.js.
+      "resolveJsonModule": true,              // Permite importar archivos JSON.
+      "isolatedModules": true,                // Asegura que cada archivo se compila independientemente.
+      "jsx": "react-jsx",                     // Usa el JSX de React 17+.
+      "baseUrl": "./",                        // Permite usar rutas relativas desde la raíz.
+      "paths": {                              // Define alias para rutas.
+        "@/*": ["src/*"]
+      }
+    },
+    "include": ["src"],                        // Directorio de archivos TypeScript a compilar.
+    "exclude": ["node_modules"]               // Excluye node_modules.
+  }
+  
