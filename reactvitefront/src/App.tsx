@@ -1,10 +1,13 @@
-import { BrowserRouter } from "react-router-dom";
-import { Rutas } from "./rutas/rutas";
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './rutas/AuthContext';
+import { Rutas } from './rutas/rutas';
 
 const App = () => {
   return (
     <BrowserRouter>
-      <Rutas />
+      <AuthProvider>
+        <Rutas />
+      </AuthProvider>
     </BrowserRouter>
   );
 };

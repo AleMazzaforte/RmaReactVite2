@@ -1,6 +1,7 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
-
 import Swal from 'sweetalert2';
+import { useAuth } from '../rutas/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 // Determinar la URL de la API según la url
 let url = 'https://rmareactviteback.onrender.com';
@@ -20,6 +21,9 @@ export function LoginContainer() {
     nombre: '',
     password: '',
   });
+
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -56,6 +60,7 @@ export function LoginContainer() {
 
       if (response.ok) {
         localStorage.setItem('token', data.token);
+        login();
         Swal.fire({
           title: '¡Bienvenido!',
           text: `Hola, ${formData.nombre}. ¡Te has logueado exitosamente!`,
@@ -64,7 +69,7 @@ export function LoginContainer() {
           showConfirmButton: false,
         });
         setTimeout(() => {
-          window.location.href = '/';
+          navigate('/');
         }, 2800);
       } else {
         let errorMessage = 'Ocurrió un error al iniciar sesión';
