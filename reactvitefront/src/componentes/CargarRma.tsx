@@ -26,10 +26,10 @@ export const CargarRma: React.FC = () => {
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<Marca | null>(null);
   const [loading, setLoading] = useState(false);  // Estado para el loader
 
-  let urlClientes = 'https://rmareactviteback.onrender.com/buscarCliente';
-  let urlProductos = 'https://rmareactviteback.onrender.com/buscarProductos';
-  let urlMarcas = 'https://rmareactviteback.onrender.com/listarMarcas';
-  let urlAgregarRma = 'https://rmareactviteback.onrender.com/agregarRma';
+  let urlClientes = 'https://rmareactvite2.onrender.com/buscarCliente';
+  let urlProductos = 'https://rmareactvite2.onrender.com/buscarProductos';
+  let urlMarcas = 'https://rmareactvite2.onrender.com/listarMarcas';
+  let urlAgregarRma = 'https://rmareactvite2.onrender.com/agregarRma';
 
   if (window.location.hostname === 'localhost') {
     urlClientes = 'http://localhost:8080/buscarCliente';
