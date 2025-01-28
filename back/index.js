@@ -1,7 +1,3 @@
-
-
-
-
 import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
@@ -25,7 +21,14 @@ app.use(express.static(path.join(__dirname, 'rma-vite', 'dist')));
 // Middleware para procesar formularios
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(cors());
+
+// Configuración explícita de CORS
+const corsOptions = {
+    origin: 'https://rma-react-vite2.vercel.app',
+    optionsSuccessStatus: 200 // Para navegadores legacy como IE11
+};
+app.use(cors(corsOptions));
+
 app.use(cookieParser());
 
 // Usar las rutas importadas
@@ -42,9 +45,6 @@ if (process.env.NODE_ENV === 'production') {
         res.send(`Servidor corriendo en el puerto: ${port}`);
     });
 }
-
-
-
 
 app.listen(port, () => {
     console.log(`Servidor corriendo en puerto: ${port}`);
