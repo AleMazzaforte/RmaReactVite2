@@ -13,7 +13,7 @@ import cors from 'cors';
 
 dotenv.config();
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
 const app = express();
 
 // Para obtener el __dirname en ES Modules
@@ -39,7 +39,7 @@ if (process.env.NODE_ENV === 'production') {
     
 } else {
     app.get('/', (req, res) => {
-        res.send('Servidor corriendo');
+        res.send(`Servidor corriendo en el puerto: ${port}`);
     });
 }
 

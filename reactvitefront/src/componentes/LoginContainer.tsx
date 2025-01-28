@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
 
 // Determinar la URL de la API según la url
-let url = 'https://rmareactviteback.onrender.com';
+let url = 'https://rmareactvite2.onrender.com';
 
 if (window.location.hostname === 'localhost') {
   url = 'http://localhost:8080';
@@ -94,6 +94,7 @@ export function LoginContainer() {
         });
       }
     } catch (error) {
+      console.error(error);
       Swal.fire({
         title: 'Error',
         text: 'Ocurrió un error en la solicitud de login',
