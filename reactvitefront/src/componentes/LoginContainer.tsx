@@ -2,6 +2,7 @@ import React, { useState, ChangeEvent, FormEvent } from 'react';
 import Swal from 'sweetalert2';
 import { useAuth } from '../rutas/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Loader from './utilidades/Loader';  // Importar el componente Loader
 
 // Determinar la URL de la API según la url
 let url = 'https://rmareactviteback.onrender.com';
@@ -21,6 +22,7 @@ export function LoginContainer() {
     nombre: '',
     password: '',
   });
+  const [loading, setLoading] = useState(false);  // Estado para controlar el loader
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -48,6 +50,11 @@ export function LoginContainer() {
     }
 
     try {
+      setLoading(true);  // Mostrar el loader
+
+      // Añadir setTimeout de 10 segundos para simular una espera
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       const response = await fetch(`${url}/login`, {
         method: 'POST',
         headers: {
@@ -70,7 +77,7 @@ export function LoginContainer() {
         });
         setTimeout(() => {
           navigate('/');
-        }, 2800);
+        }, 20);
       } else {
         let errorMessage = 'Ocurrió un error al iniciar sesión';
         if (data.error === 'Usuario no encontrado') {
@@ -94,6 +101,8 @@ export function LoginContainer() {
         timer: 2000,
         showConfirmButton: false,
       });
+    } finally {
+      setLoading(false);  // Ocultar el loader
     }
   };
 
@@ -107,6 +116,7 @@ export function LoginContainer() {
         boxShadow: '0 -10px 20px rgba(0, 0, 0, 0.3)',
       }}
     >
+      {loading && <Loader />}  
       <div className="flex justify-center mb-6">
         <div className="h-16 w-16 bg-gray-300 rounded-full flex items-center justify-center">
           <span className="text-gray-500 font-bold">LOGO</span>
@@ -149,7 +159,7 @@ export function LoginContainer() {
             type="submit"
             className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
           >
-            Ingresar
+            {loading ? 'Cargando...' : 'Ingresar'}  
           </button>
         </div>
       </form>

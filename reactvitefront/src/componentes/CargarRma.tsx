@@ -3,6 +3,7 @@ import { BusquedaClientes } from './utilidades/BusquedaClientes';
 import { BusquedaProductos } from './utilidades/ListarProductos';
 import { ListarMarcas } from './utilidades/ListarMarcas';
 import Swal from 'sweetalert2';
+import Loader from './utilidades/Loader';  // Importar el componente Loader
 
 interface Cliente {
   id: string;
@@ -23,6 +24,7 @@ export const CargarRma: React.FC = () => {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<Marca | null>(null);
+  const [loading, setLoading] = useState(false);  // Estado para el loader
 
   let urlClientes = 'https://rmareactviteback.onrender.com/buscarCliente';
   let urlProductos = 'https://rmareactviteback.onrender.com/buscarProductos';
@@ -78,6 +80,7 @@ export const CargarRma: React.FC = () => {
     };
 
     try {
+      setLoading(true);  // Mostrar el loader
       const response = await fetch(urlAgregarRma, {
         method: 'POST',
         headers: {
@@ -106,6 +109,8 @@ export const CargarRma: React.FC = () => {
         title: 'Error',
         text: 'Hubo un problema al enviar el formulario',
       });
+    } finally {
+      setLoading(false);  // Ocultar el loader
     }
   };
 
@@ -130,9 +135,7 @@ export const CargarRma: React.FC = () => {
         {clienteSeleccionado && <input type="hidden" name="idCliente" value={clienteSeleccionado.id} />}
 
         <div>
-          <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">
-            SKU:
-          </label>
+          <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">SKU:</label>
           <BusquedaProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} />
         </div>
         {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} />}
@@ -180,13 +183,13 @@ export const CargarRma: React.FC = () => {
 
         <div>
           <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Observaciones:</label>
-          <textarea id="observaciones" name="observaciones"  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto"></textarea>
+          <textarea id="observaciones" name="observaciones" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto"></textarea>
         </div>
 
         <div>
           <label htmlFor="numIngreso" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">N° de Ingreso:</label>
-          <input type="text" id="numIngreso" name="nIngreso" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" /> </div>
-
+          <input type="text" id="numIngreso" name="nIngreso" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
+        </div>
 
         <div>
           <label htmlFor="numEgreso" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">N° de Egreso:</label>
@@ -195,16 +198,15 @@ export const CargarRma: React.FC = () => {
 
         <input type="hidden" id="idCliente" name="idCliente" />
 
-        
-
         <div>
           <button
             type="submit"
             id="botonCargar"
-            className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
+            className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
           >
-            Cargar RMA
+            {loading ? 'Cargando...' : 'Cargar RMA'}  {/* Mostrar texto alternativo si loading es true */}
           </button>
+          {loading && <Loader />}  {/* Mostrar el loader mientras loading es true */}
         </div>
       </form>
     </div>
