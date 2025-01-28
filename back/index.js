@@ -16,18 +16,14 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-app.use(express.static(path.join(__dirname, 'rma-vite', 'dist')));
+app.use(express.static(path.join(__dirname, 'reactvitefront', 'dist')));
 
 // Middleware para procesar formularios
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Configuración explícita de CORS
-const corsOptions = {
-    origin: 'https://rma-react-vite2.vercel.app',
-    optionsSuccessStatus: 200 // Para navegadores legacy como IE11
-};
-app.use(cors(corsOptions));
+
+app.use(cors());
 
 app.use(cookieParser());
 
@@ -35,9 +31,9 @@ app.use(cookieParser());
 app.use('/', rutas);
 
 if (process.env.NODE_ENV === 'production') {
-    app.use(express.static('rma-vite/dist'));
+    app.use(express.static('reactvitefront/dist'));
     app.get('*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, 'rma-vite', 'dist', 'index.html'));
+        res.sendFile(path.resolve(__dirname, 'reactvitefront', 'dist', 'index.html'));
     });
     
 } else {
