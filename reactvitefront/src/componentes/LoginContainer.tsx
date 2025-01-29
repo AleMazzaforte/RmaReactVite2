@@ -109,7 +109,7 @@ export function LoginContainer() {
 
   return (
     <div
-      className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto"
+      className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mt-10"
       style={{
         maxWidth: '600px',
         alignItems: 'center',
@@ -158,7 +158,7 @@ export function LoginContainer() {
         <div>
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
+            className="w-full py-2 px-4 bg-blue-600 text-white font-semibold mt-10 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
           >
             {loading ? 'Cargando...' : 'Ingresar'}  
           </button>

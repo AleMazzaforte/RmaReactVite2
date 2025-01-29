@@ -25,6 +25,7 @@ export const CargarRma: React.FC = () => {
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<Marca | null>(null);
   const [loading, setLoading] = useState(false);  // Estado para el loader
+  const [sugerencias, setSugerencias] = useState<string[]>([]); // Estado para las sugerencias
 
   let urlClientes = 'https://rmareactvite2.onrender.com/buscarCliente';
   let urlProductos = 'https://rmareactvite2.onrender.com/buscarProductos';
@@ -48,6 +49,25 @@ export const CargarRma: React.FC = () => {
 
   const handleMarcaSeleccionada = (marca: Marca) => {
     setMarcaSeleccionada(marca);
+  };
+
+  const buscarSugerencias = async (endpoint: string) => {
+    setLoading(true);
+    setSugerencias([]);
+    try {
+      const response = await fetch(endpoint);
+      const data = await response.json();
+      if (data.length > 0) {
+        setSugerencias(data);
+      } else {
+        setSugerencias(['No hay coincidencia con su búsqueda']);
+      }
+    } catch (error) {
+      console.error('Error al buscar sugerencias:', error);
+      setSugerencias(['No hay coincidencia con su búsqueda']);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const enviarFormulario = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -95,6 +115,7 @@ export const CargarRma: React.FC = () => {
           title: 'RMA agregado',
           text: 'El RMA se ha agregado correctamente',
         });
+        
       } else {
         Swal.fire({
           icon: 'error',
@@ -138,21 +159,26 @@ export const CargarRma: React.FC = () => {
           <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">SKU:</label>
           <BusquedaProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} />
         </div>
-        {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} />}
+        {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} required />}
 
         <div className="divrelleno"></div>
-        <div id="suggestionsContainer2" style={{ display: 'none' }}></div>
+        {loading && <Loader />} {/* Mostrar el loader mientras se carga */}
+        <div id="suggestionsContainer2">
+          {sugerencias.map((sugerencia, index) => (
+            <div key={index} className="p-2 border-b border-gray-300">{sugerencia}</div>
+          ))}
+        </div>
         
         <div>
           <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Cantidad:</label>
-          <input type="number" id="cantidad" name="cantidad" min="1" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
+          <input type="number" id="cantidad" name="cantidad" min="1" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
         </div>
 
         <div>
           <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Marca:</label>
           <ListarMarcas endpoint={urlMarcas} onMarcaSeleccionada={handleMarcaSeleccionada} campos={['nombre']} />
         </div>
-        {marcaSeleccionada && (<input type="hidden" name="idMarca" value={marcaSeleccionada.id} />)}
+        {marcaSeleccionada && (<input type="hidden" name="idMarca" required value={marcaSeleccionada.id} />)}
 
         <div>
           <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Solicita:</label>
@@ -166,7 +192,7 @@ export const CargarRma: React.FC = () => {
         <div className="divrelleno"></div>
         <div id="suggestionsOp" className="suggestions-container" style={{ display: 'none' }}></div>
 
-        <div>
+                <div>
           <label htmlFor="vencimiento" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Vencimiento:</label>
           <input type="date" id="vencimiento" name="vencimiento" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
         </div>
@@ -206,7 +232,7 @@ export const CargarRma: React.FC = () => {
           >
             {loading ? 'Cargando...' : 'Cargar RMA'}  {/* Mostrar texto alternativo si loading es true */}
           </button>
-          {loading && <Loader />}  {/* Mostrar el loader mientras loading es true */}
+          
         </div>
       </form>
     </div>
