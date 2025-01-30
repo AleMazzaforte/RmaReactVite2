@@ -1,6 +1,27 @@
-import React from "react";
+import React from 'react';
 
-const TablaRmas = ({ rmas, handleActualizar, handleEliminar }) => {
+interface Rma {
+  id?: string;
+  modelo: string;
+  cantidad: number;
+  marca: string;
+  solicita: string;
+  opLote: string;
+  vencimiento: string;
+  seEntrega: string;
+  seRecibe: string;
+  observaciones: string;
+  numeroIngreso: string;
+  numeroEgreso: string;
+}
+
+interface TablaRmasProps {
+  rmas: Rma[];
+  handleActualizar: (rma: Rma) => void;
+  handleEliminar: (id: string | undefined) => void;
+}
+
+const TablaRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualizar, handleEliminar }) => {
   if (rmas.length === 0) return null;
 
   return (

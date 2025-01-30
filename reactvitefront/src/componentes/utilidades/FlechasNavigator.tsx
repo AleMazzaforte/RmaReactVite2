@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-export const FlechasNavigator = ({ resultados, onClienteSeleccionado, campos }) => {
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const resultadosRef = useRef(null);
+interface FlechasNavigatorProps {
+  resultados: Array<{ id: string, [key: string]: any }>;
+  onClienteSeleccionado: (cliente: any) => void;
+  campos: string[];
+}
+
+export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, onClienteSeleccionado, campos }) => {
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const resultadosRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         setSelectedIndex((prevIndex) => {
           const newIndex = prevIndex < resultados.length - 1 ? prevIndex + 1 : prevIndex;
@@ -23,9 +29,9 @@ export const FlechasNavigator = ({ resultados, onClienteSeleccionado, campos }) 
       }
     };
 
-    const scrollToItem = (index) => {
+    const scrollToItem = (index: number) => {
       if (resultadosRef.current && resultadosRef.current.children[index]) {
-        resultadosRef.current.children[index].scrollIntoView({
+        (resultadosRef.current.children[index] as HTMLDivElement).scrollIntoView({
           behavior: 'smooth',
           block: 'nearest',
         });
@@ -61,5 +67,3 @@ export const FlechasNavigator = ({ resultados, onClienteSeleccionado, campos }) 
     </div>
   );
 };
-
-

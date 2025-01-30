@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BusquedaClientes } from './utilidades/BusquedaClientes';
 import { BusquedaProductos } from './utilidades/ListarProductos';
 import { ListarMarcas } from './utilidades/ListarMarcas';
@@ -70,9 +70,17 @@ export const CargarRma: React.FC = () => {
     }
   };
 
-  const enviarFormulario = async (e: React.FormEvent<HTMLFormElement>) => {
+  const enviarFormulario = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    const target = e.target as typeof e.target & {
+  
+    // Obtener el formulario manualmente
+    const form = e.currentTarget.closest("form") as HTMLFormElement | null;
+    if (!form) {
+      console.error("No se encontró el formulario");
+      return;
+    }
+  
+    const target = form as typeof form & {
       cantidad: { value: string };
       solicita: { value: string };
       opLote: { value: string };
@@ -83,7 +91,53 @@ export const CargarRma: React.FC = () => {
       nIngreso: { value: string };
       nEgreso: { value: string };
     };
-
+  
+    // Validaciones de campos obligatorios
+    if (!clienteSeleccionado) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campo vacío',
+        text: 'Debe seleccionar un cliente',
+      });
+      return;
+    }
+  
+    if (!productoSeleccionado) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campo vacío',
+        text: 'Debe seleccionar un producto',
+      });
+      return;
+    }
+  
+    if (!marcaSeleccionada) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campo vacío',
+        text: 'Debe seleccionar una marca',
+      });
+      return;
+    }
+  
+    if (!target.cantidad.value.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campo vacío',
+        text: 'Debe ingresar la cantidad',
+      });
+      return;
+    }
+  
+    if (!target.solicita.value.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campo vacío',
+        text: 'Debe ingresar la fecha de solicitud',
+      });
+      return;
+    }
+  
     const formData = {
       modelo: productoSeleccionado?.sku || '',
       cantidad: target.cantidad.value,
@@ -98,9 +152,9 @@ export const CargarRma: React.FC = () => {
       nEgreso: target.nEgreso.value || null,
       idCliente: clienteSeleccionado?.id || '',
     };
-
+  
     try {
-      setLoading(true);  // Mostrar el loader
+      setLoading(true); // Mostrar el loader
       const response = await fetch(urlAgregarRma, {
         method: 'POST',
         headers: {
@@ -108,14 +162,14 @@ export const CargarRma: React.FC = () => {
         },
         body: JSON.stringify(formData),
       });
-
+  
       if (response.ok) {
         Swal.fire({
           icon: 'success',
           title: 'RMA agregado',
           text: 'El RMA se ha agregado correctamente',
         });
-        
+  
       } else {
         Swal.fire({
           icon: 'error',
@@ -131,9 +185,45 @@ export const CargarRma: React.FC = () => {
         text: 'Hubo un problema al enviar el formulario',
       });
     } finally {
-      setLoading(false);  // Ocultar el loader
+      setLoading(false); // Ocultar el loader
     }
   };
+
+  //////////////////////////////////////////////////////////////////////////////////
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'h') {
+        const today = new Date();
+        const formattedDate = `${today.getFullYear()}-${(today.getMonth() + 1)
+          .toString()
+          .padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`; // Formato YYYY-MM-DD
+
+
+        if (document.activeElement instanceof HTMLInputElement) {
+          const input = document.activeElement;
+          if (
+            input.id === 'solicita' ||
+            input.id === 'vencimiento' ||
+            input.id === 'seEntrega' ||
+            input.id === 'seRecibe'
+          ) {
+            input.value = formattedDate;
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
+
+
+
+  ///////////////////////////////////////////////////////////////////////
+  
+  
 
   return (
     <div
@@ -146,7 +236,7 @@ export const CargarRma: React.FC = () => {
         </div>
       </div>
       <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Cargar RMA</h2>
-      <form id="formRma" className="space-y-6" onSubmit={enviarFormulario}>
+      <form id="formRma" className="space-y-6">
         <div>
           <label htmlFor="clienteSearch" className="block text-sm font-medium text-gray-700 mb-1">
             Cliente:
@@ -226,8 +316,9 @@ export const CargarRma: React.FC = () => {
 
         <div>
           <button
-            type="submit"
+            type="button"
             id="botonCargar"
+            onClick={(e) => enviarFormulario(e)}
             className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
           >
             {loading ? 'Cargando...' : 'Cargar RMA'}  {/* Mostrar texto alternativo si loading es true */}
