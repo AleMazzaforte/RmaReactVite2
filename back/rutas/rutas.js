@@ -24,6 +24,7 @@ router.get('/listarMarcas', listarMarcas.getListarMarcas);
 
 // Ruta para agregar RMA
 router.post('/agregarRma',  cargarRma.postAgregarRma);
+//router.get('/getRmaCLiente', gestionarRma.getListarRma);
 router.get('/getRmaCLiente/:idCliente', gestionarRma.getListarProductosRma);
 router.post('/actualizarProductoRma/:idRma', gestionarRma.postActualizarCliente); 
 router.delete('/eliminarRma/:idRma', gestionarRma.deleteRma);

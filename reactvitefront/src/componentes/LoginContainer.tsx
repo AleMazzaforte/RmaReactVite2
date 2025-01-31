@@ -114,7 +114,7 @@ export function LoginContainer() {
         maxWidth: '600px',
         alignItems: 'center',
         height: '100vh',
-        boxShadow: '0 -10px 20px rgba(0, 0, 0, 0.3)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
       }}
     >
       {loading && <Loader />}  

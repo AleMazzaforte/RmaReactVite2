@@ -224,7 +224,7 @@ const gestionarRma = {
 
   getListarProductosRma: async (req, res) => {
     const idCliente = req.params.idCliente;
-
+    console.log("idCliente", idCliente);
     const obtenerProductosPorCliente = async (idCliente) => {
       const query = `
       SELECT idRma, modelo, cantidad, marca, solicita, opLote, vencimiento, 
@@ -235,6 +235,7 @@ const gestionarRma = {
       try {
         const [rows] = await conn.execute(query, [idCliente]);
         return rows;
+        console.log("rows", rows);
       } catch (executeError) {
         console.error("Error en la ejecución de la consulta:", executeError);
         throw executeError;
