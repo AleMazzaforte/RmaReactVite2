@@ -14,8 +14,8 @@ interface Cliente {
   nombre: string;
 }
 
-interface Rma {
-  id?: string;
+export interface Rma {
+  idRma?: string;
   modelo: string;
   cantidad: number;
   marca: string;
@@ -25,8 +25,8 @@ interface Rma {
   seEntrega: string;
   seRecibe: string;
   observaciones: string;
-  numeroIngreso: string;
-  numeroEgreso: string;
+  nIngreso: string;
+  nEgreso: string;
 }
 
 export const ProductosPorCliente = (): JSX.Element => {
@@ -74,12 +74,12 @@ export const ProductosPorCliente = (): JSX.Element => {
   };
 
   const handleActualizar = (rmaActualizada: Rma) => {
-    setRmas(rmas.map(rma => (rma.id === rmaActualizada.id ? rmaActualizada : rma)));
+    setRmas(rmas.map(rma => (rma.idRma === rmaActualizada.idRma ? rmaActualizada : rma)));
   };
 
   const handleEliminar = (id: string | undefined) => {
     if (id) {
-      setRmas(rmas.filter(rma => rma.id !== id));
+      setRmas(rmas.filter(rma => rma.idRma !== id));
     }
   };
 
@@ -87,7 +87,7 @@ export const ProductosPorCliente = (): JSX.Element => {
     <>
       {mostrarFormulario ? (
         <div className="w-full h-80 max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"
-        style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
+          style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
         >
           <div className="flex justify-center mb-6">
             <div className="h-16 w-16 bg-gray-300 rounded-full flex items-center justify-center">
@@ -117,7 +117,7 @@ export const ProductosPorCliente = (): JSX.Element => {
 
       {!mostrarFormulario && cliente && (
         <div>
-          <h2 className="text-xl font-semibold text-gray-700 text-center mb-4">Cliente: {cliente?.nombre}</h2>
+          <h2 className="text-xl font-semibold text-gray-700 ml-10 mb-4"> {cliente?.nombre}</h2>
           
           {!isLoading && <TablaListarRmas rmas={rmas} handleActualizar={handleActualizar} handleEliminar={handleEliminar} />}
           <button 
@@ -126,7 +126,6 @@ export const ProductosPorCliente = (): JSX.Element => {
           >
             Cambiar Cliente
           </button>
-
         </div>
       )}
     </>
