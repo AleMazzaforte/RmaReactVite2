@@ -9,10 +9,21 @@ import {
 
 import { postLogin } from '../controladores/loginController.js';
 import  usuario  from '../controladores/usuarioController.js';
+import gestionClientes from '../controladores/clienteController.js';
 
 const router = express.Router();
 
 router.post('/login', postLogin);
+//Ruta para cargar clientes
+
+
+
+
+// Ruta para cargar clientes
+router.post('/cargarCliente', gestionClientes.cargarCliente);
+
+
+
 // Ruta para listar clientes
 router.get('/buscarCliente', clienteController.getListarClientesRma);
 

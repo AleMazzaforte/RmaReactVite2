@@ -6,10 +6,7 @@ export const CargarUsuario: React.FC = () => {
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const enviarFormulario = async () => {
     const formData = { username, password };
 
     let urlCargarUsuario = 'https://rmareactvite2.onrender.com/cargarUsuario'; // URL de producción 
@@ -29,7 +26,7 @@ export const CargarUsuario: React.FC = () => {
         Swal.fire({
           icon: 'success',
           title: 'Usuario cargado',
-          text: 'El usuario se ha cargado correctamente',
+          text: `El usuario ${username} se ha cargado correctamente`,
         });
         setUsername('');
         setPassword('');
@@ -50,6 +47,22 @@ export const CargarUsuario: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    Swal.fire({
+      title: `¿Quiere guardar a ${username} como usuario?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        enviarFormulario();
+      }
+    });
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {

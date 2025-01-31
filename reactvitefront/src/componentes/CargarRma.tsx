@@ -219,12 +219,7 @@ export const CargarRma: React.FC = () => {
   }, []);
 
 
-
-
   ///////////////////////////////////////////////////////////////////////
-  
-  
-
   return (
     <div
       className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"
