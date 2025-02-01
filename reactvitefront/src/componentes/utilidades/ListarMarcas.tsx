@@ -64,7 +64,7 @@ export const ListarMarcas: React.FC<ListarMarcasProps> = ({ endpoint, onMarcaSel
       {loading ? <Loader /> : (
         <FlechasNavigator
           resultados={resultados}
-          onClienteSeleccionado={handleMarcaSeleccionada}
+          onSeleccionado={handleMarcaSeleccionada}
           campos={campos}
         />
       )}

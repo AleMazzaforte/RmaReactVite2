@@ -64,7 +64,7 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({ endpoint, on
       {loading ? <Loader /> : (
         <FlechasNavigator
           resultados={resultados}
-          onClienteSeleccionado={handleClienteSeleccionado}
+          onSeleccionado={handleClienteSeleccionado}
           campos={campos}
         />
       )}

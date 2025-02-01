@@ -65,7 +65,7 @@ export const BusquedaProductos: React.FC<BusquedaProductosProps> = ({ endpoint, 
       {loading ? <Loader /> : (
         <FlechasNavigator
           resultados={resultados}
-          onClienteSeleccionado={handleProductoSeleccionado}
+          onSeleccionado={handleProductoSeleccionado}
           campos={campos}
         />
       )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BusquedaClientes } from './utilidades/BusquedaClientes';
 import { BusquedaProductos } from './utilidades/ListarProductos';
 import { ListarMarcas } from './utilidades/ListarMarcas';
+import { ListarOp } from './utilidades/ListarOp';
 import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
 
@@ -31,12 +32,14 @@ export const CargarRma: React.FC = () => {
   let urlProductos = 'https://rmareactvite2.onrender.com/buscarProductos';
   let urlMarcas = 'https://rmareactvite2.onrender.com/listarMarcas';
   let urlAgregarRma = 'https://rmareactvite2.onrender.com/agregarRma';
+  let urlOp = 'https://rmareactvite2.onrender.com/listarOp';
 
   if (window.location.hostname === 'localhost') {
     urlClientes = 'http://localhost:8080/buscarCliente';
     urlProductos = 'http://localhost:8080/buscarProductos';
     urlMarcas = 'http://localhost:8080/listarMarcas';
     urlAgregarRma = 'http://localhost:8080/agregarRma';
+    urlOp = 'http://localhost:8080/listarOp';
   }
 
   const handleClienteSeleccionado = (cliente: Cliente) => {
@@ -50,6 +53,13 @@ export const CargarRma: React.FC = () => {
   const handleMarcaSeleccionada = (marca: Marca) => {
     setMarcaSeleccionada(marca);
   };
+
+  const [opLoteSeleccionado, setOpLoteSeleccionado] = useState<any>(null);
+
+  const handleOpLoteSeleccionado = (opLote: any) => {
+    setOpLoteSeleccionado(opLote);  // Guarda la opción seleccionada en el estado
+  };
+
 
   const buscarSugerencias = async (endpoint: string) => {
     setLoading(true);
@@ -137,13 +147,22 @@ export const CargarRma: React.FC = () => {
       });
       return;
     }
+
+    if (!opLoteSeleccionado) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campo vacío',
+        text: 'Debe ingresar la OP/Lote',
+      });
+      return;
+    }
   
     const formData = {
       modelo: productoSeleccionado?.sku || '',
       cantidad: target.cantidad.value,
       marca: marcaSeleccionada?.nombre || '',
       solicita: target.solicita.value,
-      opLote: target.opLote.value || null,
+      opLote: opLoteSeleccionado?.nombre || null,
       vencimiento: target.vencimiento.value || null,
       seEntrega: target.seEntrega.value || null,
       seRecibe: target.seRecibe.value || null,
@@ -234,14 +253,14 @@ export const CargarRma: React.FC = () => {
       <form id="formRma" className="space-y-6">
         <div>
           <label htmlFor="clienteSearch" className="block text-sm font-medium text-gray-700 mb-1">
-            Cliente:
+            Cliente*:
           </label>
           <BusquedaClientes endpoint={urlClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} />
         </div>
         {clienteSeleccionado && <input type="hidden" name="idCliente" value={clienteSeleccionado.id} />}
 
         <div>
-          <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">SKU:</label>
+          <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">SKU*:</label>
           <BusquedaProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} />
         </div>
         {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} required />}
@@ -255,24 +274,24 @@ export const CargarRma: React.FC = () => {
         </div>
         
         <div>
-          <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Cantidad:</label>
+          <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Cantidad*:</label>
           <input type="number" id="cantidad" name="cantidad" min="1" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
         </div>
 
         <div>
-          <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Marca:</label>
+          <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Marca*:</label>
           <ListarMarcas endpoint={urlMarcas} onMarcaSeleccionada={handleMarcaSeleccionada} campos={['nombre']} />
         </div>
         {marcaSeleccionada && (<input type="hidden" name="idMarca" required value={marcaSeleccionada.id} />)}
 
         <div>
-          <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Solicita:</label>
+          <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Solicita*:</label>
           <input type="date" id="solicita" name="solicita" autoComplete="off" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" required />
         </div>
 
         <div>
-          <label htmlFor="opLote" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">OP/Lote:</label>
-          <input type="text" id="opLote" name="opLote" autoComplete="off" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
+          <label htmlFor="opLote" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">OP/Lote*:</label>
+          <ListarOp endpoint={urlOp} onSeleccionado={handleOpLoteSeleccionado} campos={['nombre']} />
         </div>
         <div className="divrelleno"></div>
         <div id="suggestionsOp" className="suggestions-container" style={{ display: 'none' }}></div>

@@ -2,13 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 
 interface FlechasNavigatorProps {
   resultados: Array<{ id: string, [key: string]: any }>;
-  onClienteSeleccionado: (cliente: any) => void;
+  onSeleccionado: (cliente: any) => void;
   campos: string[];
 }
 
-export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, onClienteSeleccionado, campos }) => {
+
+
+export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, onSeleccionado, campos }) => {
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const resultadosRef = useRef<HTMLDivElement>(null);
+
+  
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -25,7 +29,7 @@ export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, 
           return newIndex;
         });
       } else if (e.key === 'Enter' && selectedIndex >= 0 && resultados[selectedIndex]) {
-        onClienteSeleccionado(resultados[selectedIndex]);
+        onSeleccionado(resultados[selectedIndex]);
       }
     };
 
@@ -45,7 +49,7 @@ export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [resultados, selectedIndex, onClienteSeleccionado]);
+  }, [resultados, selectedIndex, onSeleccionado]);
 
   return (
     <div>
@@ -54,7 +58,7 @@ export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, 
           {resultados.map((cliente, index) => (
             <div
               key={cliente.id}
-              onClick={() => onClienteSeleccionado(cliente)}
+              onClick={() => onSeleccionado(cliente)}
               className={`px-4 py-2 hover:bg-gray-200 cursor-pointer ${selectedIndex === index ? 'bg-gray-200' : ''}`}
             >
               {campos.map((campo) => (
