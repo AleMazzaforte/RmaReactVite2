@@ -1,9 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { ActualizarRma } from './utilidades/ActualizarRma';
-import { EliminarRma } from './utilidades/EliminarRma'; // Importa EliminarRma
-import { Rma } from './ProductosPorCliente'; // Importa Rma
-import { ConvertirFecha } from './utilidades/ConvertirFecha'; // Importa la función para convertir fechas
-import Swal from 'sweetalert2'; // Importa SweetAlert2
+import React from 'react';
+
+
+
+interface Rma {
+  id?: string;
+  modelo: string;
+  cantidad: number;
+  marca: string;
+  solicita: string;
+  opLote: string;
+  vencimiento: string;
+  seEntrega: string;
+  seRecibe: string;
+  observaciones: string;
+  numeroIngreso: string;
+  numeroEgreso: string;
+}
 
 interface TablaRmasProps {
   rmas: Rma[];
@@ -12,42 +24,6 @@ interface TablaRmasProps {
 }
 
 export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualizar, handleEliminar }) => {
-  const [editedRmas, setEditedRmas] = useState<Rma[]>(rmas);
-
-  useEffect(() => {
-    console.log('Datos de RMAs recibidos:', rmas);
-  }, [rmas]); // Esto se ejecutará cuando 'rmas' cambie
-
-  const handleInputChange = (index: number, field: keyof Rma, value: string) => {
-    const updatedRmas = [...editedRmas];
-    updatedRmas[index] = { ...updatedRmas[index], [field]: value };
-    setEditedRmas(updatedRmas);
-  };
-
-  const handleActualizarWrapper = (index: number) => {
-    handleActualizar(editedRmas[index]);
-  };
-
-  // Función para manejar la eliminación con confirmación
-  const handleEliminarWrapper = (id: string | undefined) => {
-    Swal.fire({
-      title: '¿Estás seguro?',
-      text: '¡Este RMA será eliminado!',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // Si el usuario confirma, elimina el RMA
-        setEditedRmas(editedRmas.filter((rma) => rma.idRma !== id));
-        handleEliminar(id); // Llama al manejador para eliminar del backend
-        Swal.fire('Eliminado', 'El RMA ha sido eliminado.', 'success');
-      }
-    });
-  };
-
   return (
     <div>
       <table className="w-full m-4 table-auto">
@@ -68,100 +44,99 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
           </tr>
         </thead>
         <tbody>
-          {editedRmas.length > 0 ? (
-            editedRmas.map((rma, index) => (
-              <tr key={index}>
-                <td className="border text-sm text-center">
+          {rmas.length > 0 ? (
+            rmas.map((rma, index) => (
+              <tr key={rma.id || index}>
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
-                    value={rma.modelo}
-                    onChange={(e) => handleInputChange(index, 'modelo', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.modelo}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="number"
-                    value={rma.cantidad.toString()}
-                    onChange={(e) => handleInputChange(index, 'cantidad', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.cantidad}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
-                    value={rma.marca}
-                    onChange={(e) => handleInputChange(index, 'marca', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.marca}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
-                    value={rma.solicita}
-                    onChange={(e) => handleInputChange(index, 'solicita', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.solicita}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
-                    value={rma.opLote}
-                    onChange={(e) => handleInputChange(index, 'opLote', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.opLote}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="date"
-                    value={ConvertirFecha(rma.vencimiento) || ''}
-                    onChange={(e) => handleInputChange(index, 'vencimiento', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.vencimiento}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
-                    value={rma.seEntrega}
-                    onChange={(e) => handleInputChange(index, 'seEntrega', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.seEntrega}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
-                    value={rma.seRecibe}
-                    onChange={(e) => handleInputChange(index, 'seRecibe', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.seRecibe}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
-                    value={rma.observaciones}
-                    onChange={(e) => handleInputChange(index, 'observaciones', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.observaciones}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
-                    value={rma.nIngreso}
-                    onChange={(e) => handleInputChange(index, 'nIngreso', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.numeroIngreso}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border text-sm text-center">
+                <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
-                    value={rma.nEgreso}
-                    onChange={(e) => handleInputChange(index, 'nEgreso', e.target.value)}
-                    className="block w-full text-sm rounded-lg text-center"
+                    defaultValue={rma.numeroEgreso}
+                    className="block w-full py-1 text-sm rounded-lg text-center"
                   />
                 </td>
-                <td className="border py-1 text-sm text-center flex items-center justify-center space-x-2">
-                  <ActualizarRma rma={editedRmas[index]} handleActualizar={() => handleActualizarWrapper(index)} />
-                  <EliminarRma idRma={rma.idRma} handleEliminar={handleEliminarWrapper} />
+                <td className="border py-2 text-sm text-center flex items-center justify-center space-x-2">
+                  <button
+                    className="bg-yellow-500 text-white px-2 py-1 text-sm rounded"
+                    onClick={() => handleActualizar(rma)}
+                  >
+                    Actualizar
+                  </button>
+                  <button
+                    className="bg-red-500 text-white px-2 py-1 text-sm rounded"
+                    onClick={() => handleEliminar(rma.id)}
+                  >
+                    Eliminar
+                  </button>
                 </td>
               </tr>
             ))

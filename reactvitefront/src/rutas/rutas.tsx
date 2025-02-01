@@ -5,8 +5,8 @@ import { LoginContainer } from '../componentes/LoginContainer';
 import { CargarRma } from '../componentes/CargarRma';
 import { CargarUsuario } from '../componentes/CargarUsuario';
 import { ProductosPorCliente } from '../componentes/ProductosPorCliente';
-import { NotFound } from '../componentes/NotFound'; // Asegúrate de tener este componente
-import { CargarClientes } from '../componentes/CargarCLientes';
+import { NotFound } from '../componentes/NotFound'; 
+import { CargarClientes } from '../componentes/CargarClientes';
 
 export const Rutas = (): JSX.Element => {
   return (

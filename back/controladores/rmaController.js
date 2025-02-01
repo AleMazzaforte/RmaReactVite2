@@ -224,6 +224,7 @@ const gestionarRma = {
 
   getListarProductosRma: async (req, res) => {
     const idCliente = req.params.idCliente;
+    console.log("idCliente", idCliente);
     const obtenerProductosPorCliente = async (idCliente) => {
       const query = `
       SELECT idRma, modelo, cantidad, marca, solicita, opLote, vencimiento, 
