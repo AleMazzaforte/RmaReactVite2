@@ -7,6 +7,7 @@ import { CargarUsuario } from '../componentes/CargarUsuario';
 import { ProductosPorCliente } from '../componentes/ProductosPorCliente';
 import { NotFound } from '../componentes/NotFound'; 
 import { CargarClientes } from '../componentes/CargarClientes';
+import { ActualizarClientes } from '../componentes/ActualizarClientes';
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -17,6 +18,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/cargarUsuario" element={<CargarUsuario />} />
         <Route path="/gestionarRma" element={<ProductosPorCliente />} />
         <Route path="/cargarCLiente" element={<CargarClientes />} />
+        <Route path="/actualizarCLiente" element={<ActualizarClientes />} />
       </Route>
       <Route path="*" element={<NotFound />} /> {/* Ruta para manejar páginas no encontradas */}
     </Routes>

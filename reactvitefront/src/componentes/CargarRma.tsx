@@ -156,7 +156,7 @@ export const CargarRma: React.FC = () => {
       });
       return;
     }
-  
+  ///////////////////////////////////////////////////////////////////////
     const formData = {
       modelo: productoSeleccionado?.sku || '',
       cantidad: target.cantidad.value,
@@ -253,14 +253,14 @@ export const CargarRma: React.FC = () => {
       <form id="formRma" className="space-y-6">
         <div>
           <label htmlFor="clienteSearch" className="block text-sm font-medium text-gray-700 mb-1">
-            Cliente*:
+            Cliente<span className="text-red-500">*</span>: 
           </label>
           <BusquedaClientes endpoint={urlClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} />
         </div>
         {clienteSeleccionado && <input type="hidden" name="idCliente" value={clienteSeleccionado.id} />}
 
         <div>
-          <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">SKU*:</label>
+          <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">SKU<span className="text-red-500">*</span>:</label>
           <BusquedaProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} />
         </div>
         {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} required />}
@@ -274,23 +274,23 @@ export const CargarRma: React.FC = () => {
         </div>
         
         <div>
-          <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Cantidad*:</label>
+          <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Cantidad<span className="text-red-500">*</span>:</label>
           <input type="number" id="cantidad" name="cantidad" min="1" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
         </div>
 
         <div>
-          <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Marca*:</label>
+          <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Marca<span className="text-red-500">*</span>:</label>
           <ListarMarcas endpoint={urlMarcas} onMarcaSeleccionada={handleMarcaSeleccionada} campos={['nombre']} />
         </div>
         {marcaSeleccionada && (<input type="hidden" name="idMarca" required value={marcaSeleccionada.id} />)}
 
         <div>
-          <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Solicita*:</label>
+          <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Solicita<span className="text-red-500">*</span>:</label>
           <input type="date" id="solicita" name="solicita" autoComplete="off" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" required />
         </div>
 
         <div>
-          <label htmlFor="opLote" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">OP/Lote*:</label>
+          <label htmlFor="opLote" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">OP/Lote<span className="text-red-500">*</span>:</label>
           <ListarOp endpoint={urlOp} onSeleccionado={handleOpLoteSeleccionado} campos={['nombre']} />
         </div>
         <div className="divrelleno"></div>
