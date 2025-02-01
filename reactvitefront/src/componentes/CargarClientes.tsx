@@ -11,80 +11,83 @@ export const CargarClientes: React.FC = () => {
     urlClientes = 'http://localhost:8080/cargarCliente';
   }
 
-  const enviarFormulario = async (nombre: string) => {
+  const enviarFormulario = async (nombre: string, cuit: string) => {
     if (formRef.current) {
       const formData = new FormData(formRef.current);
       const data = {
-        cliente: formData.get('cliente'),
-        cuit: formData.get('cuit'),
-        provincia: formData.get('provincia'),
-        ciudad: formData.get('ciudad'),
-        domicilio: formData.get('domicilio'),
-        telefono: formData.get('telefono'),
-        transporte: formData.get('transporte'),
-        seguro: formData.get('seguro'),
-        condEntrega: formData.get('condEntrega'),
-        condPago: formData.get('condPago')
+        cliente: formData.get("cliente"),
+        cuit: formData.get("cuit"),
+        provincia: formData.get("provincia"),
+        ciudad: formData.get("ciudad"),
+        domicilio: formData.get("domicilio"),
+        telefono: formData.get("telefono"),
+        transporte: formData.get("transporte"),
+        seguro: formData.get("seguro"),
+        condEntrega: formData.get("condEntrega"),
+        condPago: formData.get("condPago"),
       };
-
+  
       try {
-        setLoading(true); // Mostrar el loader
+        setLoading(true);
         const response = await fetch(urlClientes, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(data),
         });
-
+  
+        const result = await response.json();
+  
         if (response.ok) {
           Swal.fire({
-            icon: 'success',
-            title: 'Cliente agregado',
+            icon: "success",
+            title: "Cliente agregado",
             text: `El cliente ${nombre} se ha agregado correctamente`,
           }).then(() => {
             if (formRef.current) {
-              formRef.current.reset();  // Limpiar el formulario
+              formRef.current.reset();
             }
           });
         } else {
           Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Hubo un problema al agregar el cliente',
+            icon: "error",
+            title: "Error",
+            text: result.error || "Hubo un problema al agregar el cliente",
           });
         }
       } catch (error) {
-        console.error('Error al enviar el formulario:', error);
+        console.error("Error al enviar el formulario:", error);
         Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Hubo un problema al enviar el formulario',
+          icon: "error",
+          title: "Error",
+          text: "Hubo un problema al enviar el formulario",
         });
       } finally {
-        setLoading(false); // Ocultar el loader
+        setLoading(false);
       }
     }
   };
-
+  
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const nombre = formData.get('cliente') as string;
-
+    const nombre = formData.get("cliente") as string;
+    const cuit = formData.get("cuit") as string;
+  
     Swal.fire({
       title: `¿Quiere guardar a ${nombre} como cliente?`,
-      icon: 'question',
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Sí, guardar',
-      cancelButtonText: 'Cancelar'
+      confirmButtonText: "Sí, guardar",
+      cancelButtonText: "Cancelar",
     }).then((result) => {
       if (result.isConfirmed) {
-        enviarFormulario(nombre);
+        enviarFormulario(nombre, cuit);
       }
     });
   };
-
+  
   return (
     <div
       className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"

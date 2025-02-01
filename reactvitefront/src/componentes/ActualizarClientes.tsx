@@ -22,6 +22,7 @@ export const ActualizarClientes: React.FC = () => {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
+  let urlListarClientes = 'https://rmareactvite2.onrender.com/buscarCliente';
   let urlClientes = 'https://rmareactvite2.onrender.com/cargarCliente';
   let urlActualizarCliente = 'https://rmareactvite2.onrender.com/actualizarCliente';
   let urlEliminarCliente = 'https://rmareactvite2.onrender.com/eliminarCliente';
@@ -170,14 +171,15 @@ export const ActualizarClientes: React.FC = () => {
           <span className="text-gray-500 font-bold">LOGO</span>
         </div>
       </div>
-      <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Actualizar clientes</h2>
+      <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Actualizar clientes esta pagina no anda</h2>
       <form id="formRma" className="space-y-6" ref={formRef}>
         <div>
           <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-1">
             Cliente:
           </label>
-          <BusquedaClientes endpoint={urlClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} />
-          <input name="cliente" type="text" id="clienteSearch" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+         <BusquedaClientes endpoint={urlListarClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} />
+
+          <input type="hidden" name="cliente" />
         </div>
         <div>
           <label htmlFor="cuit" className="block text-sm font-medium text-gray-700 mb-1">CUIT:</label>

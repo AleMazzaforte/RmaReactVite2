@@ -44,7 +44,17 @@ const gestionClientes = {
         res.status(200).json({ message: "Cliente agregado correctamente" });
       } catch (error) {
         console.error("Error al agregar el cliente:", error);
-        res.status(500).json({ message: "Hubo un problema al agregar el cliente" });
+        if (error.code === 'ER_DUP_ENTRY') {
+          if (error.sqlMessage.includes("clientes.nombre")) {
+            return res.status(400).json({ error: `El nombre ${cliente} ya está en la base de datos.` });
+          }
+          if (error.sqlMessage.includes("clientes.cuit")) {
+            return res.status(400).json({ error: `El CUIT ${cuit} ya está en la base de datos.` });
+          }
+        }else {
+          res.status(500).json({ message: "Hubo un problema al agregar el cliente" });
+        }
+        
       } finally {
         if (connection) {
           connection.release();

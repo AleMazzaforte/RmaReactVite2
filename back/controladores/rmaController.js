@@ -27,6 +27,7 @@ const clienteController = {
     try {
       const [clientes] = await conn.query("SELECT id, nombre FROM clientes");
       res.json(clientes); // Retorna los clientes en formato JSON
+      console.log("clientes", clientes);
       
     } catch (error) {
       console.error(error);
@@ -45,7 +46,7 @@ const productosGeneralController = {
       connection = await conn.getConnection();
       const [results] = await connection.query(query);
       res.json(results);
-      
+      connection.release();
     } catch (error) {
       console.error("Error al listar productos:", error);
       res.status(500).send("Error al listar productos");
@@ -60,7 +61,7 @@ const productosGeneralController = {
 const listarMarcas = {
   getListarMarcas: async (req, res) => {
     try {
-      const connection = await conn.getConnection();
+      let connection = await conn.getConnection();
       const [results] = await connection.query("SELECT * FROM marcas");
       connection.release();
       res.json(results);
