@@ -13,8 +13,8 @@ interface Cliente {
   telefono: string;
   transporte: string;
   seguro: string;
-  condEntrega: string;
-  condPago: string;
+  condicionDeEntrega: string;
+  condicionDePago: string;
 }
 
 export const ActualizarClientes: React.FC = () => {
@@ -22,24 +22,22 @@ export const ActualizarClientes: React.FC = () => {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  let urlListarClientes = 'https://rmareactvite2.onrender.com/buscarCliente';
-  let urlClientes = 'https://rmareactvite2.onrender.com/cargarCliente';
+  let urlListarClientes = 'https://rmareactvite2.onrender.com/listarCliente';
   let urlActualizarCliente = 'https://rmareactvite2.onrender.com/actualizarCliente';
-  let urlEliminarCliente = 'https://rmareactvite2.onrender.com/eliminarCliente';
 
   if (window.location.hostname === 'localhost') {
-    urlClientes = 'http://localhost:8080/cargarCliente';
+    urlListarClientes = 'http://localhost:8080/listarCliente';
     urlActualizarCliente = 'http://localhost:8080/actualizarCliente';
-    urlEliminarCliente = 'http://localhost:8080/eliminarCliente';
   }
 
   const handleClienteSeleccionado = (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
+    
   };
 
   useEffect(() => {
     if (clienteSeleccionado && formRef.current) {
-      const { nombre, cuit, provincia, ciudad, domicilio, telefono, transporte, seguro, condEntrega, condPago } = clienteSeleccionado;
+      const { nombre, cuit, provincia, ciudad, domicilio, telefono, transporte, seguro, condicionDeEntrega, condicionDePago } = clienteSeleccionado;
       formRef.current.cliente.value = nombre || '';
       formRef.current.cuit.value = cuit || '';
       formRef.current.provincia.value = provincia || '';
@@ -48,8 +46,11 @@ export const ActualizarClientes: React.FC = () => {
       formRef.current.telefono.value = telefono || '';
       formRef.current.transporte.value = transporte || '';
       formRef.current.seguro.value = seguro || '';
-      formRef.current.condEntrega.value = condEntrega || '';
-      formRef.current.condPago.value = condPago || '';
+      formRef.current.condicionDeEntrega.value = condicionDeEntrega || '';
+      formRef.current.condicionDePago.value = condicionDePago || '';
+      //console.log('Formulario lleno:', {
+       // nombre, cuit, provincia, ciudad, domicilio, telefono, transporte, seguro, condicionDeEntrega, condicionDePago
+      //});
     }
   }, [clienteSeleccionado]);
 
@@ -65,10 +66,10 @@ export const ActualizarClientes: React.FC = () => {
         telefono: formData.get('telefono'),
         transporte: formData.get('transporte'),
         seguro: formData.get('seguro'),
-        condEntrega: formData.get('condEntrega'),
-        condPago: formData.get('condPago')
+        condicionDeEntrega: formData.get('condicionDeEntrega'),
+        condicionDePago: formData.get('condicionDePago')
       };
-
+      //console.log('Datos enviados:', data);
       try {
         setLoading(true);
         const response = await fetch(url, {
@@ -78,12 +79,12 @@ export const ActualizarClientes: React.FC = () => {
           },
           body: JSON.stringify(data),
         });
-
+        
         if (response.ok) {
           Swal.fire({
             icon: 'success',
             title: mensajeExito,
-            text: `El cliente ${nombre} se ha procesado correctamente`,
+            text: `El cliente ${nombre} se ha actualizado correctamente`,
           }).then(() => {
             if (formRef.current) {
               formRef.current.reset();
@@ -93,7 +94,7 @@ export const ActualizarClientes: React.FC = () => {
           Swal.fire({
             icon: 'error',
             title: mensajeError,
-            text: 'Hubo un problema al procesar el cliente',
+            text: `Hubo un problema al actualizar el cliente ${nombre}`,
           });
         }
       } catch (error) {
@@ -109,54 +110,16 @@ export const ActualizarClientes: React.FC = () => {
     }
   };
 
-  const handleCrear = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    handleFormSubmit('crear');
-  };
-
   const handleActualizar = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    handleFormSubmit('actualizar');
-  };
-
-  const handleEliminar = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    handleFormSubmit('eliminar');
-  };
-
-  const handleFormSubmit = (accion: string) => {
-    if (formRef.current) {
-      const formData = new FormData(formRef.current);
-      const nombre = formData.get('cliente') as string;
-
-      let url: string;
-      let mensajeExito: string;
-      let mensajeError: string;
-
-      if (accion === 'crear') {
-        url = urlClientes;
-        mensajeExito = 'Cliente agregado';
-        mensajeError = 'Error al agregar el cliente';
-      } else if (accion === 'actualizar') {
-        url = urlActualizarCliente;
-        mensajeExito = 'Cliente actualizado';
-        mensajeError = 'Error al actualizar el cliente';
-      } else if (accion === 'eliminar') {
-        url = urlEliminarCliente;
-        mensajeExito = 'Cliente eliminado';
-        mensajeError = 'Error al eliminar el cliente';
-      }
-
+    if (clienteSeleccionado) {
+      const url = `${urlActualizarCliente}/${clienteSeleccionado.id}`;
+      enviarFormulario(clienteSeleccionado.nombre, url, 'Cliente actualizado', 'Error al actualizar el cliente');
+    } else {
       Swal.fire({
-        title: `¿Quiere ${accion} a ${nombre} como cliente?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, proceder',
-        cancelButtonText: 'Cancelar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          enviarFormulario(nombre, url, mensajeExito, mensajeError);
-        }
+        icon: 'warning',
+        title: 'No se seleccionó ningún cliente',
+        text: 'Seleccione un cliente para actualizar.',
       });
     }
   };
@@ -171,14 +134,13 @@ export const ActualizarClientes: React.FC = () => {
           <span className="text-gray-500 font-bold">LOGO</span>
         </div>
       </div>
-      <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Actualizar clientes esta pagina no anda</h2>
+      <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Actualizar clientes</h2>
       <form id="formRma" className="space-y-6" ref={formRef}>
         <div>
           <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-1">
             Cliente:
           </label>
-         <BusquedaClientes endpoint={urlListarClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} />
-
+          <BusquedaClientes endpoint={urlListarClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} />
           <input type="hidden" name="cliente" />
         </div>
         <div>
@@ -210,21 +172,12 @@ export const ActualizarClientes: React.FC = () => {
           <input type="text" id="seguro" name="seguro" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
         </div>
         <div>
-          <label htmlFor="condEntrega" className="block text-sm font-medium text-gray-700 mb-1">Condición de entrega:</label>
-          <input type="text" id="condEntrega" name="condEntrega" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <label htmlFor="condicionDeEntrega" className="block text-sm font-medium text-gray-700 mb-1">Condición de entrega:</label>
+          <input type="text" id="condicionDeEntrega" name="condicionDeEntrega" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
         </div>
         <div>
-          <label htmlFor="condPago" className="block text-sm font-medium text-gray-700 mb-1">Condición de pago:</label>
-          <input type="text" id="condPago" name="condPago" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
-        </div>
-        <div>
-          <button
-            type="button"
-            onClick={handleCrear}
-            className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
-          >
-            {loading ? 'Cargando...' : 'Cargar cliente'}
-          </button>
+          <label htmlFor="condicionDePago" className="block text-sm font-medium text-gray-700 mb-1">Condición de pago:</label>
+          <input type="text" id="condicionDePago" name="condicionDePago" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
         </div>
         <div>
           <button
@@ -232,16 +185,7 @@ export const ActualizarClientes: React.FC = () => {
             onClick={handleActualizar}
             className="w-full py-2 px-4 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring focus:ring-yellow-300"
           >
-            {loading ? 'Cargando...' : 'Actualizar cliente'}
-          </button>
-        </div>
-        <div>
-          <button
-            type="button"
-            onClick={handleEliminar}
-            className="w-full py-2 px-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-none focus:ring focus:ring-red-300"
-          >
-            {loading ? 'Cargando...' : 'Eliminar cliente'}
+            {loading ? 'Actualizando...' : 'Actualizar cliente'}
           </button>
         </div>
       </form>

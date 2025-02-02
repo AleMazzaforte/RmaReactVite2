@@ -15,7 +15,7 @@ interface Cliente {
 }
 
 interface Rma {
-  id?: string;
+  idRma: string;
   modelo: string;
   cantidad: number;
   marca: string;
@@ -25,8 +25,8 @@ interface Rma {
   seEntrega: string;
   seRecibe: string;
   observaciones: string;
-  numeroIngreso: string;
-  numeroEgreso: string;
+  nIngreso: string;
+  nEgreso: string;
 }
 
 export const ProductosPorCliente = (): JSX.Element => {
@@ -73,16 +73,108 @@ export const ProductosPorCliente = (): JSX.Element => {
     setRmas([]);
   };
 
-  const handleActualizar = (rmaActualizada: Rma) => {
-    setRmas(rmas.map(rma => (rma.id === rmaActualizada.id ? rmaActualizada : rma)));
-  };
-
-  const handleEliminar = (id: string | undefined) => {
-    if (id) {
-      setRmas(rmas.filter(rma => rma.id !== id));
+  const handleActualizar = async (rmaActualizada: Rma) => {
+    
+    
+    // Actualizar el estado local
+    setRmas(rmas.map(rma => (rma.idRma === rmaActualizada.idRma ? rmaActualizada : rma)));
+    
+    // Enviar la actualización al backend
+    try {
+      const response = await fetch(`${url}/actualizarProductoRma/${rmaActualizada.idRma}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(rmaActualizada),
+      });
+  
+      if (response.ok) {
+        const updatedRma = await response.json();
+        Swal.fire({
+          title: "¡Actualización exitosa!",
+          text: updatedRma.message,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
+      } else {
+        Swal.fire({
+          title: "Atención",
+          text: response.statusText,
+          icon: "warning",
+          confirmButtonColor: "#3085d6",
+        });
+        console.error('Error al actualizar el RMA en el backend:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error al enviar la solicitud de actualización:', error);
     }
   };
+  
 
+  const handleEliminar = async (idRma: string | undefined) => {
+    console.log('Eliminar RMA:', idRma);
+    
+    if (idRma) {
+      // Mostrar confirmación antes de eliminar
+      const result = await Swal.fire({
+        title: '¿Estás seguro?',
+        text: '¡Esta acción no se puede deshacer!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+      });
+  
+      if (result.isConfirmed) {
+        try {
+          const response = await fetch(`${url}/eliminarRma/${idRma}`, {
+            method: 'DELETE',
+          });
+  
+          const data = await response.json();
+  
+          if (response.ok) {
+            Swal.fire({
+              title: '¡Eliminado!',
+              text: data.message,
+              icon: 'success',
+              confirmButtonColor: '#3085d6',
+            });
+  
+            // Eliminar de la lista local
+            setRmas(rmas.filter(rma => rma.idRma !== idRma));
+          } else {
+            Swal.fire({
+              title: 'Error',
+              text: data.message,
+              icon: 'error',
+              confirmButtonColor: '#d33',
+            });
+          }
+        } catch (error) {
+          console.error('Error al eliminar RMA:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'Hubo un problema al eliminar el RMA.',
+            icon: 'error',
+            confirmButtonColor: '#d33',
+          });
+        }
+      }
+    }else {
+      Swal.fire({
+        title: 'Error',
+        text: 'El id no existe.',
+        icon: 'error',
+        confirmButtonColor: '#d33',
+      })
+    }
+  };
+  
+
+  
   return (
     <>
       {mostrarFormulario ? (
@@ -108,7 +200,7 @@ export const ProductosPorCliente = (): JSX.Element => {
             </div>
             <FlechasNavigator
               resultados={[]}
-              onClienteSeleccionado={handleClienteSeleccionado}
+              onSeleccionado={handleClienteSeleccionado}
               campos={['nombre']}
             />
           </form>

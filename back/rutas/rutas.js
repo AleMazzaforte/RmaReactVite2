@@ -20,8 +20,10 @@ router.post('/login', postLogin);
 
 
 
-// Ruta para cargar clientes
+// Ruta para clientes
 router.post('/cargarCliente', gestionClientes.cargarCliente);
+router.get('/listarCliente', gestionClientes.listarClientesParaActualizar);
+router.post('/actualizarCliente/:idCliente', gestionClientes.actualizarCliente);
 
 // Ruta para listar OP
 router.get('/listarOp', listarOp.getListarOp);

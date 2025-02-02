@@ -9,25 +9,38 @@ dotenv.config();
 const formatFecha = (fecha) => {
   if (!fecha) {
     return ""; // Retorna una cadena vacía si la fecha es null o undefined
-  }
+  }console.log("Fecha recibida:", fecha);
 
   const date = new Date(fecha);
+  console.log("Fecha convertida con new Date():", date);
   if (isNaN(date.getTime())) {
+    console.log("La fecha es inválida");
     return ""; // Retorna una cadena vacía si la fecha no es válida
   }
 
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0"); // Los meses en JavaScript van de 0 a 11
   const year = date.getFullYear();
+  console.log("Fecha formateada:", date);
   return `${day}/${month}/${year}`;
 };
+
+const convertirFechaParaBackend = (fecha) => {
+  if (!fecha) return null; // Si es null o undefined, retorna null
+
+  const partes = fecha.split("/");
+  if (partes.length !== 3) return null; // Verifica que tenga tres partes (dd/mm/aaaa)
+
+  const [dia, mes, anio] = partes;
+  return `${anio}-${mes}-${dia}`; // Retorna en formato aaaa/mm/dd
+};
+
 
 const clienteController = {
   getListarClientesRma: async (req, res) => {
     try {
       const [clientes] = await conn.query("SELECT id, nombre FROM clientes");
       res.json(clientes); // Retorna los clientes en formato JSON
-      console.log("clientes", clientes);
       
     } catch (error) {
       console.error(error);
@@ -134,9 +147,9 @@ const cargarRma = {
 };
 
 const gestionarRma = {
-  postActualizarCliente: async (req, res) => {
+  postActualizarCliente: async (req, res) => {console.log('req.body en actualizarCliente rma controller', req.body);
     const idRma = req.params.idRma;
-    const {
+    let {
       modelo,
       cantidad,
       marca,
@@ -149,6 +162,13 @@ const gestionarRma = {
       nIngreso,
       nEgreso,
     } = req.body;
+    console.log('req.body en actualizarcliente', req.body);
+    //cambio de formato de fecha
+    solicita = convertirFechaParaBackend(solicita);
+    vencimiento = convertirFechaParaBackend(vencimiento);
+    seEntrega = convertirFechaParaBackend(seEntrega);
+    seRecibe = convertirFechaParaBackend(seRecibe);
+
     
     let connection;
     try {
@@ -225,7 +245,6 @@ const gestionarRma = {
 
   getListarProductosRma: async (req, res) => {
     const idCliente = req.params.idCliente;
-    console.log("idCliente", idCliente);
     const obtenerProductosPorCliente = async (idCliente) => {
       const query = `
       SELECT idRma, modelo, cantidad, marca, solicita, opLote, vencimiento, 
@@ -235,8 +254,7 @@ const gestionarRma = {
 
       try {
         const [rows] = await conn.execute(query, [idCliente]);
-        return rows;
-        console.log("rows", rows);
+        return rows;        
       } catch (executeError) {
         console.error("Error en la ejecución de la consulta:", executeError);
         throw executeError;
