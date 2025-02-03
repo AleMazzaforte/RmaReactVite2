@@ -13,11 +13,13 @@ export const ActualizarProductos: React.FC = () => {
   let urlProductos = 'https://rmareactvite2.onrender.com/listarProductos';
   let urlListarMarcas = 'https://rmareactvite2.onrender.com/listarMarcas';
   let urlActualizarProducto = 'https://rmareactvite2.onrender.com/actualizarProducto';
+  let urlEliminarProducto = 'https://rmareactvite2.onrender.com/eliminarProducto';
 
   if (window.location.hostname === 'localhost') {
     urlProductos = 'http://localhost:8080/listarProductos';
     urlListarMarcas = 'http://localhost:8080/listarMarcas';
     urlActualizarProducto = 'http://localhost:8080/actualizarProducto';
+    urlEliminarProducto = 'http://localhost:8080/eliminarProducto';
   }
 
   const handleProductoSeleccionado = (producto: any) => {
@@ -61,7 +63,7 @@ export const ActualizarProductos: React.FC = () => {
           Swal.fire({
             icon: "success",
             title: "Producto actualizado",
-            text: `El producto SKU ${data.sku} se ha actualizado correctamente`,
+            text: `El producto con SKU "${data.sku}" se ha actualizado correctamente`,
           }).then(() => {
             if (formRef.current) {
               formRef.current.reset();
@@ -92,8 +94,8 @@ export const ActualizarProductos: React.FC = () => {
     if (productoSeleccionado) {
       try {
         setLoading(true);
-        const response = await fetch(`${urlProductos}/${productoSeleccionado.sku}`, {
-          method: "DELETE",
+        const response = await fetch(`${urlEliminarProducto}/${productoSeleccionado.sku}`, {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
@@ -105,7 +107,7 @@ export const ActualizarProductos: React.FC = () => {
           Swal.fire({
             icon: "success",
             title: "Producto eliminado",
-            text: `El producto SKU ${productoSeleccionado.sku} se ha eliminado correctamente`,
+            text: `El producto con SKU "${productoSeleccionado.sku}" se ha eliminado correctamente`,
           });
           if (formRef.current) {
             formRef.current.reset();
@@ -135,7 +137,7 @@ export const ActualizarProductos: React.FC = () => {
     e.preventDefault();
   
     Swal.fire({
-      title: `¿Quiere actualizar el producto SKU ${productoSeleccionado?.sku}?`,
+      title: `¿Quiere actualizar el producto con SKU "${productoSeleccionado?.sku}"?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Sí, actualizar",
@@ -149,7 +151,7 @@ export const ActualizarProductos: React.FC = () => {
 
   const handleEliminarProducto = () => {
     Swal.fire({
-      title: `¿Quiere eliminar el producto SKU ${productoSeleccionado?.sku}?`,
+      title: `¿Quiere eliminar el producto con SKU "${productoSeleccionado?.sku}"?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Sí, eliminar",
@@ -170,54 +172,54 @@ export const ActualizarProductos: React.FC = () => {
 
   return (
     <div className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"
-      style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}>
-      <div className="flex justify-center mb-6">
-        <div className="h-16 w-16 bg-gray-300 rounded-full flex items-center justify-center">
-          <span className="text-gray-500 font-bold">LOGO</span>
+        style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}>
+        <div className="flex justify-center mb-6">
+            <div className="h-16 w-16 bg-gray-300 rounded-full flex items-center justify-center">
+                <span className="text-gray-500 font-bold">LOGO</span>
+            </div>
         </div>
-      </div>
-      <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Actualizar Productos</h2>
-      <form id="formProductos" className="space-y-6" onSubmit={handleFormSubmit} ref={formRef} onKeyDown={handleKeyDown}>
-        <div>
-          <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">
-            SKU:
-          </label>
-          <ListarProductos 
-            endpoint={urlProductos}  
-            onProductoSeleccionado={handleProductoSeleccionado} 
-            campos={["sku"]} 
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1">Marca:</label>
-          <ListarMarcas 
-            endpoint={urlListarMarcas}  
-            onMarcaSeleccionada={setMarcaSeleccionada} 
-            campos={["nombre"]} 
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">Descripción:</label>
-          <input type="text" id="descripcion" name="descripcion" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
-        </div>
+        <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Actualizar Productos</h2>
+        <form id="formProductos" className="space-y-6" onSubmit={handleFormSubmit} ref={formRef} onKeyDown={handleKeyDown}>
+            <div>
+                <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">
+                    SKU:
+                </label>
+                <ListarProductos 
+                    endpoint={urlProductos}  
+                    onProductoSeleccionado={handleProductoSeleccionado} 
+                    campos={["sku"]} 
+                />
+            </div>
 
-        <div>
-          <label htmlFor="rubro" className="block text-sm font-medium text-gray-700 mb-1">Rubro:</label>
-          <input type="text" id="rubro" name="rubro" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
-        </div>
+            <div>
+                <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1">Marca:</label>
+                <ListarMarcas 
+                    endpoint={urlListarMarcas}  
+                    onMarcaSeleccionada={setMarcaSeleccionada} 
+                    campos={["nombre"]} 
+                />
+            </div>
 
-        <div className="flex flex-col space-y-4">
-          <button type="submit" id="botonActualizar" className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300">
-            {loading ? 'Cargando...' : 'Actualizar producto'}
-          </button>
-          <button type="button" id="botonEliminar" onClick={handleEliminarProducto} className="w-full py-2 px-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-none focus:ring focus:ring-red-300">
-          {loading ? 'Cargando...' : 'Eliminar producto'}
-          </button>
-        </div>
-      </form>
-      {loading && <Loader />}  {/* Mostrar el loader si loading es true */}
+            <div>
+                <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">Descripción:</label>
+                <input type="text" id="descripcion" name="descripcion" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+            </div>
+
+            <div>
+                <label htmlFor="rubro" className="block text-sm font-medium text-gray-700 mb-1">Rubro:</label>
+                <input type="text" id="rubro" name="rubro" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+            </div>
+
+            <div className="flex flex-col space-y-4">
+                <button type="submit" id="botonActualizar" className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300">
+                    {loading ? 'Cargando...' : 'Actualizar producto'}
+                </button>
+                <button type="button" id="botonEliminar" onClick={handleEliminarProducto} className="w-full py-2 px-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-none focus:ring focus:ring-red-300">
+                    {loading ? 'Cargando...' : 'Eliminar producto'}
+                </button>
+            </div>
+        </form>
+        {loading && <Loader />}  {/* Mostrar el loader si loading es true */}
     </div>
-  );
-};
+);
+}

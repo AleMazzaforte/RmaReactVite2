@@ -38,6 +38,22 @@ export const postCargarProducto = {
             console.error(error);
             res.status(500).json({ message: "Error al actualizar el producto" });
         }
+    },
+
+    postELiminarProducto: async (req, res) => {
+        const { sku } = req.params;     
+        try {
+           const results = await conn.query(
+                "DELETE FROM productos WHERE sku = ?",
+                [sku]
+            );
+            if (results[0].affectedRows > 0) {                
+                res.status(201).json({ message: "Producto eliminado correctamente" });
+            }
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: "Error al eliminar el producto" });
+        }
     }
 };
 

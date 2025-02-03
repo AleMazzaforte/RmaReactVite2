@@ -37,6 +37,7 @@ router.get('/buscarCliente', clienteController.getListarClientesRma);
 router.post('/cargarProducto', productosController.postCargarProducto);
 router.get('/listarProductos', productosGeneralController.getListarProductos);
 router.post('/actualizarProducto/:sku', productosController.postActualizarProductos);
+router.post('/eliminarProducto/:sku', productosController.postELiminarProducto);
 
 // Ruta para listar marcas
 router.get('/listarMarcas', listarMarcas.getListarMarcas);
