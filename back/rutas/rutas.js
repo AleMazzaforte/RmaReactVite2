@@ -11,6 +11,7 @@ import { postLogin } from '../controladores/loginController.js';
 import  usuario  from '../controladores/usuarioController.js';
 import gestionClientes from '../controladores/clienteController.js';
 import listarOp from '../controladores/opController.js';
+import productosController from '../controladores/productosController.js';
 
 const router = express.Router();
 
@@ -32,8 +33,10 @@ router.get('/listarOp', listarOp.getListarOp);
 // Ruta para listar clientes
 router.get('/buscarCliente', clienteController.getListarClientesRma);
 
-// Ruta para listar productos
-router.get('/buscarProductos', productosGeneralController.getListarProductos);
+// Ruta para productos
+router.post('/cargarProducto', productosController.postCargarProducto);
+router.get('/listarProductos', productosGeneralController.getListarProductos);
+router.post('/actualizarProducto/:sku', productosController.postActualizarProductos);
 
 // Ruta para listar marcas
 router.get('/listarMarcas', listarMarcas.getListarMarcas);

@@ -8,6 +8,8 @@ import { ProductosPorCliente } from '../componentes/ProductosPorCliente';
 import { NotFound } from '../componentes/NotFound'; 
 import { CargarClientes } from '../componentes/CargarClientes';
 import { ActualizarClientes } from '../componentes/ActualizarClientes';
+import { CargarProductos } from '../componentes/CargarProductos';
+import { ActualizarProductos } from '../componentes/ActualizarProductos';
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -19,6 +21,8 @@ export const Rutas = (): JSX.Element => {
         <Route path="/gestionarRma" element={<ProductosPorCliente />} />
         <Route path="/cargarCLiente" element={<CargarClientes />} />
         <Route path="/actualizarCLiente" element={<ActualizarClientes />} />
+        <Route path="/cargarProductos" element={<CargarProductos />} />
+        <Route path="/actualizarProductos" element={<ActualizarProductos />} />
       </Route>
       <Route path="*" element={<NotFound />} /> {/* Ruta para manejar páginas no encontradas */}
     </Routes>

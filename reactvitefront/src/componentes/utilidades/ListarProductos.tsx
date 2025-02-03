@@ -2,13 +2,13 @@ import React, { useState, useRef, ChangeEvent } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 
-interface BusquedaProductosProps {
+interface ListarProductosProps {
   endpoint: string;
   onProductoSeleccionado: (producto: any) => void;
   campos: string[];
 }
 
-export const BusquedaProductos: React.FC<BusquedaProductosProps> = ({ endpoint, onProductoSeleccionado, campos }) => {
+export const ListarProductos: React.FC<ListarProductosProps> = ({ endpoint, onProductoSeleccionado, campos }) => {
   const [query, setQuery] = useState<string>('');
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);

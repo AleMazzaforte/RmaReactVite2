@@ -21,7 +21,7 @@ const formatFecha = (fecha) => {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0"); // Los meses en JavaScript van de 0 a 11
   const year = date.getFullYear();
-  console.log("Fecha formateada:", date);
+  //console.log("Fecha formateada:", date);
   return `${day}/${month}/${year}`;
 };
 
@@ -77,6 +77,7 @@ const listarMarcas = {
       let connection = await conn.getConnection();
       const [results] = await connection.query("SELECT * FROM marcas");
       connection.release();
+      //console.log("Marcas:", results);
       res.json(results);
       
     } catch (error) {

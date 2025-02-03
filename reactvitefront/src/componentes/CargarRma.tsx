@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BusquedaClientes } from './utilidades/BusquedaClientes';
-import { BusquedaProductos } from './utilidades/ListarProductos';
+import { ListarProductos } from './utilidades/ListarProductos';
 import { ListarMarcas } from './utilidades/ListarMarcas';
 import { ListarOp } from './utilidades/ListarOp';
 import Swal from 'sweetalert2';
@@ -29,14 +29,14 @@ export const CargarRma: React.FC = () => {
   const [sugerencias, setSugerencias] = useState<string[]>([]); // Estado para las sugerencias
 
   let urlClientes = 'https://rmareactvite2.onrender.com/buscarCliente';
-  let urlProductos = 'https://rmareactvite2.onrender.com/buscarProductos';
+  let urlProductos = 'https://rmareactvite2.onrender.com/listarProductos';
   let urlMarcas = 'https://rmareactvite2.onrender.com/listarMarcas';
   let urlAgregarRma = 'https://rmareactvite2.onrender.com/agregarRma';
   let urlOp = 'https://rmareactvite2.onrender.com/listarOp';
 
   if (window.location.hostname === 'localhost') {
     urlClientes = 'http://localhost:8080/buscarCliente';
-    urlProductos = 'http://localhost:8080/buscarProductos';
+    urlProductos = 'http://localhost:8080/listarProductos';
     urlMarcas = 'http://localhost:8080/listarMarcas';
     urlAgregarRma = 'http://localhost:8080/agregarRma';
     urlOp = 'http://localhost:8080/listarOp';
@@ -261,7 +261,7 @@ export const CargarRma: React.FC = () => {
 
         <div>
           <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">SKU<span className="text-red-500">*</span>:</label>
-          <BusquedaProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} />
+          <ListarProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} />
         </div>
         {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} required />}
 

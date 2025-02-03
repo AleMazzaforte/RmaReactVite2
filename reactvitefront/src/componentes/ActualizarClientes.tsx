@@ -183,7 +183,7 @@ export const ActualizarClientes: React.FC = () => {
           <button
             type="button"
             onClick={handleActualizar}
-            className="w-full py-2 px-4 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring focus:ring-yellow-300"
+            className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring focus:ring-yellow-300"
           >
             {loading ? 'Actualizando...' : 'Actualizar cliente'}
           </button>
