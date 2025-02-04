@@ -71,21 +71,7 @@ const productosGeneralController = {
   },
 };
 
-const listarMarcas = {
-  getListarMarcas: async (req, res) => {
-    try {
-      let connection = await conn.getConnection();
-      const [results] = await connection.query("SELECT * FROM marcas");
-      connection.release();
-      //console.log("Marcas:", results);
-      res.json(results);
-      
-    } catch (error) {
-      console.error("Error al obtener las marcas:", error);
-      res.status(500).send("Error al obtener las marcas");
-    }
-  },
-};
+
 
 const cargarRma = {
   postAgregarRma: async (req, res) => {
@@ -299,7 +285,7 @@ const gestionarRma = {
 export {
   clienteController,
   productosGeneralController,
-  listarMarcas,
+  
   cargarRma,
   gestionarRma,
 };

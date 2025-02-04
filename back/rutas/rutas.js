@@ -1,8 +1,7 @@
 import express from 'express';
 import { 
     clienteController, 
-    productosGeneralController, 
-    listarMarcas, 
+    productosGeneralController,  
     cargarRma, 
     gestionarRma,  
 } from '../controladores/rmaController.js';
@@ -12,6 +11,7 @@ import  usuario  from '../controladores/usuarioController.js';
 import gestionClientes from '../controladores/clienteController.js';
 import listarOp from '../controladores/opController.js';
 import productosController from '../controladores/productosController.js';
+import { marcas } from '../controladores/marcasController.js';
 
 const router = express.Router();
 
@@ -40,7 +40,8 @@ router.post('/actualizarProducto/:sku', productosController.postActualizarProduc
 router.post('/eliminarProducto/:sku', productosController.postELiminarProducto);
 
 // Ruta para listar marcas
-router.get('/listarMarcas', listarMarcas.getListarMarcas);
+router.get('/listarMarcas', marcas.getListarMarcas);
+router.post('/cargarMarca', marcas.postCargarMarca);
 
 // Ruta para agregar RMA
 router.post('/agregarRma',  cargarRma.postAgregarRma);
