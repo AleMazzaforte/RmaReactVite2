@@ -13,58 +13,67 @@ export const CargarMarca: React.FC = () => {
 
   const enviarFormulario = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    //Obtener datos del Formulario
+
+    // Obtener datos del formulario
     const form = e.currentTarget.closest("#formMarca") as HTMLFormElement | null;
     if (!form) return;
 
     const nombreMarca = form.marca.value.trim();
-    //Validar datos
+
+    // Validar datos
     if (nombreMarca === '') {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Campo vacío',
-        text: 'Por favor, ingrese la marca',
-      });
-      return;
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campo vacío',
+            text: 'Por favor, ingrese la marca',
+        });
+        return;
     }
 
     const formData = {
-      nombre: nombreMarca,
+        nombre: nombreMarca,
     };
-    //Enviar datos a la API
-    try {
-      setLoading(true);
-      const response = await fetch(urlMarca, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
 
-      if (response.ok) {
-        Swal.fire({
-          icon: 'success',
-          title: '¡Marca cargada exitosamente!',
+    // Enviar datos a la API
+    try {
+        setLoading(true); // Activar estado de carga
+        const response = await fetch(urlMarca, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
         });
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error al cargar marca',
-          text: 'Por favor, inténtelo de nuevo',
-        });
-      }
+
+        const data = await response.json(); // Parsear la respuesta JSON
+
+        if (response.ok) {
+            // Si la respuesta es exitosa
+            Swal.fire({
+                icon: 'success',
+                title: '¡Marca cargada exitosamente!',
+            });
+        } else {
+            // Si hay un error en la respuesta
+            const errorMessage = data.message || 'Error al cargar la marca';
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMessage,
+            });
+        }
     } catch (error) {
-      console.error('Error al cargar la marca', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error al cargar la marca',
-        text: 'Por favor, inténtelo de nuevo',
-      });
+        // Si hay un error en la conexión o en la solicitud
+        console.error('Error al cargar la marca', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de conexión',
+            text: 'Por favor, inténtelo de nuevo más tarde',
+        });
     } finally {
-      setLoading(false);
+        setLoading(false); // Desactivar estado de carga
     }
-  }
+  };
 
   return (
     <div className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"

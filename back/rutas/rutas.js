@@ -43,6 +43,7 @@ router.post('/eliminarProducto/:sku', productosController.postELiminarProducto);
 router.get('/listarMarcas', marcas.getListarMarcas);
 router.post('/cargarMarca', marcas.postCargarMarca);
 router.post('/actualizarMarca', marcas.postActualizarMarca);
+router.post('/eliminarMarca', marcas.postEliminarMarca);
 
 // Ruta para agregar RMA
 router.post('/agregarRma',  cargarRma.postAgregarRma);

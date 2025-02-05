@@ -16,7 +16,7 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-app.use(express.static(path.join(__dirname, 'reactvitefront', 'dist')));
+//app.use(express.static(path.join(__dirname, 'reactvitefront', 'dist')));
 
 // Middleware para procesar formularios
 app.use(express.urlencoded({ extended: true }));
@@ -30,12 +30,20 @@ app.use(cookieParser());
 // Usar las rutas importadas
 app.use('/', rutas);
 
+// Configuración para producción
 if (process.env.NODE_ENV === 'production') {
-    app.use(express.static('reactvitefront/dist'));
+    // Ruta absoluta a la carpeta del frontend
+    const frontendPath = path.join(__dirname, '..', 'reactvitefront', 'dist');
+    
+    // Servir archivos estáticos del frontend
+    app.use(express.static(frontendPath));
+
+    // Capturar todas las rutas y enviar el archivo index.html
     app.get('*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, 'reactvitefront', 'dist', 'index.html'));
+        res.sendFile(path.join(frontendPath, 'index.html'));
     });
 } else {
+    // Ruta de prueba para desarrollo
     app.get('/', (req, res) => {
         res.send(`Servidor corriendo en el puerto: ${port}`);
     });
