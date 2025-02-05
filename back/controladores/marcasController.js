@@ -44,7 +44,55 @@ const marcas = {
             connection.release()
             };
         }
-      }
+      },
+
+      postActualizarMarca: async (req, res) => {
+        const { id, nombre } = req.body;
+        console.log("Datos recibidos para actualizar:", req.body);
+    
+        let connection;
+        try {
+            connection = await conn.getConnection();
+    
+            // Obtener la marca actual desde la base de datos
+            const [marcaActual] = await connection.query(
+                "SELECT nombre FROM marcas WHERE id = ?", 
+                [id]
+            );
+    
+            // Comprobar si la marca existe
+            if (!marcaActual || marcaActual.length === 0) {
+                return res.status(404).json({ message: "Marca no encontrada" });
+            }
+    
+            const nombreOriginal = marcaActual[0].nombre;
+    
+            // Validar si el nombre es el mismo
+            if (nombreOriginal === nombre) {
+                return res.status(400).json({ message: "El nuevo nombre no puede ser igual al original" });
+            }
+    
+            // Actualizar la marca si el nombre es diferente
+            const [resultado] = await connection.query(
+                "UPDATE marcas SET nombre = ? WHERE id = ?",
+                [nombre, id]
+            );
+    
+            if (resultado.affectedRows === 1) {
+                res.json({ message: "Marca actualizada correctamente" });
+            } else {
+                res.status(500).json({ message: "No se pudo actualizar la marca" });
+            }
+    
+        } catch (error) {
+            console.error("Error al actualizar la marca:", error);
+            res.status(500).json({ message: "Error al actualizar la marca" });
+        } finally {
+            if (connection) {
+                connection.release();
+            }
+        }
+    }
       
 };
 

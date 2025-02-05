@@ -39,9 +39,10 @@ router.get('/listarProductos', productosGeneralController.getListarProductos);
 router.post('/actualizarProducto/:sku', productosController.postActualizarProductos);
 router.post('/eliminarProducto/:sku', productosController.postELiminarProducto);
 
-// Ruta para listar marcas
+// Ruta para marcas
 router.get('/listarMarcas', marcas.getListarMarcas);
 router.post('/cargarMarca', marcas.postCargarMarca);
+router.post('/actualizarMarca', marcas.postActualizarMarca);
 
 // Ruta para agregar RMA
 router.post('/agregarRma',  cargarRma.postAgregarRma);

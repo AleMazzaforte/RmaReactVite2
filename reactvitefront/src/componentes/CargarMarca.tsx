@@ -67,7 +67,7 @@ export const CargarMarca: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6 min-h-[80vh]"
+    <div className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"
       style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
     >
       <div className="flex justify-center mb-6">
