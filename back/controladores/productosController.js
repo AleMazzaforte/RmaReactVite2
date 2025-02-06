@@ -7,29 +7,51 @@ dotenv.config();
 
 
 
-export const postCargarProducto = {   
+export const postCargarProducto = {
     postCargarProducto: async (req, res) => {
-        const { sku, descripcion, marca, rubro } = req.body;        
+        const { sku, descripcion, marca, rubro } = req.body;
+
+        let connection;
         try {
-           const results = await conn.query(
+            connection = await conn.getConnection();
+
+            // Verificar si el SKU ya existe
+            const [existingProduct] = await connection.query(
+                "SELECT sku FROM productos WHERE sku = ?",
+                [sku]
+            );
+
+            if (existingProduct.length > 0) {
+                return res.status(400).json({ success: false, message: "El SKU ya existe" });
+            }
+
+            // Insertar el producto
+            const [results] = await connection.query(
                 "INSERT INTO productos (sku, descripcion, marca, rubro) VALUES (?, ?, ?, ?)",
                 [sku, descripcion, marca, rubro]
             );
-            if (results[0].affectedRows > 0) {                
-                res.status(201).json({ message: "Producto cargado correctamente" });
+
+            if (results.affectedRows > 0) {
+                res.status(201).json({ success: true, message: "Producto cargado correctamente" });
+            } else {
+                res.status(500).json({ success: false, message: "No se pudo cargar el producto" });
             }
         } catch (error) {
             console.error(error);
-            res.status(500).json({ message: "Error al cargar el producto" });
+            res.status(500).json({ success: false, message: "Error interno del servidor al cargar el producto" });
+        } finally {
+            if (connection) {
+                connection.release();
+            }
         }
     },
+
     postActualizarProductos: async (req, res) => {
-        const { sku, descripcion, marca, rubro } = req.body;  
-        console.log('req.body en actualizarproductos', req.body);      
+        const { id, sku, descripcion, marca, rubro } = req.body;        
         try {
            const results = await conn.query(
-                "UPDATE productos SET descripcion = ?, marca = ?, rubro = ? WHERE sku = ?",
-                [descripcion, marca, rubro, sku]
+                "UPDATE productos SET sku = ?, descripcion = ?, marca = ?, rubro = ? WHERE id = ?",
+                [sku, descripcion, marca, rubro, id]
             );
             if (results[0].affectedRows > 0) {                
                 res.status(201).json({ message: "Producto actualizado correctamente" });
@@ -39,7 +61,6 @@ export const postCargarProducto = {
             res.status(500).json({ message: "Error al actualizar el producto" });
         }
     },
-
     postELiminarProducto: async (req, res) => {
         const { sku } = req.params;     
         try {
@@ -55,6 +76,13 @@ export const postCargarProducto = {
             res.status(500).json({ message: "Error al eliminar el producto" });
         }
     }
+
 };
 
 export default postCargarProducto;
+
+
+
+
+
+ 

@@ -20,12 +20,12 @@ export const CargarProductos: React.FC = () => {
     if (formRef.current) {
       const formData = new FormData(formRef.current);
       const data = {
-        sku: formData.get("sku"),
+        sku: formData.get("sku") as string,
         marca: marcaSeleccionada ? marcaSeleccionada.nombre : "",
-        descripcion: formData.get("descripcion"),
-        rubro: formData.get("rubro"),
+        descripcion: formData.get("descripcion") as string,
+        rubro: formData.get("rubro") as string,
       };
-  
+
       try {
         setLoading(true);
         const response = await fetch(urlProductos, {
@@ -35,9 +35,9 @@ export const CargarProductos: React.FC = () => {
           },
           body: JSON.stringify(data),
         });
-  
+
         const result = await response.json();
-  
+
         if (response.ok) {
           Swal.fire({
             icon: "success",
@@ -46,13 +46,14 @@ export const CargarProductos: React.FC = () => {
           }).then(() => {
             if (formRef.current) {
               formRef.current.reset();
+              setMarcaSeleccionada(null); // Resetear la marca seleccionada
             }
           });
         } else {
           Swal.fire({
             icon: "error",
             title: "Error",
-            text: result.error || "Hubo un problema al agregar el producto",
+            text: result.message || "Hubo un problema al agregar el producto",
           });
         }
       } catch (error) {
@@ -67,12 +68,12 @@ export const CargarProductos: React.FC = () => {
       }
     }
   };
-  
+
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const sku = formData.get("sku") as string;
-  
+
     Swal.fire({
       title: `¿Quiere guardar el producto SKU ${sku}?`,
       icon: "question",
@@ -85,7 +86,7 @@ export const CargarProductos: React.FC = () => {
       }
     });
   };
-  
+
   return (
     <div className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"
       style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}>
@@ -124,11 +125,10 @@ export const CargarProductos: React.FC = () => {
 
         <div>
           <button type="submit" id="botonCargar" className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300">
-            {loading ? 'Cargando...' : 'Cargar producto'}
+            {loading ? <Loader /> : 'Cargar producto'}
           </button>
         </div>
       </form>
-      {loading && <Loader />}  {/* Mostrar el loader si loading es true */}
     </div>
   );
 };

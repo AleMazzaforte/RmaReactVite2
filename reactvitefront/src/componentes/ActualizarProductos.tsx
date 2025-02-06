@@ -41,6 +41,7 @@ export const ActualizarProductos: React.FC = () => {
     if (formRef.current && productoSeleccionado) {
       const formData = new FormData(formRef.current);
       const data = {
+        id: productoSeleccionado.id,
         sku: productoSeleccionado.sku,
         marca: marcaSeleccionada ? marcaSeleccionada.nombre : productoSeleccionado.marca,
         descripcion: formData.get("descripcion") as string || productoSeleccionado.descripcion,
@@ -49,7 +50,7 @@ export const ActualizarProductos: React.FC = () => {
   
       try {
         setLoading(true);
-        const response = await fetch(`${urlActualizarProducto}/${data.sku}`, {
+        const response = await fetch(`${urlActualizarProducto}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
