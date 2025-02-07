@@ -12,7 +12,7 @@ import gestionClientes from '../controladores/clienteController.js';
 import listarOp from '../controladores/opController.js';
 import productosController from '../controladores/productosController.js';
 import { marcas } from '../controladores/marcasController.js';
-
+import transportes from '../controladores/transportesController.js';
 const router = express.Router();
 
 router.post('/login', postLogin);
@@ -54,4 +54,11 @@ router.delete('/eliminarRma/:idRma', gestionarRma.deleteRma);
 
 //Ruta para agregar usuario
 router.post('/cargarUsuario', usuario.postCargarUsuario);
+
+//Rutas para transportes
+router.post('/cargarTransporte', transportes.postCargarTransporte);
+router.post('/actualizarTransporte', transportes.postActualizarTransporte);
+router.post('/eliminarTransporte', transportes.postEliminarTransporte);
+router.get('/buscarTransporte', transportes.getBuscarTransporte);
+
 export default router;
