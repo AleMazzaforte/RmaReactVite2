@@ -30,7 +30,6 @@ const marcas = {
       let connection = await conn.getConnection();
       try {
           const [marca] = await connection.query("INSERT INTO marcas SET ?", marcaNueva);
-          console.log("Marca insertada:", marca);
           if (marca.affectedRows === 1) {
               res.status(201).json({ success: true, data: marca });
           } else {

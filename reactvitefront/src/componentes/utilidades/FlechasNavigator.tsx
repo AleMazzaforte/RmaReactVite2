@@ -17,18 +17,21 @@ export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
+        e.preventDefault();
         setSelectedIndex((prevIndex) => {
           const newIndex = prevIndex < resultados.length - 1 ? prevIndex + 1 : prevIndex;
           scrollToItem(newIndex);
           return newIndex;
         });
       } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
         setSelectedIndex((prevIndex) => {
           const newIndex = prevIndex > 0 ? prevIndex - 1 : prevIndex;
           scrollToItem(newIndex);
           return newIndex;
         });
       } else if (e.key === 'Enter' && selectedIndex >= 0 && resultados[selectedIndex]) {
+        e.preventDefault();
         onSeleccionado(resultados[selectedIndex]);
       }
     };

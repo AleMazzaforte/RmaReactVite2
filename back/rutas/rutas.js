@@ -13,6 +13,7 @@ import listarOp from '../controladores/opController.js';
 import productosController from '../controladores/productosController.js';
 import { marcas } from '../controladores/marcasController.js';
 import transportes from '../controladores/transportesController.js';
+import etiquetas from '../controladores/etiquetasController.js';
 const router = express.Router();
 
 router.post('/login', postLogin);
@@ -60,5 +61,8 @@ router.post('/cargarTransporte', transportes.postCargarTransporte);
 router.post('/actualizarTransporte', transportes.postActualizarTransporte);
 router.post('/eliminarTransporte', transportes.postEliminarTransporte);
 router.get('/buscarTransporte', transportes.getBuscarTransporte);
+
+//Rutas para etiquetas
+router.get('/buscarRMA', etiquetas.getBuscarRma);
 
 export default router;

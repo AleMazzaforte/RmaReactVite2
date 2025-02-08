@@ -4,6 +4,7 @@ import Loader from './utilidades/Loader';
 import { BusquedaTransportes } from './utilidades/BusquedaTransportes';
 
 export const ActualizarTransporte: React.FC = () => {
+  
   const [loading, setLoading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [transporteSeleccionado, setTransporteSeleccionado] = useState<any>(null);
@@ -32,6 +33,7 @@ export const ActualizarTransporte: React.FC = () => {
   }, [transporteSeleccionado]);
 
   const actualizarTransporte = async () => {
+    
     if (formRef.current && transporteSeleccionado) {
       const formData = new FormData(formRef.current);
       const data = {
@@ -139,7 +141,12 @@ export const ActualizarTransporte: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-xl bg-white rounded-lg shadow-lg p-8 mx-auto mb-6">
+    <div className="w-full max-w-xl bg-white rounded-lg shadow-lg p-8 mx-auto mb-6" style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}>
+      <div className="flex justify-center mb-6">
+            <div className="h-16 w-16 bg-gray-300 rounded-full flex items-center justify-center">
+                <span className="text-gray-500 font-bold">LOGO</span>
+            </div>
+        </div>
       <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Actualizar Transporte</h2>
       <form id="formTransportes" className="space-y-6" onSubmit={handleFormSubmit} ref={formRef}>
         <div>

@@ -16,10 +16,12 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
+   
     const value = e.target.value;
     setQuery(value);
-  
+    e.preventDefault();
     if (value) {
+      
       if (timer) clearTimeout(timer);
       const newTimer = setTimeout(() => setLoading(true), 300);
       setTimer(newTimer);
@@ -63,6 +65,11 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
         ref={inputRef}
         value={query}
         onChange={handleInputChange}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault(); // Evitar que el formulario se envíe al presionar Enter
+          }
+        }}
         placeholder="Buscar transporte"
         className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
       />
