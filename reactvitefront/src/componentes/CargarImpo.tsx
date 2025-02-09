@@ -52,7 +52,7 @@ export const CargarImpo = () => {
         setProductosAgregados([...productosAgregados, nuevoProducto]);
         setProductoSeleccionado(null); // Limpiar el producto seleccionado
         cantidadRef.current.value = ''; // Limpiar el campo de cantidad
-        console.log('Productoagragados', productosAgregados)
+        
         // Mostrar la tabla si es el primer producto
         if (!mostrarTabla) {
           setMostrarTabla(true);
