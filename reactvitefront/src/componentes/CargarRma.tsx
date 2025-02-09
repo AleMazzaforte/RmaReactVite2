@@ -5,6 +5,7 @@ import { ListarMarcas } from './utilidades/ListarMarcas';
 import { ListarOp } from './utilidades/ListarOp';
 import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
+import FechaInput from './utilidades/FechaInput';
 
 interface Cliente {
   id: string;
@@ -22,6 +23,12 @@ interface Marca {
 }
 
 export const CargarRma: React.FC = () => {
+
+  const [solicita, setSolicita] = useState('');
+  const [vencimiento, setVencimiento] = useState('');
+  const [seEntrega, setSeEntrega] = useState('');
+  const [seRecibe, setSeRecibe] = useState('');
+
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<Marca | null>(null);
@@ -158,9 +165,9 @@ export const CargarRma: React.FC = () => {
     }
   ///////////////////////////////////////////////////////////////////////
     const formData = {
-      modelo: productoSeleccionado?.sku || '',
+      modelo: productoSeleccionado?.id || '',
       cantidad: target.cantidad.value,
-      marca: marcaSeleccionada?.nombre || '',
+      marca: marcaSeleccionada?.id || '',
       solicita: target.solicita.value,
       opLote: opLoteSeleccionado?.nombre || null,
       vencimiento: target.vencimiento.value || null,
@@ -171,7 +178,7 @@ export const CargarRma: React.FC = () => {
       nEgreso: target.nEgreso.value || null,
       idCliente: clienteSeleccionado?.id || '',
     };
-  
+   console.log('formData', formData)
     try {
       setLoading(true); // Mostrar el loader
       const response = await fetch(urlAgregarRma, {
@@ -208,34 +215,7 @@ export const CargarRma: React.FC = () => {
     }
   };
 
-  //////////////////////////////////////////////////////////////////////////////////
 
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'h') {
-        const today = new Date();
-        const formattedDate = `${today.getFullYear()}-${(today.getMonth() + 1)
-          .toString()
-          .padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`; // Formato YYYY-MM-DD
-
-
-        if (document.activeElement instanceof HTMLInputElement) {
-          const input = document.activeElement;
-          if (
-            input.id === 'solicita' ||
-            input.id === 'vencimiento' ||
-            input.id === 'seEntrega' ||
-            input.id === 'seRecibe'
-          ) {
-            input.value = formattedDate;
-          }
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
-  }, []);
 
 
   ///////////////////////////////////////////////////////////////////////
@@ -285,10 +265,9 @@ export const CargarRma: React.FC = () => {
         {marcaSeleccionada && (<input type="hidden" name="idMarca" required value={marcaSeleccionada.id} />)}
 
         <div>
-          <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Solicita<span className="text-red-500">*</span>:</label>
-          <input type="date" id="solicita" name="solicita" autoComplete="off" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" required />
+          <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1">Solicita:</label>
+          <FechaInput id="solicita" value={solicita} onChange={setSolicita} />
         </div>
-
         <div>
           <label htmlFor="opLote" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">OP/Lote<span className="text-red-500">*</span>:</label>
           <ListarOp endpoint={urlOp} onSeleccionado={handleOpLoteSeleccionado} campos={['nombre']} />
@@ -296,19 +275,19 @@ export const CargarRma: React.FC = () => {
         <div className="divrelleno"></div>
         <div id="suggestionsOp" className="suggestions-container" style={{ display: 'none' }}></div>
 
-                <div>
-          <label htmlFor="vencimiento" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Vencimiento:</label>
-          <input type="date" id="vencimiento" name="vencimiento" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
+        <div>
+          <label htmlFor="vencimiento" className="block text-sm font-medium text-gray-700 mb-1">Vencimiento:</label>
+          <FechaInput id="vencimiento" value={vencimiento} onChange={setVencimiento} />
         </div>
 
         <div>
-          <label htmlFor="seEntrega" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Se Entrega:</label>
-          <input type="date" id="seEntrega" name="seEntrega" autoComplete="off" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
+          <label htmlFor="seEntrega" className="block text-sm font-medium text-gray-700 mb-1">Se Entrega:</label>
+          <FechaInput id="seEntrega" value={seEntrega} onChange={setSeEntrega} />
         </div>
 
         <div>
-          <label htmlFor="seRecibe" className="block text-sm font-medium text-gray-700 mb-1 campoOculto">Se Recibe:</label>
-          <input type="date" id="seRecibe" name="seRecibe" autoComplete="off" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none campoOculto" />
+          <label htmlFor="seRecibe" className="block text-sm font-medium text-gray-700 mb-1">Se Recibe:</label>
+          <FechaInput id="seRecibe" value={seRecibe} onChange={setSeRecibe} />
         </div>
 
         <div>

@@ -9,19 +9,19 @@ dotenv.config();
 const formatFecha = (fecha) => {
   if (!fecha) {
     return ""; // Retorna una cadena vacía si la fecha es null o undefined
-  }console.log("Fecha recibida:", fecha);
+  }
 
   const date = new Date(fecha);
-  console.log("Fecha convertida con new Date():", date);
+  
   if (isNaN(date.getTime())) {
-    console.log("La fecha es inválida");
+    
     return ""; // Retorna una cadena vacía si la fecha no es válida
   }
 
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0"); // Los meses en JavaScript van de 0 a 11
   const year = date.getFullYear();
-  //console.log("Fecha formateada:", date);
+ 
   return `${day}/${month}/${year}`;
 };
 
@@ -134,7 +134,7 @@ const cargarRma = {
 };
 
 const gestionarRma = {
-  postActualizarCliente: async (req, res) => {console.log('req.body en actualizarCliente rma controller', req.body);
+  postActualizarCliente: async (req, res) => {
     const idRma = req.params.idRma;
     let {
       modelo,
@@ -149,27 +149,52 @@ const gestionarRma = {
       nIngreso,
       nEgreso,
     } = req.body;
-    console.log('req.body en actualizarcliente', req.body);
-    //cambio de formato de fecha
+  
+    // Cambio de formato de fecha
     solicita = convertirFechaParaBackend(solicita);
     vencimiento = convertirFechaParaBackend(vencimiento);
     seEntrega = convertirFechaParaBackend(seEntrega);
     seRecibe = convertirFechaParaBackend(seRecibe);
-
-    
+  
     let connection;
     try {
       connection = await conn.getConnection();
+  
+      // Obtener el ID del modelo (producto) a partir del SKU
+      const [producto] = await connection.execute(
+        'SELECT id FROM productos WHERE sku = ?',
+        [modelo]
+      );
+  
+      if (producto.length === 0) {
+        throw new Error('Modelo no encontrado');
+      }
+  
+      const productoId = producto[0].id;
+  
+      // Obtener el ID de la marca a partir del nombre
+      const [marcaResult] = await connection.execute(
+        'SELECT id FROM marcas WHERE nombre = ?',
+        [marca]
+      );
+  
+      if (marcaResult.length === 0) {
+        throw new Error('Marca no encontrada');
+      }
+  
+      const marcaId = marcaResult[0].id;
+  
       const query = `
         UPDATE r_m_a
         SET modelo = ?, cantidad = ?, marca = ?, solicita = ?, opLote = ?, 
             vencimiento = ?, seEntrega = ?, seRecibe = ?, observaciones = ?, 
             nIngreso = ?, nEgreso = ?
         WHERE idRma = ?`;
+  
       const [result] = await connection.execute(query, [
-        modelo,
+        productoId,
         cantidad,
-        marca,
+        marcaId,
         solicita,
         opLote,
         vencimiento,
@@ -180,7 +205,7 @@ const gestionarRma = {
         nEgreso,
         idRma,
       ]);
-
+  
       if (result.affectedRows > 0) {
         res.status(200).json({
           success: true,
@@ -202,6 +227,7 @@ const gestionarRma = {
       }
     }
   },
+  
 
   deleteRma: async (req, res) => {
     const idRma = req.params.idRma;
@@ -234,11 +260,14 @@ const gestionarRma = {
     const idCliente = req.params.idCliente;
     const obtenerProductosPorCliente = async (idCliente) => {
       const query = `
-      SELECT idRma, modelo, cantidad, marca, solicita, opLote, vencimiento, 
-        seEntrega, seRecibe, observaciones, nIngreso, nEgreso 
-      FROM r_m_a 
-      WHERE idCliente = ?`;
-
+      SELECT rma.idRma, p.sku AS modelo_sku, rma.cantidad, m.nombre AS marca_nombre, 
+             rma.solicita, rma.opLote, rma.vencimiento, rma.seEntrega, rma.seRecibe, 
+             rma.observaciones, rma.nIngreso, rma.nEgreso 
+      FROM r_m_a rma
+      JOIN productos p ON rma.modelo = p.id
+      JOIN marcas m ON rma.marca = m.id
+      WHERE rma.idCliente = ?`;
+  
       try {
         const [rows] = await conn.execute(query, [idCliente]);
         return rows;        
@@ -247,18 +276,18 @@ const gestionarRma = {
         throw executeError;
       }
     };
-
+  
     let connection;
-
+  
     try {
       connection = await conn.getConnection();
-
+  
       let productos = await obtenerProductosPorCliente(idCliente);
-
+  
       productos = productos.map((producto) => ({
-        modelo: producto.modelo || "",
+        modelo: producto.modelo_sku || "",  // Asegúrate de que el `sku` está siendo tomado correctamente
         cantidad: producto.cantidad || "",
-        marca: producto.marca || "",
+        marca: producto.marca_nombre || "",  // Asegúrate de que el nombre de la marca está siendo tomado correctamente
         solicita: formatFecha(producto.solicita) || "",
         opLote: producto.opLote || "",
         vencimiento: formatFecha(producto.vencimiento || ""),
@@ -269,7 +298,7 @@ const gestionarRma = {
         nEgreso: producto.nEgreso || "",
         idRma: producto.idRma || "",
       }));
-
+  
       res.json(productos);
     } catch (error) {
       console.error("Error al listar productos:", error);
@@ -280,6 +309,8 @@ const gestionarRma = {
       }
     }
   },
+  
+  
 };
 
 export {

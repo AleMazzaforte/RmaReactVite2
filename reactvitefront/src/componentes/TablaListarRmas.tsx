@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface Rma {
   idRma: string;
@@ -22,7 +22,11 @@ interface TablaRmasProps {
 }
 
 export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualizar, handleEliminar }) => {
-  const [editableRmas, setEditableRmas] = useState(rmas);
+  const [editableRmas, setEditableRmas] = useState<Rma[]>(rmas);
+
+  useEffect(() => {
+    setEditableRmas(rmas);
+  }, [rmas]);
 
   const handleChange = (index: number, field: keyof Rma, value: string | number | undefined) => {
     const updatedRmas = [...editableRmas];
@@ -39,8 +43,8 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
     handleEliminar(rma.idRma);
     console.log('RMA eliminada:', rma);
     console.log('RMA id:', rma.idRma);
-
   };
+
   return (
     <div>
       <table className="w-full m-4 table-auto">

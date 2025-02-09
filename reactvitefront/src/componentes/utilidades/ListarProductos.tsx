@@ -6,14 +6,18 @@ interface ListarProductosProps {
   endpoint: string;
   onProductoSeleccionado: (producto: any) => void;
   campos: string[];
+  inputRef?: React.RefObject<HTMLInputElement>; // Agregar inputRef a las props
+  limpiarQuery?: () => void; // Prop para la función de limpiar query
 }
 
-export const ListarProductos: React.FC<ListarProductosProps> = ({ endpoint, onProductoSeleccionado, campos }) => {
+export const ListarProductos: React.FC<ListarProductosProps> = ({ endpoint, onProductoSeleccionado, campos, inputRef, limpiarQuery }) => {
   const [query, setQuery] = useState<string>('');
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);  // Referencia al input
+
+  // Utilizar la ref pasada a través de props o crear una nueva si no se pasa ninguna
+  const localInputRef = inputRef || useRef<HTMLInputElement>(null);
 
   const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -28,7 +32,6 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({ endpoint, onPr
         const response = await fetch(`${endpoint}?query=${value}`);
         const data = await response.json();
         setResultados(data.filter((producto: any) => producto.sku.toLowerCase().includes(value.toLowerCase())));
-        
       } catch (error) {
         console.error('Error buscando productos:', error);
       } finally {
@@ -46,8 +49,8 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({ endpoint, onPr
       onProductoSeleccionado(producto);
       setResultados([]);
       setQuery(producto.sku);  // Mostrar el SKU seleccionado en el input
-      if (inputRef.current && inputRef.current.nextElementSibling) {
-        (inputRef.current.nextElementSibling as HTMLElement).focus();  // Saltar al siguiente campo
+      if (localInputRef.current && localInputRef.current.nextElementSibling) {
+        (localInputRef.current.nextElementSibling as HTMLElement).focus();  // Saltar al siguiente campo
       }
     }
   };
@@ -56,7 +59,7 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({ endpoint, onPr
     <div>
       <input
         type="text"
-        ref={inputRef}
+        ref={localInputRef} // Usar la ref apropiada
         value={query}
         onChange={handleInputChange}
         placeholder="Buscar SKU"
