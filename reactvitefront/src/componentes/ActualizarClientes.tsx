@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';
 import { BusquedaClientes } from './utilidades/BusquedaClientes';
+import { BusquedaTransportes } from './utilidades/BusquedaTransportes'; // Importar BusquedaTransportes
 
 interface Cliente {
   id: string;
@@ -20,19 +21,26 @@ interface Cliente {
 export const ActualizarClientes: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
+  const [transporteSeleccionado, setTransporteSeleccionado] = useState<string | null>(null); // Estado para el transporte seleccionado
   const formRef = useRef<HTMLFormElement>(null);
 
   let urlListarClientes = 'https://rmareactvite2.onrender.com/listarCliente';
   let urlActualizarCliente = 'https://rmareactvite2.onrender.com/actualizarCliente';
+  let urlBuscarTransporte = 'https://rmareactvite2.onrender.com/buscarTransporte'; // URL para buscar transportes
 
   if (window.location.hostname === 'localhost') {
     urlListarClientes = 'http://localhost:8080/listarCliente';
     urlActualizarCliente = 'http://localhost:8080/actualizarCliente';
+    urlBuscarTransporte = 'http://localhost:8080/buscarTransporte';
   }
 
   const handleClienteSeleccionado = (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
-    
+    setTransporteSeleccionado(cliente.transporte); // Actualizar el transporte seleccionado
+  };
+
+  const handleTransporteSeleccionado = (transporte: any) => {
+    setTransporteSeleccionado(transporte.nombre); // Asumimos que el transporte tiene un campo "nombre"
   };
 
   useEffect(() => {
@@ -48,9 +56,6 @@ export const ActualizarClientes: React.FC = () => {
       formRef.current.seguro.value = seguro || '';
       formRef.current.condicionDeEntrega.value = condicionDeEntrega || '';
       formRef.current.condicionDePago.value = condicionDePago || '';
-      //console.log('Formulario lleno:', {
-       // nombre, cuit, provincia, ciudad, domicilio, telefono, transporte, seguro, condicionDeEntrega, condicionDePago
-      //});
     }
   }, [clienteSeleccionado]);
 
@@ -64,7 +69,7 @@ export const ActualizarClientes: React.FC = () => {
         ciudad: formData.get('ciudad'),
         domicilio: formData.get('domicilio'),
         telefono: formData.get('telefono'),
-        transporte: formData.get('transporte'),
+        transporte: transporteSeleccionado, // Usar el transporte seleccionado
         seguro: formData.get('seguro'),
         condicionDeEntrega: formData.get('condicionDeEntrega'),
         condicionDePago: formData.get('condicionDePago')
@@ -79,7 +84,7 @@ export const ActualizarClientes: React.FC = () => {
           },
           body: JSON.stringify(data),
         });
-        
+
         if (response.ok) {
           Swal.fire({
             icon: 'success',
@@ -88,6 +93,7 @@ export const ActualizarClientes: React.FC = () => {
           }).then(() => {
             if (formRef.current) {
               formRef.current.reset();
+              setTransporteSeleccionado(null); // Limpiar el transporte seleccionado
             }
           });
         } else {
@@ -165,19 +171,37 @@ export const ActualizarClientes: React.FC = () => {
         </div>
         <div>
           <label htmlFor="transporte" className="block text-sm font-medium text-gray-700 mb-1">Transporte:</label>
-          <input type="text" id="transporte" name="transporte" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <BusquedaTransportes
+            endpoint={urlBuscarTransporte}
+            onTransporteSeleccionado={handleTransporteSeleccionado} // Pasar la función para manejar la selección
+            campos={['nombre']}
+          />
+          <input style={{position: 'fixed'}} type="hidden" name="transporte" value={transporteSeleccionado || ''} />
         </div>
         <div>
           <label htmlFor="seguro" className="block text-sm font-medium text-gray-700 mb-1">Seguro:</label>
-          <input type="text" id="seguro" name="seguro" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <select name="seguro" id="seguro" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none">
+            <option value="">Seleccionar</option>
+            <option value="Mínimo">Mínimo</option>
+            <option value="Sin IVA">Sin IVA</option>
+            <option value="Mitad sin Iva">Mitad sin Iva</option>
+          </select>
         </div>
         <div>
           <label htmlFor="condicionDeEntrega" className="block text-sm font-medium text-gray-700 mb-1">Condición de entrega:</label>
-          <input type="text" id="condicionDeEntrega" name="condicionDeEntrega" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <select name="condicionDeEntrega" id="condicionDeEntrega" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none">
+            <option value="">Seleccionar</option>
+            <option value="Entrega a domicilio">Entrega a domicilio</option>
+            <option value="Retira en depósito">Retira en depósito</option>
+          </select>
         </div>
         <div>
           <label htmlFor="condicionDePago" className="block text-sm font-medium text-gray-700 mb-1">Condición de pago:</label>
-          <input type="text" id="condicionDePago" name="condicionDePago" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <select name="condicionDePago" id="condicionDePago" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none">
+            <option value="">Seleccionar</option>
+            <option value="Pago en origen">Pago en origen</option>
+            <option value="Pago en destino">Pago en destino</option>
+          </select>
         </div>
         <div>
           <button

@@ -1,19 +1,24 @@
 import React, { useState, useRef } from 'react';
 import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
+import { BusquedaTransportes } from './utilidades/BusquedaTransportes';
 
 export const CargarClientes: React.FC = () => {
   const [loading, setLoading] = useState(false);  // Estado para el loader
+  const [transporteSeleccionado, setTransporteSeleccionado] = useState<any>(null); // Estado para el transporte seleccionado
   const formRef = useRef<HTMLFormElement>(null);
 
   let urlClientes = 'https://rmareactvite2.onrender.com/cargarCliente';
+  let urlBuscarTransporte = 'https://rmareactvite2.onrender.com/buscarTransporte';
   if (window.location.hostname === 'localhost') {
     urlClientes = 'http://localhost:8080/cargarCliente';
+    urlBuscarTransporte = 'http://localhost:8080/buscarTransporte';
   }
 
   const enviarFormulario = async (nombre: string, cuit: string) => {
     if (formRef.current) {
       const formData = new FormData(formRef.current);
+      
       const data = {
         cliente: formData.get("cliente"),
         cuit: formData.get("cuit"),
@@ -21,12 +26,12 @@ export const CargarClientes: React.FC = () => {
         ciudad: formData.get("ciudad"),
         domicilio: formData.get("domicilio"),
         telefono: formData.get("telefono"),
-        transporte: formData.get("transporte"),
+        transporte: transporteSeleccionado.nombre, // Usamos el estado del transporte seleccionado
         seguro: formData.get("seguro"),
         condEntrega: formData.get("condEntrega"),
         condPago: formData.get("condPago"),
       };
-  
+
       try {
         setLoading(true);
         const response = await fetch(urlClientes, {
@@ -36,9 +41,9 @@ export const CargarClientes: React.FC = () => {
           },
           body: JSON.stringify(data),
         });
-  
+
         const result = await response.json();
-  
+
         if (response.ok) {
           Swal.fire({
             icon: "success",
@@ -47,6 +52,7 @@ export const CargarClientes: React.FC = () => {
           }).then(() => {
             if (formRef.current) {
               formRef.current.reset();
+              setTransporteSeleccionado(null); // Limpiamos el transporte seleccionado
             }
           });
         } else {
@@ -68,13 +74,13 @@ export const CargarClientes: React.FC = () => {
       }
     }
   };
-  
+
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const nombre = formData.get("cliente") as string;
     const cuit = formData.get("cuit") as string;
-  
+
     Swal.fire({
       title: `¿Quiere guardar a ${nombre} como cliente?`,
       icon: "question",
@@ -87,7 +93,7 @@ export const CargarClientes: React.FC = () => {
       }
     });
   };
-  
+
   return (
     <div
       className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"
@@ -106,12 +112,12 @@ export const CargarClientes: React.FC = () => {
           </label>
           <input name="cliente" type="text" id="clienteSearch" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
         </div>
-        
+
         <div>
           <label htmlFor="cuit" className="block text-sm font-medium text-gray-700 mb-1">CUIT:</label>
           <input type="number" name="cuit" id="cuit" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
         </div>
-        
+
         <div>
           <label htmlFor="provincia" className="block text-sm font-medium text-gray-700 mb-1">Provincia:</label>
           <input type="text" id="provincia" name="provincia" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
@@ -131,25 +137,42 @@ export const CargarClientes: React.FC = () => {
           <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-1">Teléfono:</label>
           <input type="number" id="telefono" name="telefono" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
         </div>
-        
+
         <div>
           <label htmlFor="transporte" className="block text-sm font-medium text-gray-700 mb-1">Transporte:</label>
-          <input type="text" id="transporte" name="transporte" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <BusquedaTransportes
+            endpoint={urlBuscarTransporte}
+            onTransporteSeleccionado={setTransporteSeleccionado} // Pasamos la función para manejar la selección
+            campos={['nombre']}
+          />
         </div>
 
         <div>
           <label htmlFor="seguro" className="block text-sm font-medium text-gray-700 mb-1">Seguro:</label>
-          <input type="text" id="seguro" name="seguro" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <select name="seguro" id="seguro" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none">
+            <option value="">Seleccionar</option>
+            <option value="Mínimo">Mínimo</option>
+            <option value="Sin IVA">Sin IVA</option>
+            <option value="Mitad sin Iva">Mitad sin Iva</option>
+          </select>
         </div>
 
         <div>
           <label htmlFor="condEntrega" className="block text-sm font-medium text-gray-700 mb-1">Condición de entrega:</label>
-          <input type="text" id="condEntrega" name="condEntrega" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <select name="condEntrega" id="condEntrega" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none">
+            <option value="">Seleccionar</option>
+            <option value="Entrega a domicilio">Entrega a domicilio</option>
+            <option value="Retira en depósito">Retira en depósito</option>
+          </select>
         </div>
 
         <div>
           <label htmlFor="condPago" className="block text-sm font-medium text-gray-700 mb-1">Condición de pago:</label>
-          <input id="condPago" name="condPago" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <select name="condPago" id="condPago" className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none">
+            <option value="">Seleccionar</option>
+            <option value="Pago en origen">Pago en origen</option>
+            <option value="Pago en destino">Pago en destino</option>
+          </select>
         </div>
 
         <div>

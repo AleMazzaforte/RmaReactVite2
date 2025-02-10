@@ -46,7 +46,6 @@ const gestionClientes = {
         condEntrega,
         condPago
       ].map(campo => (campo === '' ? null : campo)); // Convertir campos vacíos a null
-
       let connection;
       try {
         connection = await conn.getConnection();

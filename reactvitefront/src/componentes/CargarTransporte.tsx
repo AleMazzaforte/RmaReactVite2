@@ -18,8 +18,8 @@ export const CargarTransporte: React.FC = () => {
       const formData = new FormData(formRef.current);
       const data = {
         nombre: formData.get("nombre") as string,
-        direccionLocal: formData.get("direccionLocal") as string,
-        telefono: formData.get("telefono") as string,
+        direccionLocal: formData.get("direccionLocal")?.toString || null,
+        telefono: formData.get("telefono")?.toString || null,
       };
 
       try {
@@ -102,12 +102,12 @@ export const CargarTransporte: React.FC = () => {
         
         <div>
           <label htmlFor="direccionLocal" className="block text-sm font-medium text-gray-700 mb-1">Dirección local:</label>
-          <input type="text" id="direccionLOcal" name="direccionLocal" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <input type="text" id="direccionLOcal" name="direccionLocal"  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
         </div>
 
         <div>
           <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-1">Teléfono:</label>
-          <input type="number" id="telefono" name="telefono" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <input type="number" id="telefono" name="telefono"  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
         </div>
 
         <div>
