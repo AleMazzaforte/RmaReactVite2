@@ -27,7 +27,6 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({ endpoint, onSelecciona
       try {
         const response = await fetch(`${endpoint}?query=${value}`);
         const data = await response.json();
-        console.log('data', data);
 
         // Formatear datos eliminando duplicados
         const formattedData = data.map((item: any) => ({
@@ -37,7 +36,6 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({ endpoint, onSelecciona
         const filteredData = formattedData.filter((opLote: any) =>
           opLote.nombre.toLowerCase().includes(value.toLowerCase())
         );
-        console.log('filteredData', filteredData);
 
         // Eliminar duplicados usando la función
         const uniqueData = filteredData
@@ -86,6 +84,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({ endpoint, onSelecciona
           resultados={resultados}
           onSeleccionado={handleSeleccionado}
           campos={campos}
+          useUniqueKey={true}  // Aquí se pasa el nuevo prop
         />
       )}
     </div>

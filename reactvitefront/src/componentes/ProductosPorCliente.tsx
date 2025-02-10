@@ -46,7 +46,7 @@ export const ProductosPorCliente = (): JSX.Element => {
     try {
       const response = await fetch(`${url}/getRmaCliente/${clienteId}`);
       const data = await response.json();
-        console.log('data', data)
+    
       if (data.length > 0) {
         setRmas(data);
       } else {
@@ -113,7 +113,7 @@ export const ProductosPorCliente = (): JSX.Element => {
   
 
   const handleEliminar = async (idRma: string | undefined) => {
-    console.log('Eliminar RMA:', idRma);
+    
     
     if (idRma) {
       // Mostrar confirmación antes de eliminar

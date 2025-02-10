@@ -210,17 +210,7 @@ export const CargarImpo = () => {
 
       {/* Tabla de productos agregados a la derecha */}
       {mostrarTabla && (
-        <div style={{ 
-          position: 'fixed', 
-          right: '20px', 
-          top: '20px', 
-          width: '300px', // Ancho reducido de la tabla
-          backgroundColor: '#fff', 
-          padding: '20px', 
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-          marginLeft: '20px', // Margen para separar la tabla del formulario
-          zIndex: 1000, // Asegurar que la tabla esté por encima de otros elementos
-        }}>
+        <div className="relative right-5 top-5 w-[300px] bg-white p-5  -ml-[300px] h-auto">
           <h3 className="text-xl font-semibold text-gray-700 mb-4">Productos Agregados</h3>
           <table className="w-full">
             <thead>

@@ -178,7 +178,7 @@ export const CargarRma: React.FC = () => {
       nEgreso: target.nEgreso.value || null,
       idCliente: clienteSeleccionado?.id || '',
     };
-   console.log('formData', formData)
+   
     try {
       setLoading(true); // Mostrar el loader
       const response = await fetch(urlAgregarRma, {

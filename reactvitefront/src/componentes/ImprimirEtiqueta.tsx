@@ -156,7 +156,8 @@ export const ImprimirEtiqueta = () => {
      
 
   return (
-    <div className='w-full max-w-xl bg-white rounded-lg shadow-lg p-8 mx-auto mb-6'>
+    <div className='w-full max-w-xl bg-white rounded-lg shadow-lg p-8 mx-auto mb-6'
+    style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}>
       <h2 className='text-2xl font-semibold text-gray-700 mb-8 text-center'>
         Imprimir etiqueta
       </h2>

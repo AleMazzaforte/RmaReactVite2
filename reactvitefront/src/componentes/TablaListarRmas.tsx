@@ -36,13 +36,12 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
 
   const handleSave = (rma: Rma) => {
     handleActualizar(rma);
-    console.log('RMA actualizada:', rma);
+
   };
 
   const handleDelete = (rma: Rma) => {
     handleEliminar(rma.idRma);
-    console.log('RMA eliminada:', rma);
-    console.log('RMA id:', rma.idRma);
+
   };
 
   return (

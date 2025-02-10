@@ -1,18 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 interface FlechasNavigatorProps {
-  resultados: Array<{ id: string, [key: string]: any }>;
+  resultados: Array<{ nombre: string, [key: string]: any }>;
   onSeleccionado: (cliente: any) => void;
   campos: string[];
+  useUniqueKey?: boolean;  // Nuevo parámetro para decidir si usar clave única
 }
 
-
-
-export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, onSeleccionado, campos }) => {
+export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, onSeleccionado, campos, useUniqueKey = false }) => {
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const resultadosRef = useRef<HTMLDivElement>(null);
-
-  
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -45,10 +42,8 @@ export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, 
       }
     };
 
-    // Añadir el evento del teclado al montar el componente
     window.addEventListener('keydown', handleKeyDown);
 
-    // Eliminar el evento del teclado al desmontar el componente
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
@@ -58,14 +53,14 @@ export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, 
     <div>
       {resultados.length > 0 && (
         <div ref={resultadosRef} className="mt-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-          {resultados.map((cliente, index) => (
+          {resultados.map((opLote, index) => (
             <div
-              key={cliente.id}
-              onClick={() => onSeleccionado(cliente)}
+              key={useUniqueKey ? opLote.nombre : opLote.id}  // Usamos 'nombre' o 'id' dependiendo de la condición
+              onClick={() => onSeleccionado(opLote)}
               className={`px-4 py-2 hover:bg-gray-200 cursor-pointer ${selectedIndex === index ? 'bg-gray-200' : ''}`}
             >
               {campos.map((campo) => (
-                <div key={campo}>{cliente[campo]}</div>
+                <div key={campo}>{opLote[campo]}</div>
               ))}
             </div>
           ))}
