@@ -61,6 +61,7 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
   return (
     <div>
       <input
+        name="nombre"
         type="text"
         ref={inputRef}
         value={query}

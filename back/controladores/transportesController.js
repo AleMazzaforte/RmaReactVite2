@@ -52,8 +52,7 @@ export const transportes = {
     },
 
     postActualizarTransporte: async (req, res) => {
-        const { id, nombre, direccionLocal, telefono} = req.body;   
-        console.log(req.body);     
+        const { id, nombre, direccionLocal, telefono} = req.body;       
         try {
            const results = await conn.query(
                 "UPDATE transportes SET nombre = ?, direccionLocal = ?, telefono = ? WHERE idTransporte = ?",
