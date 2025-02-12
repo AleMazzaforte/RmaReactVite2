@@ -23,7 +23,9 @@ export const ImprimirEtiqueta = () => {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
   const [cantidadBultos, setCantidadBultos] = useState<number | null>(null);
   const [mostrarInput, setMostrarInput] = useState(false);
-  const [paginaHorizontal, setPaginaHorizontal] = useState(false); // Estado para manejar el tamaño de página
+  const [mostrarDatosEditable, setMostrarDatosEditable] = useState(false); // Estado para mostrar/ocultar el div de datos editables
+  const [paginaHorizontal, setPaginaHorizontal] = useState(false);
+  const [datosEditables, setDatosEditables] = useState<Cliente | null>(null); // Estado para los datos editables
   const formRef = useRef<HTMLFormElement>(null);
 
   let urlListarClientes = 'https://rmareactvite2.onrender.com/listarCliente';
@@ -50,7 +52,7 @@ export const ImprimirEtiqueta = () => {
     try {
       const response = await fetch(`${urlBuscarRMA}?idCliente=${clienteSeleccionado.id}`);
       const data = await response.json();
-      
+
       if (response.ok) {
         const rmaPendiente = data.some((rma: any) => !rma.nEgreso || rma.nEgreso === null);
 
@@ -68,6 +70,8 @@ export const ImprimirEtiqueta = () => {
           });
         }
         setMostrarInput(true);
+        setMostrarDatosEditable(true); // Mostrar el div de datos editables
+        setDatosEditables(clienteSeleccionado); // Inicializar los datos editables con los datos del cliente
       } else {
         Swal.fire({
           icon: 'error',
@@ -87,77 +91,85 @@ export const ImprimirEtiqueta = () => {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (datosEditables) {
+      setDatosEditables({
+        ...datosEditables,
+        [name]: value,
+      });
+    }
+  };
+
   const generarPDF = () => {
-    if (!clienteSeleccionado || cantidadBultos === null || cantidadBultos <= 0) {
+    if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Ingrese una cantidad de bultos válida.',
+        text: 'Ingrese una cantidad de bultos válida y verifique los datos del cliente.',
       });
       return;
     }
-  
+
     // Crear documento PDF con orientación y tamaño ajustados según la variable `paginaHorizontal`
-    const doc = new jsPDF(paginaHorizontal ? 'landscape' : 'p', 'mm', paginaHorizontal ? [210, 150] : [190, 100]);
-  
+    const doc = new jsPDF(paginaHorizontal ? 'landscape' : 'p', 'mm', paginaHorizontal ? [210, 150] : [100, 190]);
+
     // Margen superior de 6 cm (aproximadamente 60 mm)
     const marginTop = 40;
-  
+
     // Tamaño de la fuente ajustado según la orientación
     const fontSize = paginaHorizontal ? 12 : 16;
-  
-   
-  
+
     // Agregar más páginas si la cantidad de bultos es mayor a 1
     for (let i = 1; i < (cantidadBultos + 1); i++) {
-       // Establecer fuente y tamaño para el nombre del cliente (centrado)
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(fontSize);
-    doc.text(`${clienteSeleccionado.nombre}`, doc.internal.pageSize.getWidth() / 2, marginTop, { align: "center" });
-  
-    // Establecer fuente normal para el resto de los datos
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    const lineHeight = 1;
-  
-    // Agregar los datos del cliente
-    doc.text(`Domicilio: ${clienteSeleccionado.domicilio}`, 20, marginTop + 10 + lineHeight);
-    doc.text(`Ciudad: ${clienteSeleccionado.ciudad}, ${clienteSeleccionado.provincia}`, 20, marginTop + 20 + lineHeight);
-    doc.text(`Teléfono: ${clienteSeleccionado.telefono}`, 20, marginTop + 30 + lineHeight);
-    doc.text(`Transporte: ${clienteSeleccionado.transporte}`, 20, marginTop + 40 + lineHeight);
-    doc.text(`Seguro: ${clienteSeleccionado.seguro}`, 20, marginTop + 50 + lineHeight);
-    doc.text(`Entrega a ${clienteSeleccionado.condicionDeEntrega}`, 20, marginTop + 60 + lineHeight);
-    doc.text(`Pago en ${clienteSeleccionado.condicionDePago}`, 20, marginTop + 70 + lineHeight);
-  
-    // Datos del remitente
-    doc.text(`Rte: Femex S.A.`, 20, marginTop + 80 + lineHeight);
-    doc.text(`CUIT: 30-71130830-6`, 20, marginTop + 90 + lineHeight);
-    doc.text(`Domicilio: Duarte Quirós 4105`, 20, marginTop + 100 + lineHeight);
-    doc.text(`Provincia: Córdoba`, 20, marginTop + 110 + lineHeight);
-    doc.text(`Ciudad: Córdoba`, 20, marginTop + 120 + lineHeight);
-    doc.text(`Teléfono: 351 8509718`, 20, marginTop + 130 + lineHeight);
-  
-    // Calculamos la posición X para centrar el texto en el pie de página
-    const pageWidth = doc.internal.pageSize.getWidth(); // Ancho de la página
-    const text = `Bulto ${i} de ${cantidadBultos}`;
-    const textWidth = doc.getTextWidth(text); // Obtiene el ancho del texto
-    const xPosition = ((pageWidth - textWidth) / 2) -1; // Calcula la posición X para centrar el texto
-  
-    // Agregar el texto del pie de página
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text(text, xPosition, marginTop + 140); // Coloca el texto centrado en el pie de página
+      // Establecer fuente y tamaño para el nombre del cliente (centrado)
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(fontSize);
+      doc.text(`${datosEditables.nombre}`, doc.internal.pageSize.getWidth() / 2, marginTop, { align: "center" });
+
+      // Establecer fuente normal para el resto de los datos
+      doc.setFont("helvwtica", "bold");
+      doc.setFontSize(12);
+      const lineHeight = 1;
+
+      // Agregar los datos del cliente
+      doc.text(`Domicilio: ${datosEditables.domicilio}`, 14, marginTop + 10 + lineHeight);
+      doc.text(`Ciudad: ${datosEditables.ciudad}, ${datosEditables.provincia}`, 14, marginTop + 18 + lineHeight);
+      doc.text(`Teléfono: ${datosEditables.telefono}`, 14, marginTop + 26 + lineHeight);
+      doc.text(`Transporte: ${datosEditables.transporte}`, 14, marginTop + 34 + lineHeight);
+      doc.text(`Seguro: ${datosEditables.seguro}`, 14, marginTop + 42 + lineHeight);
+      doc.text(`Entrega a ${datosEditables.condicionDeEntrega}`, 14, marginTop + 50 + lineHeight);
+      doc.text(`Pago en ${datosEditables.condicionDePago}`, 14, marginTop + 58 + lineHeight);
+      doc.text(`------------------------`, 14, marginTop + 68 + lineHeight);
+
+      // Datos del remitente
+      doc.text(`Rte: Femex S.A.`, 14, marginTop + 80 + lineHeight);
+      doc.text(`CUIT: 30-71130830-6`, 14, marginTop + 88 + lineHeight);
+      doc.text(`Domicilio: Duarte Quirós 4105`, 14, marginTop + 96 + lineHeight);
+      doc.text(`Provincia: Córdoba`, 14, marginTop + 104 + lineHeight);
+      doc.text(`Ciudad: Córdoba`, 14, marginTop + 112 + lineHeight);
+      doc.text(`Teléfono: 351 8509718`, 14, marginTop + 120 + lineHeight);
+
+      // Calculamos la posición X para centrar el texto en el pie de página
+      const pageWidth = doc.internal.pageSize.getWidth(); // Ancho de la página
+      const text = `Bulto ${i} de ${cantidadBultos}`;
+      const textWidth = doc.getTextWidth(text); // Obtiene el ancho del texto
+      const xPosition = ((pageWidth - textWidth) / 2) - 4; // Calcula la posición X para centrar el texto
+
+      // Agregar el texto del pie de página
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(text, xPosition, marginTop + 140); // Coloca el texto centrado en el pie de página
       if (i < cantidadBultos) doc.addPage(); // Añadir una nueva página
     }
-  
+
     // Mostrar el PDF en una nueva ventana
     doc.output('dataurlnewwindow');
   };
-     
 
   return (
     <div className='w-full max-w-xl bg-white rounded-lg shadow-lg p-8 mx-auto mb-6'
-    style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}>
+      style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}>
       <h2 className='text-2xl font-semibold text-gray-700 mb-8 text-center'>
         Imprimir etiqueta
       </h2>
@@ -175,41 +187,130 @@ export const ImprimirEtiqueta = () => {
       {loading && <Loader />}
       {mostrarInput && (
         <div>
-        <div className='mt-4 flex space-x-4'>
-          <div className='flex-1'>
-            {/*<label className='block text-sm font-medium text-gray-700 mb-1'>Cantidad de Bultos</label>*/}
-            <input
-              placeholder='Cantidad de bultos'
-              type='number'
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg'
-              value={cantidadBultos || ''}
-              onChange={(e) => setCantidadBultos(Number(e.target.value))}
-            />
+          {/* Div para editar los datos del cliente */}
+          {mostrarDatosEditable && datosEditables && (
+            <div className='mt-4 space-y-4'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Nombre</label>
+                <input
+                  type='text'
+                  name='nombre'
+                  value={datosEditables.nombre}
+                  onChange={handleInputChange}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Domicilio</label>
+                <input
+                  type='text'
+                  name='domicilio'
+                  value={datosEditables.domicilio}
+                  onChange={handleInputChange}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Ciudad</label>
+                <input
+                  type='text'
+                  name='ciudad'
+                  value={datosEditables.ciudad}
+                  onChange={handleInputChange}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Provincia</label>
+                <input
+                  type='text'
+                  name='provincia'
+                  value={datosEditables.provincia}
+                  onChange={handleInputChange}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Teléfono</label>
+                <input
+                  type='text'
+                  name='telefono'
+                  value={datosEditables.telefono}
+                  onChange={handleInputChange}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Transporte</label>
+                <input
+                  type='text'
+                  name='transporte'
+                  value={datosEditables.transporte}
+                  onChange={handleInputChange}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Seguro</label>
+                <input
+                  type='text'
+                  name='seguro'
+                  value={datosEditables.seguro}
+                  onChange={handleInputChange}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Condición de Entrega</label>
+                <input
+                  type='text'
+                  name='condicionDeEntrega'
+                  value={datosEditables.condicionDeEntrega}
+                  onChange={handleInputChange}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Condición de Pago</label>
+                <input
+                  type='text'
+                  name='condicionDePago'
+                  value={datosEditables.condicionDePago}
+                  onChange={handleInputChange}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                />
+              </div>
+            </div>
+          )}
+
+          <div className='mt-4 flex space-x-4'>
+            <div className='flex-1'>
+              <input
+                min={1}
+                placeholder='Cantidad de bultos'
+                type='number'
+                className='w-full px-4 py-2 border border-gray-300 rounded-lg'
+                value={cantidadBultos || ''}
+                onChange={(e) => setCantidadBultos(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => setPaginaHorizontal(!paginaHorizontal)}
+                className="w-full py-2 px-4 bg-gray-600 text-white font-semibold rounded-lg"
+              >
+                En construcción
+              </button>
+            </div>
           </div>
-
-
-          <div>
-            
-          <button
-            type="button"
-            onClick={() => setPaginaHorizontal(!paginaHorizontal)}
-            className="w-full py-2 px-4 bg-gray-600 text-white font-semibold rounded-lg"
-            >
-            En construcción
-          </button>
-
-          </div>
-          
-
-        </div>
           <button
             onClick={generarPDF}
             className='mt-2 w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-lg'>
-            Generar etiquetas 
+            Generar etiquetas
           </button>
         </div>
       )}
     </div>
   );
 };
-
