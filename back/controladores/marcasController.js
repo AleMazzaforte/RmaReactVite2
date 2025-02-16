@@ -10,7 +10,7 @@ const marcas = {
         let connection = await conn.getConnection();
       try {
         
-        const [results] = await connection.query("SELECT * FROM marcas");
+        const [results] = await connection.query("SELECT id, nombre FROM marcas ORDER By nombre ASC");
         connection.release();
         //console.log("Marcas:", results);
         res.json(results);

@@ -52,6 +52,7 @@ router.post('/agregarRma',  cargarRma.postAgregarRma);
 router.get('/getRmaCLiente/:idCliente', gestionarRma.getListarProductosRma);
 router.post('/actualizarProductoRma/:idRma', gestionarRma.postActualizarCliente); 
 router.delete('/eliminarRma/:idRma', gestionarRma.deleteRma);
+router.get('/getUltimoNIngreso', cargarRma.getUltimoNum);
 
 //Ruta para agregar usuario
 router.post('/cargarUsuario', usuario.postCargarUsuario);

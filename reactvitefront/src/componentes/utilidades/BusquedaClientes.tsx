@@ -12,41 +12,41 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({ endpoint, on
   const [query, setQuery] = useState<string>('');
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);  // Referencia al input
+  const inputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<number | null>(null);
 
-  const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
 
-    if (value) {
-      if (timer) clearTimeout(timer);  // Limpiar cualquier temporizador previo
-      const newTimer = setTimeout(() => setLoading(true), 300); // Iniciar el temporizador para mostrar loader después de 3 segundos
-      setTimer(newTimer);
+    if (timerRef.current) clearTimeout(timerRef.current);
 
-      try {
-        const response = await fetch(`${endpoint}?query=${value}`);
-        const data = await response.json();
-        setResultados(data.filter((cliente: any) => cliente.nombre.toLowerCase().includes(value.toLowerCase())));
-      } catch (error) {
-        console.error('Error buscando clientes:', error);
-      } finally {
-        if (newTimer) clearTimeout(newTimer);  // Limpiar el temporizador si el fetch finaliza antes de los 3 segundos
+    timerRef.current = window.setTimeout(async () => {
+      if (value) {
+        setLoading(true);
+        try {
+          const response = await fetch(`${endpoint}?query=${value}`);
+          const data = await response.json();
+          setResultados(data.filter((cliente: any) => cliente.nombre.toLowerCase().includes(value.toLowerCase())));
+        } catch (error) {
+          console.error('Error buscando clientes:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setResultados([]);
         setLoading(false);
       }
-    } else {
-      setResultados([]);
-      setLoading(false);
-    }
+    }, 500);
   };
 
   const handleClienteSeleccionado = (cliente: any) => {
     if (cliente) {
       onClienteSeleccionado(cliente);
       setResultados([]);
-      setQuery(cliente.nombre);  // Mostrar el nombre seleccionado en el input
+      setQuery(cliente.nombre);
       if (inputRef.current && inputRef.current.nextElementSibling) {
-        (inputRef.current.nextElementSibling as HTMLElement).focus();  // Saltar al siguiente campo
+        (inputRef.current.nextElementSibling as HTMLElement).focus();
       }
     }
   };

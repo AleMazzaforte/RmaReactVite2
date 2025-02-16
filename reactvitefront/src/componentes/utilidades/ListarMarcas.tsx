@@ -12,28 +12,36 @@ export const ListarMarcas: React.FC<ListarMarcasProps> = ({ endpoint, onMarcaSel
   const [query, setQuery] = useState<string>('');
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null); // Para manejar el timeout
   const inputRef = useRef<HTMLInputElement>(null); // Referencia al input
 
-  const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
 
-    if (value) {
-      if (timer) clearTimeout(timer); // Limpiar cualquier temporizador previo
-      const newTimer = setTimeout(() => setLoading(true), 300); // Iniciar el temporizador para mostrar loader después de 3 segundos
-      setTimer(newTimer);
+    // Limpiar el timeout anterior si existe
+    if (timer) {
+      clearTimeout(timer);
+    }
 
-      try {
-        const response = await fetch(`${endpoint}?query=${value}`);
-        const data = await response.json();
-        setResultados(data.filter((marca: any) => marca.nombre.toLowerCase().includes(value.toLowerCase())));
-      } catch (error) {
-        console.error('Error buscando marcas:', error);
-      } finally {
-        if (newTimer) clearTimeout(newTimer); // Limpiar el temporizador si el fetch finaliza antes de los 3 segundos
-        setLoading(false);
-      }
+    // Si hay valor en el input, proceder con el retraso
+    if (value) {
+      setLoading(true);
+
+      // Establecer un nuevo timeout para la búsqueda
+      const newTimer = setTimeout(async () => {
+        try {
+          const response = await fetch(`${endpoint}?query=${value}`);
+          const data = await response.json();
+          setResultados(data.filter((marca: any) => marca.nombre.toLowerCase().includes(value.toLowerCase())));
+        } catch (error) {
+          console.error('Error buscando marcas:', error);
+        } finally {
+          setLoading(false);
+        }
+      }, 500); // 500 ms de retraso
+
+      setTimer(newTimer);
     } else {
       setResultados([]);
       setLoading(false);

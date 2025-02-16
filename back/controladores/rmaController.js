@@ -39,7 +39,7 @@ const convertirFechaParaBackend = (fecha) => {
 const clienteController = {
   getListarClientesRma: async (req, res) => {
     try {
-      const [clientes] = await conn.query("SELECT id, nombre FROM clientes");
+      const [clientes] = await conn.query("SELECT id, nombre FROM clientes ORDER BY nombre ASC");
       res.json(clientes); // Retorna los clientes en formato JSON
       
     } catch (error) {
@@ -131,6 +131,22 @@ const cargarRma = {
       }
     }
   },
+
+  getUltimoNum: async (req, res) => {
+    let ultimoNIngreso
+    try {
+      const [rows] = await conn.query("SELECT MAX(nIngreso) AS ultimoNIngreso FROM r_m_a");
+      console.log('ultimo numero', ultimoNIngreso)
+      if (rows.length > 0 && rows[0].ultimoNIngreso !== null) {
+        res.json({ nIngreso: rows[0].ultimoNIngreso });
+      } else {
+        res.json({ nIngreso: 0 }); // Si no hay registros, devolver 0
+      }
+    } catch (error) {
+      console.error("Error al obtener el último número de ingreso:", error);
+      res.status(500).json({ error: "Error al obtener el último número de ingreso" });
+    }
+  }
 };
 
 const gestionarRma = {
@@ -309,6 +325,7 @@ const gestionarRma = {
       }
     }
   },
+
   
   
 };

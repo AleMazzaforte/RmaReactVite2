@@ -6,6 +6,7 @@ import { ListarOp } from './utilidades/ListarOp';
 import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
 import FechaInput from './utilidades/FechaInput';
+import UltimoNIngreso from './utilidades/UltimoNIngreso';
 
 interface Cliente {
   id: string;
@@ -24,6 +25,7 @@ interface Marca {
 
 export const CargarRma: React.FC = () => {
 
+  const [ultimoNIngreso, setUltimoNIngreso] = useState<number>(0);
   const [solicita, setSolicita] = useState('');
   const [vencimiento, setVencimiento] = useState('');
   const [seEntrega, setSeEntrega] = useState('');
@@ -51,6 +53,8 @@ export const CargarRma: React.FC = () => {
 
   const handleClienteSeleccionado = (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
+    setUltimoNIngreso((prev) => prev + 1);
+    
   };
 
   const handleProductoSeleccionado = (producto: Producto) => {
@@ -232,10 +236,13 @@ export const CargarRma: React.FC = () => {
       <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Cargar RMA</h2>
       <form id="formRma" className="space-y-6">
         <div>
+          <h3>Último N° de Ingreso: {ultimoNIngreso}</h3>
           <label htmlFor="clienteSearch" className="block text-sm font-medium text-gray-700 mb-1">
             Cliente<span className="text-red-500">*</span>: 
           </label>
           <BusquedaClientes endpoint={urlClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} />
+          {/* Componente que obtiene el último N° de ingreso */}
+          <UltimoNIngreso onNIngresoUpdate={setUltimoNIngreso} />
         </div>
         {clienteSeleccionado && <input type="hidden" name="idCliente" value={clienteSeleccionado.id} />}
 

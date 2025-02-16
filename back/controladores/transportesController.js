@@ -41,7 +41,7 @@ export const transportes = {
         try {
             const query = req.query.query;
             const [results] = await conn.query(
-                "SELECT * FROM transportes",                
+                "SELECT * FROM transportes ORDER BY nombre ASC",                
             );
             res.status(200).json(results);
         } catch (error) {

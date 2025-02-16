@@ -12,46 +12,52 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({ endpoint, onSelecciona
   const [query, setQuery] = useState<string>('');
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null); // Estado para manejar el timeout
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
 
+    // Limpiar el timeout anterior si existe
+    if (timer) {
+      clearTimeout(timer);
+    }
+
+    // Si hay valor en el input, proceder con el retraso
     if (value) {
-      if (timer) clearTimeout(timer);
-      const newTimer = setTimeout(() => setLoading(true), 300);
+      setLoading(true);
+
+      // Establecer un nuevo timeout para la búsqueda
+      const newTimer = setTimeout(async () => {
+        try {
+          const response = await fetch(`${endpoint}?query=${value}`);
+          const data = await response.json();
+
+          // Formatear datos eliminando duplicados
+          const formattedData = data.map((item: any) => ({ nombre: item.op }));
+
+          const filteredData = formattedData.filter((opLote: any) =>
+            opLote.nombre.toLowerCase().includes(value.toLowerCase())
+          );
+
+          // Eliminar duplicados usando la función
+          const uniqueData = filteredData
+            .map((item: any) => item.nombre)
+            .reduce((unique: string[], item: string) => {
+              return unique.includes(item) ? unique : [...unique, item];
+            }, [])
+            .map((name: string) => ({ nombre: name }));
+
+          setResultados(uniqueData);
+        } catch (error) {
+          console.error('Error buscando OP/Lote:', error);
+        } finally {
+          setLoading(false);
+        }
+      }, 500); // 500 ms de retraso
+
       setTimer(newTimer);
-
-      try {
-        const response = await fetch(`${endpoint}?query=${value}`);
-        const data = await response.json();
-
-        // Formatear datos eliminando duplicados
-        const formattedData = data.map((item: any) => ({
-          nombre: item.op
-        }));
-
-        const filteredData = formattedData.filter((opLote: any) =>
-          opLote.nombre.toLowerCase().includes(value.toLowerCase())
-        );
-
-        // Eliminar duplicados usando la función
-        const uniqueData = filteredData
-          .map((item: any) => item.nombre)
-          .reduce((unique: string[], item: string) => {
-            return unique.includes(item) ? unique : [...unique, item];
-          }, [])
-          .map((name: string) => ({ nombre: name }));
-
-        setResultados(uniqueData);
-      } catch (error) {
-        console.error('Error buscando OP/Lote:', error);
-      } finally {
-        if (newTimer) clearTimeout(newTimer);
-        setLoading(false);
-      }
     } else {
       setResultados([]);
       setLoading(false);

@@ -19,25 +19,33 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({ endpoint, onPr
   // Utilizar la ref pasada a través de props o crear una nueva si no se pasa ninguna
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
 
-  const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
 
-    if (value) {
-      if (timer) clearTimeout(timer);  // Limpiar cualquier temporizador previo
-      const newTimer = setTimeout(() => setLoading(true), 300); // Iniciar el temporizador para mostrar loader después de 3 segundos
-      setTimer(newTimer);
+    // Limpiar el timeout anterior si existe
+    if (timer) {
+      clearTimeout(timer);
+    }
 
-      try {
-        const response = await fetch(`${endpoint}?query=${value}`);
-        const data = await response.json();
-        setResultados(data.filter((producto: any) => producto.sku.toLowerCase().includes(value.toLowerCase())));
-      } catch (error) {
-        console.error('Error buscando productos:', error);
-      } finally {
-        if (newTimer) clearTimeout(newTimer);  // Limpiar el temporizador si el fetch finaliza antes de los 3 segundos
-        setLoading(false);
-      }
+    // Si hay valor en el input, proceder con el retraso
+    if (value) {
+      setLoading(true);
+
+      // Establecer un nuevo timeout para la búsqueda
+      const newTimer = setTimeout(async () => {
+        try {
+          const response = await fetch(`${endpoint}?query=${value}`);
+          const data = await response.json();
+          setResultados(data.filter((producto: any) => producto.sku.toLowerCase().includes(value.toLowerCase())));
+        } catch (error) {
+          console.error('Error buscando productos:', error);
+        } finally {
+          setLoading(false);
+        }
+      }, 500); // 500 ms de retraso
+
+      setTimer(newTimer);
     } else {
       setResultados([]);
       setLoading(false);

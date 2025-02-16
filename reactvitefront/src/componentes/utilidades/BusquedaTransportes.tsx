@@ -1,4 +1,4 @@
-import React, { useState, useRef, ChangeEvent } from 'react';
+import React, { useState, useRef, ChangeEvent, useCallback } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 
@@ -12,40 +12,44 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
   const [query, setQuery] = useState<string>('');
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimeout = useRef< number | null>(null); // Para manejar el timeout
 
-  const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
-   
-    const value = e.target.value;
-    setQuery(value);
-    e.preventDefault();
-    if (value) {
-      
-      if (timer) clearTimeout(timer);
-      const newTimer = setTimeout(() => setLoading(true), 300);
-      setTimer(newTimer);
-  
-      try {
-        const response = await fetch(`${endpoint}?query=${value}`);
-        const data = await response.json();
-        // Filtrar nombres coincidentes y guardar el objeto completo
-        const filtrados = data.filter((transporte: any) => 
-          transporte.nombre.toLowerCase().includes(value.toLowerCase())
-        );
-        setResultados(filtrados);
-      } catch (error) {
-        console.error('Error buscando transportes:', error);
-      } finally {
-        if (newTimer) clearTimeout(newTimer);
+  const handleInputChange = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setQuery(value);
+      e.preventDefault();
+
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current); // Limpiar el timeout anterior
+      }
+
+      if (value) {
+        setLoading(true);
+
+        // Retrasar la búsqueda por 500 ms
+        debounceTimeout.current = setTimeout(async () => {
+          try {
+            const response = await fetch(`${endpoint}?query=${value}`);
+            const data = await response.json();
+            const filtrados = data.filter((transporte: any) => 
+              transporte.nombre.toLowerCase().includes(value.toLowerCase())
+            );
+            setResultados(filtrados);
+          } catch (error) {
+            console.error('Error buscando transportes:', error);
+          } finally {
+            setLoading(false);
+          }
+        }, 500); // 500 ms de retraso
+      } else {
+        setResultados([]);
         setLoading(false);
       }
-    } else {
-      setResultados([]);
-      setLoading(false);
-    }
-  };
-  
+    },
+    [endpoint]
+  );
 
   const handleTransporteSeleccionado = (transporte: any) => {
     if (transporte) {
@@ -68,7 +72,7 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
         onChange={handleInputChange}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
-            e.preventDefault(); // Evitar que el formulario se envíe al presionar Enter
+            e.preventDefault();
           }
         }}
         placeholder="Buscar transporte"
@@ -84,20 +88,3 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
     </div>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
