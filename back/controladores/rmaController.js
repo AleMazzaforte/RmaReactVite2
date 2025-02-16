@@ -73,54 +73,53 @@ const productosGeneralController = {
 
 
 
-const cargarRma = {
+const cargarRma = { 
+
   postAgregarRma: async (req, res) => {
     // Desestructuración de los campos del cuerpo de la solicitud
-    let {
-      modelo,
-      cantidad,
-      marca,
+    const {
+      cliente,
       solicita,
-      opLote,
       vencimiento,
       seEntrega,
       seRecibe,
       observaciones,
       nIngreso,
       nEgreso,
-      idCliente,
+      productos, // Array de productos
     } = req.body;
-
-    // Si los campos opcionales están vacíos, asignarlos como null
-    opLote = opLote || null;
-    vencimiento = vencimiento || null;
-    seEntrega = seEntrega || null;
-    seRecibe = seRecibe || null;
-    observaciones = observaciones || null;
-    nIngreso = nIngreso || null;
-    nEgreso = nEgreso || null;
-
+  
+    
+  
     let connection;
     try {
       connection = await conn.getConnection();
-      // Inserción en la base de datos con valores null para los campos opcionales vacíos
-      await connection.query(
-        "INSERT INTO r_m_a (modelo, cantidad, marca, solicita, opLote, vencimiento, seEntrega, seRecibe, observaciones, nIngreso, nEgreso, idCliente) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          modelo,
-          cantidad,
-          marca,
-          solicita,
-          opLote,
-          vencimiento,
-          seEntrega,
-          seRecibe,
-          observaciones,
-          nIngreso,
-          nEgreso,
-          idCliente,
-        ]
-      );
+  
+      // Iterar sobre cada producto y realizar la inserción en la base de datos
+      for (const producto of productos) {
+        const { modelo, cantidad, marca, opLote: productoOpLote, observaciones: productoObservaciones } = producto;
+  
+        await connection.query(
+          `INSERT INTO r_m_a 
+          (modelo, cantidad, marca, solicita, opLote, vencimiento, seEntrega, seRecibe, observaciones, nIngreso, nEgreso, idCliente) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            modelo,
+            cantidad,
+            marca,
+            solicita,
+            productoOpLote || null, // Usar el opLote del producto si existe
+            vencimiento || null,
+            seEntrega || null,
+            seRecibe || null,
+            productoObservaciones || observaciones || null, // Usar las observaciones del producto o las generales
+            nIngreso,
+            nEgreso || null,
+            cliente,
+          ]
+        );
+      }
+  
       res.status(200).json({ message: "RMA agregado correctamente" });
     } catch (error) {
       console.error("Error al agregar RMA:", error);
@@ -133,10 +132,8 @@ const cargarRma = {
   },
 
   getUltimoNum: async (req, res) => {
-    let ultimoNIngreso
     try {
       const [rows] = await conn.query("SELECT MAX(nIngreso) AS ultimoNIngreso FROM r_m_a");
-      console.log('ultimo numero', ultimoNIngreso)
       if (rows.length > 0 && rows[0].ultimoNIngreso !== null) {
         res.json({ nIngreso: rows[0].ultimoNIngreso });
       } else {
