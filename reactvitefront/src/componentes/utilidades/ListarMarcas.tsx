@@ -1,4 +1,4 @@
-import React, { useState, useRef, ChangeEvent } from 'react';
+import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 
@@ -6,14 +6,29 @@ interface ListarMarcasProps {
   endpoint: string;
   onMarcaSeleccionada: (marca: any) => void;
   campos: string[];
+  value?: string; // Nueva prop para sincronizar el valor del input
+  inputRef?: React.RefObject<HTMLInputElement>; // Agregar inputRef a las props
 }
 
-export const ListarMarcas: React.FC<ListarMarcasProps> = ({ endpoint, onMarcaSeleccionada, campos }) => {
-  const [query, setQuery] = useState<string>('');
+export const ListarMarcas: React.FC<ListarMarcasProps> = ({
+  endpoint,
+  onMarcaSeleccionada,
+  campos,
+  value = '', // Valor por defecto vacío
+  inputRef,
+}) => {
+  const [query, setQuery] = useState<string>(value); // Inicializar con el valor de la prop
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null); // Para manejar el timeout
-  const inputRef = useRef<HTMLInputElement>(null); // Referencia al input
+
+  // Utilizar la ref pasada a través de props o crear una nueva si no se pasa ninguna
+  const localInputRef = inputRef || useRef<HTMLInputElement>(null);
+
+  // Sincronizar el estado interno `query` con la prop `value`
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -53,8 +68,8 @@ export const ListarMarcas: React.FC<ListarMarcasProps> = ({ endpoint, onMarcaSel
       onMarcaSeleccionada(marca);
       setResultados([]);
       setQuery(marca.nombre); // Mostrar la marca seleccionada en el input
-      if (inputRef.current && inputRef.current.nextElementSibling) {
-        (inputRef.current.nextElementSibling as HTMLElement).focus(); // Saltar al siguiente campo
+      if (localInputRef.current && localInputRef.current.nextElementSibling) {
+        (localInputRef.current.nextElementSibling as HTMLElement).focus(); // Saltar al siguiente campo
       }
     }
   };
@@ -63,7 +78,7 @@ export const ListarMarcas: React.FC<ListarMarcasProps> = ({ endpoint, onMarcaSel
     <div>
       <input
         type="text"
-        ref={inputRef}
+        ref={localInputRef} // Usar la ref apropiada
         value={query}
         onChange={handleInputChange}
         placeholder="Buscar marca"

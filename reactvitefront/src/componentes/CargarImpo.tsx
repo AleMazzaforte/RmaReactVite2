@@ -239,6 +239,7 @@ export const CargarImpo = () => {
           </table>
         </div>
       )}
+      { loading ? <Loader /> : ''}
     </div>
   );
 };

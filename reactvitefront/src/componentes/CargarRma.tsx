@@ -6,7 +6,6 @@ import { ListarOp } from './utilidades/ListarOp';
 import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';
 import FechaInput from './utilidades/FechaInput';
-import UltimoNIngreso from './utilidades/UltimoNIngreso';
 
 interface Cliente {
   id: string;
@@ -37,6 +36,7 @@ export const CargarRma: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [mostrarCampos, setMostrarCampos] = useState(false);
   const [productosAgregados, setProductosAgregados] = useState<any[]>([]);
+  const [mostrarLista, setMostrarLista] = useState(false)
 
   let urlClientes = 'https://rmareactvite2.onrender.com/buscarCliente';
   let urlProductos = 'https://rmareactvite2.onrender.com/listarProductos';
@@ -52,10 +52,29 @@ export const CargarRma: React.FC = () => {
     urlOp = 'http://localhost:8080/listarOp';
   }
 
-  const handleClienteSeleccionado = (cliente: Cliente) => {
+  const handleClienteSeleccionado = async (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
-    setUltimoNIngreso((prev) => prev + 1); // Incrementar el número de ingreso
     setMostrarCampos(true);
+  
+    // Llamada a la API para obtener el último número de remito
+    let url = 'https://rmareactvite2.onrender.com/getUltimoNIngreso';
+    if (window.location.hostname === 'localhost') {
+      url = 'http://localhost:8080/getUltimoNIngreso';
+    }
+  
+    try {
+      const response = await fetch(`${url}?clienteId=${cliente.id}`);
+      const data = await response.json();
+  
+      if (data.length !== 0) {
+        setUltimoNIngreso(data.nIngreso + 1); // Incrementar el número de ingreso
+      } else {
+        setUltimoNIngreso(1); // Si no hay registros, empezar desde 1
+      }
+    } catch (error) {
+      console.error("Error al obtener el último nIngreso:", error);
+      setUltimoNIngreso(1); // En caso de error, empezar desde 1
+    }
   };
 
   const handleProductoSeleccionado = (producto: Producto) => {
@@ -77,11 +96,16 @@ export const CargarRma: React.FC = () => {
     setMarcaSeleccionada(null);
     setOpLoteSeleccionado(null);
     setObservaciones('');
+    setVencimiento('');
+    setSeEntrega('');
+    setSeRecibe('');
+    setNEgreso('');
     const form = document.getElementById('formRma') as HTMLFormElement;
     form.reset(); // Limpiar los valores de los inputs
   };
 
   const agregarProducto = () => {
+    setMostrarLista(true)
     if (!productoSeleccionado || !marcaSeleccionada) {
       Swal.fire({
         icon: 'warning',
@@ -110,11 +134,14 @@ export const CargarRma: React.FC = () => {
     setProductoSeleccionado(null);
     setMarcaSeleccionada(null);
     setOpLoteSeleccionado(null);
+    setSolicita('')
     setObservaciones('');
     setVencimiento('');
     setSeEntrega('');
     setSeRecibe('');
     setNEgreso('');
+    setMostrarCampos(false)
+    setMostrarLista(false)
     const form = document.getElementById('formRma') as HTMLFormElement;
     form.reset(); // Limpiar los valores de los inputs
   };
@@ -174,9 +201,12 @@ export const CargarRma: React.FC = () => {
           icon: 'success',
           title: 'RMA agregado',
           text: 'El RMA se ha agregado correctamente',
+          confirmButtonText: 'Aceptar', // Personalizar el texto del botón
+        }).then(() => {
+          limpiarInputs(); // Limpiar los inputs después de guardar
+          setProductosAgregados([]); // Limpiar la lista de productos agregados
+          //window.location.reload(); // Recargar la página
         });
-        limpiarInputs(); // Limpiar los inputs después de guardar
-        setProductosAgregados([]); // Limpiar la lista de productos agregados
       } else {
         Swal.fire({
           icon: 'error',
@@ -210,12 +240,12 @@ export const CargarRma: React.FC = () => {
         <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Cargar RMA</h2>
         <form id="formRma" className="space-y-6">
           <div>
-            <h3>Último N° de Ingreso: {ultimoNIngreso}</h3>
+          <h3 className="hidden">N° de Remito: {ultimoNIngreso}</h3>
             <label htmlFor="clienteSearch" className="block text-sm font-medium text-gray-700 mb-1">
               Cliente<span className="text-red-500">*</span>:
             </label>
-            <BusquedaClientes endpoint={urlClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} />
-            <UltimoNIngreso onNIngresoUpdate={setUltimoNIngreso} />
+            <BusquedaClientes endpoint={urlClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} value={clienteSeleccionado ? clienteSeleccionado.nombre : ''}/>
+            
           </div>
           {clienteSeleccionado && <input type="hidden" name="idCliente" value={clienteSeleccionado.id} />}
 
@@ -228,7 +258,7 @@ export const CargarRma: React.FC = () => {
             <>
               <div>
                 <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1">SKU<span className="text-red-500">*</span>:</label>
-                <ListarProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} />
+                <ListarProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} value = {productoSeleccionado ? productoSeleccionado.sku : '' } />
               </div>
               {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} required />}
 
@@ -239,13 +269,13 @@ export const CargarRma: React.FC = () => {
 
               <div>
                 <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1">Marca<span className="text-red-500">*</span>:</label>
-                <ListarMarcas endpoint={urlMarcas} onMarcaSeleccionada={handleMarcaSeleccionada} campos={['nombre']} />
+                <ListarMarcas endpoint={urlMarcas} onMarcaSeleccionada={handleMarcaSeleccionada} campos={['nombre']} value={marcaSeleccionada ? marcaSeleccionada.nombre :''} />
               </div>
               {marcaSeleccionada && <input type="hidden" name="idMarca" required value={marcaSeleccionada.id} />}
 
               <div>
                 <label htmlFor="opLote" className="block text-sm font-medium text-gray-700 mb-1">OP/Lote<span className="text-red-500">*</span>:</label>
-                <ListarOp endpoint={urlOp} onSeleccionado={handleOpLoteSeleccionado} campos={['nombre']} />
+                <ListarOp endpoint={urlOp} onSeleccionado={handleOpLoteSeleccionado} campos={['nombre']} value= {opLoteSeleccionado ? opLoteSeleccionado.nombre : ''} />
               </div>
 
               <div>
@@ -306,16 +336,29 @@ export const CargarRma: React.FC = () => {
         </form>
         {loading && <Loader />}
       </div>
-      <div className="ml-8 fixed">
-        <h3 className="text-xl font-semibold mb-4">Productos Agregados:</h3>
-        <ul>
-          {productosAgregados.map((producto, index) => (
-            <li key={index} className="mb-2 p-2 border border-gray-300 rounded-lg">
-              <strong>SKU:</strong> {producto.sku} | <strong>Cantidad:</strong> {producto.cantidad} | <strong>Marca:</strong> {producto.nombreMarca}
-            </li>
-          ))}
-        </ul>
-      </div>
+      {mostrarLista && (<div className="ml-8 fixed">
+        <h3 className="text-xl font-semibold mb-4">N° de Remito: {ultimoNIngreso}</h3>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {productosAgregados.map((producto, index) => (
+              <tr key={index} className={index % 2 === 0 ? 'bg-gray-200' : 'bg-white'}>
+                <td className='pl-2'>{producto.sku}</td>
+                <td className='w-20 text-center'>{producto.cantidad}</td>
+                <td className='pr-2'>{producto.nombreMarca}</td>
+
+              </tr>
+            ) )}
+          </tbody>
+        </table>
+        
+      </div>)}
     </div>
   );
 };

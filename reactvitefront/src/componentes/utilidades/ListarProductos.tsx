@@ -1,4 +1,4 @@
-import React, { useState, useRef, ChangeEvent } from 'react';
+import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 
@@ -8,16 +8,29 @@ interface ListarProductosProps {
   campos: string[];
   inputRef?: React.RefObject<HTMLInputElement>; // Agregar inputRef a las props
   limpiarQuery?: () => void; // Prop para la función de limpiar query
+  value?: string; // Nueva prop para sincronizar el valor del input
 }
 
-export const ListarProductos: React.FC<ListarProductosProps> = ({ endpoint, onProductoSeleccionado, campos, inputRef, limpiarQuery }) => {
-  const [query, setQuery] = useState<string>('');
+export const ListarProductos: React.FC<ListarProductosProps> = ({
+  endpoint,
+  onProductoSeleccionado,
+  campos,
+  inputRef,
+  limpiarQuery,
+  value = '', // Valor por defecto vacío
+}) => {
+  const [query, setQuery] = useState<string>(value); // Inicializar con el valor de la prop
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   // Utilizar la ref pasada a través de props o crear una nueva si no se pasa ninguna
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
+
+  // Sincronizar el estado interno `query` con la prop `value`
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

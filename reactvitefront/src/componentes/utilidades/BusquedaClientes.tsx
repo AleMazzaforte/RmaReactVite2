@@ -1,4 +1,4 @@
-import React, { useState, useRef, ChangeEvent } from 'react';
+import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 
@@ -6,24 +6,45 @@ interface BusquedaClientesProps {
   endpoint: string;
   onClienteSeleccionado: (cliente: any) => void;
   campos: string[];
+  value?: string; // Nueva prop para sincronizar el valor del input
+  inputRef?: React.RefObject<HTMLInputElement>; // Agregar inputRef a las props
 }
 
-export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({ endpoint, onClienteSeleccionado, campos }) => {
-  const [query, setQuery] = useState<string>('');
+export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
+  endpoint,
+  onClienteSeleccionado,
+  campos,
+  value = '', // Valor por defecto vacío
+  inputRef,
+}) => {
+  const [query, setQuery] = useState<string>(value); // Inicializar con el valor de la prop
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number | null>(null);
+
+  // Utilizar la ref pasada a través de props o crear una nueva si no se pasa ninguna
+  const localInputRef = inputRef || useRef<HTMLInputElement>(null);
+
+  // Sincronizar el estado interno `query` con la prop `value`
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
 
-    if (timerRef.current) clearTimeout(timerRef.current);
+    // Limpiar el timeout anterior si existe
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
 
-    timerRef.current = window.setTimeout(async () => {
-      if (value) {
-        setLoading(true);
+    // Si hay valor en el input, proceder con el retraso
+    if (value) {
+      setLoading(true);
+
+      // Establecer un nuevo timeout para la búsqueda
+      timerRef.current = window.setTimeout(async () => {
         try {
           const response = await fetch(`${endpoint}?query=${value}`);
           const data = await response.json();
@@ -33,20 +54,20 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({ endpoint, on
         } finally {
           setLoading(false);
         }
-      } else {
-        setResultados([]);
-        setLoading(false);
-      }
-    }, 500);
+      }, 500); // 500 ms de retraso
+    } else {
+      setResultados([]);
+      setLoading(false);
+    }
   };
 
   const handleClienteSeleccionado = (cliente: any) => {
     if (cliente) {
       onClienteSeleccionado(cliente);
       setResultados([]);
-      setQuery(cliente.nombre);
-      if (inputRef.current && inputRef.current.nextElementSibling) {
-        (inputRef.current.nextElementSibling as HTMLElement).focus();
+      setQuery(cliente.nombre); // Mostrar el nombre del cliente seleccionado en el input
+      if (localInputRef.current && localInputRef.current.nextElementSibling) {
+        (localInputRef.current.nextElementSibling as HTMLElement).focus(); // Saltar al siguiente campo
       }
     }
   };
@@ -55,7 +76,7 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({ endpoint, on
     <div>
       <input
         type="text"
-        ref={inputRef}
+        ref={localInputRef} // Usar la ref apropiada
         value={query}
         onChange={handleInputChange}
         placeholder="Buscar cliente"
