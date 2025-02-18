@@ -250,7 +250,7 @@ export const CargarRma: React.FC = () => {
           {clienteSeleccionado && <input type="hidden" name="idCliente" value={clienteSeleccionado.id} />}
 
           <div>
-            <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1">Solicita:</label>
+            <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1">Solicita<span className="text-red-500">*</span>:</label>
             <FechaInput id="solicita" value={solicita} onChange={setSolicita} />
           </div>
 

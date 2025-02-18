@@ -23,7 +23,6 @@ const listarOp = {
 
   postGuardarOp: async (req, res) => {
     const { op, fechaIngreso, productos } = req.body;
-    console.log('req.body', req.body);
   
     if (!op || !fechaIngreso || !productos || productos.length === 0) {
       return res.status(400).json({ error: "Faltan datos obligatorios" });
