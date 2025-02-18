@@ -80,10 +80,10 @@ const gestionClientes = {
     }
   },
 
-  actualizarCliente: async (req, res) => { console.log('req.body en actualizarCliente', req.body);
+  actualizarCliente: async (req, res) => {
     try {
       const id = req.params.idCliente;
-      console.log('id en actualizarCliente', id);
+      
       const {
         cliente,
         cuit,

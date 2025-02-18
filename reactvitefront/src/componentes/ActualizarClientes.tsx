@@ -23,6 +23,7 @@ export const ActualizarClientes: React.FC = () => {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
   const [transporteSeleccionado, setTransporteSeleccionado] = useState<string | null>(null); // Estado para el transporte seleccionado
   const formRef = useRef<HTMLFormElement>(null);
+  const busquedaClientesRef = useRef<HTMLInputElement>(null);
 
   let urlListarClientes = 'https://rmareactvite2.onrender.com/listarCliente';
   let urlActualizarCliente = 'https://rmareactvite2.onrender.com/actualizarCliente';
@@ -38,6 +39,8 @@ export const ActualizarClientes: React.FC = () => {
     setClienteSeleccionado(cliente);
     setTransporteSeleccionado(cliente.transporte); // Actualizar el transporte seleccionado
   };
+
+  
 
   const handleTransporteSeleccionado = (transporte: any) => {
     setTransporteSeleccionado(transporte.nombre); // Asumimos que el transporte tiene un campo "nombre"
@@ -146,7 +149,7 @@ export const ActualizarClientes: React.FC = () => {
           <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-1">
             Cliente:
           </label>
-          <BusquedaClientes endpoint={urlListarClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} />
+          <BusquedaClientes endpoint={urlListarClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} inputRef={busquedaClientesRef} value={clienteSeleccionado ? clienteSeleccionado.nombre : ''} />
           <input type="hidden" name="cliente" />
         </div>
         <div>

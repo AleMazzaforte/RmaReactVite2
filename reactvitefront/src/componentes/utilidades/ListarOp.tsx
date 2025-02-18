@@ -93,6 +93,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
   return (
     <div>
       <input
+        autoComplete='off'
         type="text"
         ref={localInputRef} // Usar la ref apropiada
         value={query}

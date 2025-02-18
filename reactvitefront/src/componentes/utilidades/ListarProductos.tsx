@@ -79,6 +79,7 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
   return (
     <div>
       <input
+        autoComplete='off'
         type="text"
         ref={localInputRef} // Usar la ref apropiada
         value={query}

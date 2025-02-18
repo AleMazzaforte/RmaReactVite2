@@ -65,6 +65,7 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
   return (
     <div>
       <input
+        autoComplete='off'
         name="nombre"
         type="text"
         ref={inputRef}

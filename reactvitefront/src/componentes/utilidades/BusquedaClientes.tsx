@@ -75,6 +75,7 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
   return (
     <div>
       <input
+        autoComplete='off'
         type="text"
         ref={localInputRef} // Usar la ref apropiada
         value={query}

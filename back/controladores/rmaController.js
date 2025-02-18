@@ -89,7 +89,7 @@ const cargarRma = {
       productos, // Array de productos
     } = req.body;
   
-    
+    console.log('req.body', req.body )
   
     let connection;
     try {
