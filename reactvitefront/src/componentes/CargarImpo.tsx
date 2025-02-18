@@ -26,10 +26,12 @@ export const CargarImpo = () => {
   const listarProductoRef = useRef<HTMLInputElement>(null); // Ref para el input de ListarProductos
 
   let urlProductos = 'https://rmareactvite2.onrender.com/listarProductos';
+  let urlGuardarOp = 'https://rmareactvite2.onrender.com/guardarOp';
   if (window.location.hostname === 'localhost') {
     urlProductos = 'http://localhost:8080/listarProductos';
+    urlGuardarOp = 'http://localhost:8080/guardarOp';
   }
-
+  
   useEffect(() => {
     // Enfocar el nuevo input de producto después de regenerarlo
     if (listarProductoRef.current) {
@@ -99,7 +101,7 @@ export const CargarImpo = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('https://rmareactvite2.onrender.com/guardarImpo', {
+      const response = await fetch( `${urlGuardarOp}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,8 +111,10 @@ export const CargarImpo = () => {
           fechaIngreso: fechaImpo,
           productos: productosAgregados,
         }),
+        
       });
-
+      console.log( 'productosagregados', productosAgregados);
+      
       if (response.ok) {
         Swal.fire({
           icon: 'success',
@@ -218,20 +222,15 @@ export const CargarImpo = () => {
                 <th></th>
                 <th></th> 
                 <th></th>
-                </tr>
+              </tr>
             </thead>
             <tbody>
               {productosAgregados.map((item, index) => (
-                <tr key={index} className={index % 2 === 0 ? 'bg-gray-200' : 'bg-white'}> {/* Fondo alternado */}
+                <tr key={index} className={index % 2 === 0 ? 'bg-gray-200' : 'bg-white'}>
                   <td>{item.producto.sku}</td>
-                  <td style={{ width: '80px' }}>{item.cantidad}</td> {/* Ancho fijo para la columna Cantidad */}
+                  <td style={{ width: '80px' }}>{item.cantidad}</td>
                   <td>
-                    <button
-                      onClick={() => eliminarProducto(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      Eliminar
-                    </button>
+                    <button onClick={() => eliminarProducto(index)} className="text-red-600 hover:text-red-800">Eliminar</button>
                   </td>
                 </tr>
               ))}

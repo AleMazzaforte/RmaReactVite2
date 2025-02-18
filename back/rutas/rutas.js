@@ -27,8 +27,9 @@ router.post('/cargarCliente', gestionClientes.cargarCliente);
 router.get('/listarCliente', gestionClientes.listarClientesParaActualizar);
 router.post('/actualizarCliente/:idCliente', gestionClientes.actualizarCliente);
 
-// Ruta para listar OP
+// Ruta para OP
 router.get('/listarOp', listarOp.getListarOp);
+router.post('/guardarOp', listarOp.postGuardarOp);
 
 
 // Ruta para listar clientes
