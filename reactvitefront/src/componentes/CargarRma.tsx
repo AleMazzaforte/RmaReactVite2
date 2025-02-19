@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { BusquedaClientes } from './utilidades/BusquedaClientes';
 import { ListarProductos } from './utilidades/ListarProductos';
 import { ListarMarcas } from './utilidades/ListarMarcas';
@@ -38,6 +38,8 @@ export const CargarRma: React.FC = () => {
   const [productosAgregados, setProductosAgregados] = useState<any[]>([]);
   const [mostrarLista, setMostrarLista] = useState(false)
 
+  
+  
   let urlClientes = 'https://rmareactvite2.onrender.com/buscarCliente';
   let urlProductos = 'https://rmareactvite2.onrender.com/listarProductos';
   let urlMarcas = 'https://rmareactvite2.onrender.com/listarMarcas';
@@ -77,8 +79,13 @@ export const CargarRma: React.FC = () => {
     }
   };
 
+  const skuInputRef = useRef<HTMLInputElement>(null);
+
   const handleProductoSeleccionado = (producto: Producto) => {
     setProductoSeleccionado(producto);
+    if (skuInputRef.current) {
+      skuInputRef.current.focus();
+    }
   };
 
   const handleMarcaSeleccionada = (marca: Marca) => {
@@ -125,11 +132,22 @@ export const CargarRma: React.FC = () => {
       nombreMarca: marcaSeleccionada.nombre, // Nombre de la marca para mostrar en la lista
       opLote: opLoteSeleccionado?.nombre || null,
       observaciones: formData.get('observaciones') || null,
+      vencimiento,
+      seRecibe,
+      seEntrega,
+      nEgreso,
     };
     setProductosAgregados([...productosAgregados, producto]);
     limpiarInputsProducto(); // Limpiar los inputs después de agregar un producto
+
+    setTimeout(() => {
+      if (skuInputRef.current) {
+        skuInputRef.current.focus();
+      }
+    }, 200);
   };
 
+ 
   const limpiarInputs = () => {
     setProductoSeleccionado(null);
     setMarcaSeleccionada(null);
@@ -144,6 +162,17 @@ export const CargarRma: React.FC = () => {
     setMostrarLista(false)
     const form = document.getElementById('formRma') as HTMLFormElement;
     form.reset(); // Limpiar los valores de los inputs
+  };
+
+  const eliminarProducto = (index: number) => {
+    const nuevosProductos = productosAgregados.filter((_, i) => i !== index);
+    setProductosAgregados(nuevosProductos);
+    console.log(productosAgregados)
+    if (productosAgregados.length == 1) {
+      setMostrarLista(false)
+      setProductosAgregados([])
+      console.log( 'productosAgregadsos', productosAgregados)
+    }
   };
 
   const enviarFormulario = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -166,25 +195,27 @@ export const CargarRma: React.FC = () => {
       });
       return;
     }
+
+    
     const formData = {
       
       
       cliente: clienteSeleccionado.id,
       solicita,
-      vencimiento,
-      seEntrega,
-      seRecibe,
-      observaciones,
       nIngreso: ultimoNIngreso, // Tomar el valor de ultimoNIngreso
-      nEgreso,
       productos: productosAgregados.map((producto) => ({
         modelo: producto.modelo, // ID del producto
         cantidad: producto.cantidad,
         marca: producto.marca, // ID de la marca
         opLote: producto.opLote,
         observaciones: producto.observaciones,
+        vencimiento: producto.vencimiento,
+        seEntrega: producto.seEntrega,
+        seRecibe: producto.seRecibe,
+        nEgreso: producto.nEgreso
       })),
     };
+    
     
     try {
       setLoading(true);
@@ -258,7 +289,11 @@ export const CargarRma: React.FC = () => {
             <>
               <div>
                 <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1">SKU<span className="text-red-500">*</span>:</label>
-                <ListarProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} value = {productoSeleccionado ? productoSeleccionado.sku : '' } />
+                <ListarProductos endpoint={urlProductos} 
+                onProductoSeleccionado={handleProductoSeleccionado} 
+                campos={['sku']} 
+                inputRef={skuInputRef}
+                value = {productoSeleccionado ? productoSeleccionado.sku : '' } />
               </div>
               {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} required />}
 
@@ -344,6 +379,7 @@ export const CargarRma: React.FC = () => {
               <th></th>
               <th></th>
               <th></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -352,6 +388,14 @@ export const CargarRma: React.FC = () => {
                 <td className='pl-2'>{producto.sku}</td>
                 <td className='w-20 text-center'>{producto.cantidad}</td>
                 <td className='pr-2'>{producto.nombreMarca}</td>
+                <td>
+                  <button
+                   className="text-red-600 hover:text-red-800 pl-1.5 pr-2"
+                    onClick={() => eliminarProducto(index)}
+                   >
+                   Eliminar
+                  </button>
+                </td>
 
               </tr>
             ) )}
