@@ -14,6 +14,8 @@ export const CargarClientes: React.FC = () => {
     urlClientes = 'http://localhost:8080/cargarCliente';
     urlBuscarTransporte = 'http://localhost:8080/buscarTransporte';
   }
+  console.log(transporteSeleccionado);
+  
 
   const enviarFormulario = async (nombre: string, cuit: string) => {
     if (formRef.current) {
@@ -26,7 +28,7 @@ export const CargarClientes: React.FC = () => {
         ciudad: formData.get("ciudad"),
         domicilio: formData.get("domicilio"),
         telefono: formData.get("telefono"),
-        transporte: transporteSeleccionado.nombre, // Usamos el estado del transporte seleccionado
+        transporte: transporteSeleccionado.idTransporte, // Usamos el estado del transporte seleccionado
         seguro: formData.get("seguro"),
         condEntrega: formData.get("condEntrega"),
         condPago: formData.get("condPago"),

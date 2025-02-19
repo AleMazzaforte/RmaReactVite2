@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { BusquedaClientes } from './utilidades/BusquedaClientes';
 import Loader from './utilidades/Loader';
@@ -18,23 +18,73 @@ interface Cliente {
   condicionDePago: string;
 }
 
+interface TransporteData {
+  idTransporte: number;
+  nombre: string;
+  telefono: number;
+  direccionLocal: string;
+}
+
 export const ImprimirEtiqueta = () => {
   const [loading, setLoading] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
   const [cantidadBultos, setCantidadBultos] = useState<number | null>(null);
   const [mostrarInput, setMostrarInput] = useState(false);
-  const [mostrarDatosEditable, setMostrarDatosEditable] = useState(false); // Estado para mostrar/ocultar el div de datos editables
+  const [mostrarDatosEditable, setMostrarDatosEditable] = useState(false);
   const [paginaHorizontal, setPaginaHorizontal] = useState(false);
-  const [datosEditables, setDatosEditables] = useState<Cliente | null>(null); // Estado para los datos editables
+  const [datosEditables, setDatosEditables] = useState<Cliente | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   let urlListarClientes = 'https://rmareactvite2.onrender.com/listarCliente';
+  let urlListartransporte = 'https://rmareactvite2.onrender.com/buscarTransporte';
   let urlBuscarRMA = 'https://rmareactvite2.onrender.com/buscarRMA';
 
   if (window.location.hostname === 'localhost') {
     urlListarClientes = 'http://localhost:8080/listarCliente';
+    urlListartransporte = 'http://localhost:8080/buscarTransporte';
     urlBuscarRMA = 'http://localhost:8080/buscarRMA';
   }
+
+  // Función para obtener el nombre del transporte
+  const obtenerNombreTransporte = async (transporteId: string): Promise<string> => {
+    if (!transporteId) return "No disponible";
+
+    try {
+      const respuesta = await fetch(`${urlListartransporte}`);
+      const transporteData: TransporteData[] = await respuesta.json();
+      if (respuesta.ok && transporteData) {
+        console.log('transporteData:', transporteData);
+        console.log('ID del transporte a buscar:', transporteId);
+
+        const transporteEncontrado = transporteData.find(
+          (transporte) => transporte.idTransporte === Number(transporteId)
+        );
+        console.log('transporteEncontrado:', transporteEncontrado);
+
+        return transporteEncontrado ? transporteEncontrado.nombre : "No disponible";
+      } else {
+        return "No disponible";
+      }
+    } catch (error) {
+      console.error("Error al obtener el transporte:", error);
+      return "Error al obtener transporte";
+    }
+  };
+
+  // Efecto para actualizar el nombre del transporte cuando se selecciona un cliente
+  useEffect(() => {
+    const actualizarNombreTransporte = async () => {
+      if (clienteSeleccionado && clienteSeleccionado.transporte) {
+        const nombreTransporte = await obtenerNombreTransporte(clienteSeleccionado.transporte);
+        setDatosEditables((prevState) => ({
+          ...prevState!,
+          transporte: nombreTransporte,
+        }));
+      }
+    };
+
+    actualizarNombreTransporte();
+  }, [clienteSeleccionado]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -70,8 +120,8 @@ export const ImprimirEtiqueta = () => {
           });
         }
         setMostrarInput(true);
-        setMostrarDatosEditable(true); // Mostrar el div de datos editables
-        setDatosEditables(clienteSeleccionado); // Inicializar los datos editables con los datos del cliente
+        setMostrarDatosEditable(true);
+        setDatosEditables(clienteSeleccionado);
       } else {
         Swal.fire({
           icon: 'error',
@@ -101,7 +151,7 @@ export const ImprimirEtiqueta = () => {
     }
   };
 
-  const generarPDF = () => {
+  const generarPDF = async () => {
     if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
       Swal.fire({
         icon: 'error',
@@ -111,28 +161,20 @@ export const ImprimirEtiqueta = () => {
       return;
     }
 
-    // Crear documento PDF con orientación y tamaño ajustados según la variable `paginaHorizontal`
     const doc = new jsPDF(paginaHorizontal ? 'landscape' : 'p', 'mm', paginaHorizontal ? [210, 150] : [100, 190]);
 
-    // Margen superior de 6 cm (aproximadamente 60 mm)
     const marginTop = 40;
-
-    // Tamaño de la fuente ajustado según la orientación
     const fontSize = paginaHorizontal ? 12 : 16;
 
-    // Agregar más páginas si la cantidad de bultos es mayor a 1
-    for (let i = 1; i < (cantidadBultos + 1); i++) {
-      // Establecer fuente y tamaño para el nombre del cliente (centrado)
+    for (let i = 1; i < cantidadBultos + 1; i++) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(fontSize);
       doc.text(`${datosEditables.nombre}`, doc.internal.pageSize.getWidth() / 2, marginTop, { align: "center" });
 
-      // Establecer fuente normal para el resto de los datos
-      doc.setFont("helvwtica", "bold");
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       const lineHeight = 1;
 
-      // Agregar los datos del cliente
       doc.text(`Domicilio: ${datosEditables.domicilio}`, 14, marginTop + 10 + lineHeight);
       doc.text(`Ciudad: ${datosEditables.ciudad}, ${datosEditables.provincia}`, 14, marginTop + 18 + lineHeight);
       doc.text(`Teléfono: ${datosEditables.telefono}`, 14, marginTop + 26 + lineHeight);
@@ -140,6 +182,7 @@ export const ImprimirEtiqueta = () => {
       doc.text(`Seguro: ${datosEditables.seguro}`, 14, marginTop + 42 + lineHeight);
       doc.text(`Entrega a ${datosEditables.condicionDeEntrega}`, 14, marginTop + 50 + lineHeight);
       doc.text(`Pago en ${datosEditables.condicionDePago}`, 14, marginTop + 58 + lineHeight);
+
       doc.text(`------------------------`, 14, marginTop + 68 + lineHeight);
 
       // Datos del remitente
@@ -150,20 +193,12 @@ export const ImprimirEtiqueta = () => {
       doc.text(`Ciudad: Córdoba`, 14, marginTop + 112 + lineHeight);
       doc.text(`Teléfono: 351 8509718`, 14, marginTop + 120 + lineHeight);
 
-      // Calculamos la posición X para centrar el texto en el pie de página
-      const pageWidth = doc.internal.pageSize.getWidth(); // Ancho de la página
-      const text = `Bulto ${i} de ${cantidadBultos}`;
-      const textWidth = doc.getTextWidth(text); // Obtiene el ancho del texto
-      const xPosition = ((pageWidth - textWidth) / 2) - 4; // Calcula la posición X para centrar el texto
-
-      // Agregar el texto del pie de página
-      doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
-      doc.text(text, xPosition, marginTop + 140); // Coloca el texto centrado en el pie de página
-      if (i < cantidadBultos) doc.addPage(); // Añadir una nueva página
+      doc.text(`Bulto ${i} de ${cantidadBultos}`, doc.internal.pageSize.getWidth() / 2, marginTop + 140, { align: "center" });
+
+      if (i < cantidadBultos) doc.addPage();
     }
 
-    // Mostrar el PDF en una nueva ventana
     doc.output('dataurlnewwindow');
   };
 
@@ -187,7 +222,6 @@ export const ImprimirEtiqueta = () => {
       {loading && <Loader />}
       {mostrarInput && (
         <div>
-          {/* Div para editar los datos del cliente */}
           {mostrarDatosEditable && datosEditables && (
             <div className='mt-4 space-y-4'>
               <div>
@@ -195,7 +229,7 @@ export const ImprimirEtiqueta = () => {
                 <input
                   type='text'
                   name='nombre'
-                  value={datosEditables.nombre}
+                  value={datosEditables?.nombre || ''}
                   onChange={handleInputChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg'
                 />
@@ -205,7 +239,7 @@ export const ImprimirEtiqueta = () => {
                 <input
                   type='text'
                   name='domicilio'
-                  value={datosEditables.domicilio}
+                  value={datosEditables?.domicilio || ''}
                   onChange={handleInputChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg'
                 />
@@ -215,7 +249,7 @@ export const ImprimirEtiqueta = () => {
                 <input
                   type='text'
                   name='ciudad'
-                  value={datosEditables.ciudad}
+                  value={datosEditables?.ciudad || ''}
                   onChange={handleInputChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg'
                 />
@@ -225,7 +259,7 @@ export const ImprimirEtiqueta = () => {
                 <input
                   type='text'
                   name='provincia'
-                  value={datosEditables.provincia}
+                  value={datosEditables?.provincia || ''}
                   onChange={handleInputChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg'
                 />
@@ -235,7 +269,7 @@ export const ImprimirEtiqueta = () => {
                 <input
                   type='text'
                   name='telefono'
-                  value={datosEditables.telefono}
+                  value={datosEditables?.telefono || ''}
                   onChange={handleInputChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg'
                 />
@@ -245,7 +279,7 @@ export const ImprimirEtiqueta = () => {
                 <input
                   type='text'
                   name='transporte'
-                  value={datosEditables.transporte}
+                  value={datosEditables?.transporte || ''}
                   onChange={handleInputChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg'
                 />
@@ -255,7 +289,7 @@ export const ImprimirEtiqueta = () => {
                 <input
                   type='text'
                   name='seguro'
-                  value={datosEditables.seguro}
+                  value={datosEditables?.seguro || ''}
                   onChange={handleInputChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg'
                 />
@@ -265,7 +299,7 @@ export const ImprimirEtiqueta = () => {
                 <input
                   type='text'
                   name='condicionDeEntrega'
-                  value={datosEditables.condicionDeEntrega}
+                  value={datosEditables?.condicionDeEntrega || ''}
                   onChange={handleInputChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg'
                 />
@@ -275,7 +309,7 @@ export const ImprimirEtiqueta = () => {
                 <input
                   type='text'
                   name='condicionDePago'
-                  value={datosEditables.condicionDePago}
+                  value={datosEditables?.condicionDePago || ''}
                   onChange={handleInputChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg'
                 />
