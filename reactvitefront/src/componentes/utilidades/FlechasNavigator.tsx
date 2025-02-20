@@ -53,17 +53,18 @@ export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, 
     <div>
       {resultados.length > 0 && (
         <div ref={resultadosRef} className="mt-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-          {resultados.map((opLote, index) => (
+          {resultados.map((item, index) => (
             <div
-              key={useUniqueKey ? opLote.nombre : opLote.id}  // Usamos 'nombre' o 'id' dependiendo de la condición
-              onClick={() => onSeleccionado(opLote)}
+              key={useUniqueKey ? `${item.nombre}-${index}` : item.id ?? `item-${index}`}
+              onClick={() => onSeleccionado(item)}
               className={`px-4 py-2 hover:bg-gray-200 cursor-pointer ${selectedIndex === index ? 'bg-gray-200' : ''}`}
             >
               {campos.map((campo) => (
-                <div key={campo}>{opLote[campo]}</div>
+                <div key={`${campo}-${index}`}>{item[campo]}</div>
               ))}
             </div>
           ))}
+
         </div>
       )}
     </div>
