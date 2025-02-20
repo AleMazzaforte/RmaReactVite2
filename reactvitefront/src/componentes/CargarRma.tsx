@@ -258,10 +258,10 @@ export const CargarRma: React.FC = () => {
   };
 
   return (
-    <div className='flex'>
+    <div className='flex '>
       <div
         className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"
-        style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
+        style={{ maxWidth: '590px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
       >
         <div className="flex justify-center mb-6">
           <div className="h-16 w-16 bg-gray-300 rounded-full flex items-center justify-center">
@@ -371,7 +371,7 @@ export const CargarRma: React.FC = () => {
         </form>
         {loading && <Loader />}
       </div>
-      {mostrarLista && (<div className="ml-8 fixed">
+      {mostrarLista && (<div className="ml-3.5 fixed">
         <h3 className="text-xl font-semibold mb-4">N° de Remito: {ultimoNIngreso}</h3>
         <table>
           <thead>
