@@ -17,7 +17,7 @@ interface ProductoAgregado {
 export const CargarImpo = () => {
   const [loading, setLoading] = useState(false);
   const [fechaImpo, setFechaImpo] = useState('');
-  const [op, setOp] = useState('');
+  const [nombre, setNombre] = useState('');
   const [productosAgregados, setProductosAgregados] = useState<ProductoAgregado[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [mostrarTabla, setMostrarTabla] = useState(false); // Estado para controlar la visibilidad de la tabla
@@ -89,7 +89,7 @@ export const CargarImpo = () => {
   };
 
   const handleSubmit = async () => {
-    if (!op || !fechaImpo || productosAgregados.length === 0) {
+    if (!nombre || !fechaImpo || productosAgregados.length === 0) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -107,7 +107,7 @@ export const CargarImpo = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          op,
+          nombre,
           fechaIngreso: fechaImpo,
           productos: productosAgregados,
         }),
@@ -122,7 +122,7 @@ export const CargarImpo = () => {
           text: 'Impo cargada correctamente.',
         });
         setProductosAgregados([]); // Limpiar la lista de productos
-        setOp(''); // Limpiar el campo OP
+        setNombre(''); // Limpiar el campo OP
         setFechaImpo(''); // Limpiar el campo fecha
         setMostrarTabla(false); // Ocultar la tabla
         
@@ -161,13 +161,13 @@ export const CargarImpo = () => {
         </h2>
         <form id='formMarca' className="space-y-6">
           <div>
-            <label htmlFor="op" className="block text-sm font-medium text-gray-700 mb-1">Operación:</label>
+            <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">Operación:</label>
             <input
               type="text"
-              id="op"
-              name="op"
-              value={op}
-              onChange={(e) => setOp(e.target.value)}
+              id="nombre"
+              name="nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
             />
           </div>

@@ -7,7 +7,12 @@ interface FlechasNavigatorProps {
   useUniqueKey?: boolean;  // Nuevo parámetro para decidir si usar clave única
 }
 
-export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ resultados, onSeleccionado, campos, useUniqueKey = false }) => {
+export const FlechasNavigator: React.FC<FlechasNavigatorProps> = ({ 
+  resultados, 
+  onSeleccionado, 
+  campos, 
+  useUniqueKey = false 
+}) => {
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const resultadosRef = useRef<HTMLDivElement>(null);
 
