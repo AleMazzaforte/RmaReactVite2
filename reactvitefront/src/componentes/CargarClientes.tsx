@@ -14,7 +14,7 @@ export const CargarClientes: React.FC = () => {
     urlClientes = 'http://localhost:8080/cargarCliente';
     urlBuscarTransporte = 'http://localhost:8080/buscarTransporte';
   }
-  
+  console.log(transporteSeleccionado);
   
 
   const enviarFormulario = async (nombre: string, cuit: string) => {
@@ -35,7 +35,6 @@ export const CargarClientes: React.FC = () => {
       };
 
       try {
-      
         setLoading(true);
         const response = await fetch(urlClientes, {
           method: "POST",
@@ -44,8 +43,7 @@ export const CargarClientes: React.FC = () => {
           },
           body: JSON.stringify(data),
         });
-        
-        
+
         const result = await response.json();
 
         if (response.ok) {
