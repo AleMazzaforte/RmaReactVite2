@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { conn } from "../bd/bd.js";
 import events from "events";
+import { log } from "console";
 events.EventEmitter.defaultMaxListeners = 15;
 
 dotenv.config();
@@ -89,15 +90,15 @@ const cargarRma = {
       productos, // Array de productos
     } = req.body;
   
-    console.log('req.body', req.body )
-  
+   
+    
     let connection;
     try {
       connection = await conn.getConnection();
   
       // Iterar sobre cada producto y realizar la inserción en la base de datos
       for (const producto of productos) {
-        const { modelo, cantidad, marca, opLote: productoOpLote, observaciones: productoObservaciones } = producto;
+        const { modelo, cantidad, marca, opLote: productoOpLote, observaciones: productoObservaciones, vencimiento, seEntrega, seRecibe, nEgreso } = producto;
   
         await connection.query(
           `INSERT INTO r_m_a 

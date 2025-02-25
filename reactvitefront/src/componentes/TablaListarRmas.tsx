@@ -58,7 +58,6 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
             <th className="px-4 py-2">Se Entrega</th>
             <th className="px-4 py-2">Se Recibe</th>
             <th className="px-4 py-2">Observaciones</th>
-            <th className="px-4 py-2">N° de Ingreso</th>
             <th className="px-4 py-2">N° de Egreso</th>
             <th className="px-4 py-2">Acciones</th>
           </tr>
@@ -139,14 +138,7 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
                     onChange={(e) => handleChange(index, 'observaciones', e.target.value)}
                   />
                 </td>
-                <td className="border py-1 text-sm text-center">
-                  <input
-                    type="text"
-                    value={rma.nIngreso}
-                    className="block w-full py-1 text-sm rounded-lg text-center"
-                    onChange={(e) => handleChange(index, 'nIngreso', e.target.value)}
-                  />
-                </td>
+                
                 <td className="border py-1 text-sm text-center">
                   <input
                     type="text"

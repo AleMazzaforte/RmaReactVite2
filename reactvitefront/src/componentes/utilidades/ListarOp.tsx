@@ -2,71 +2,67 @@ import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 
+interface Op {
+  id: number;
+  nombre: string;
+  fechaIngreso: string;
+  producto: string;
+  cantidad: number;
+}
+
 interface BusquedaOpLoteProps {
   endpoint: string;
-  onSeleccionado: (opLote: any) => void;
+  onSeleccionado: (opLote: Op[]) => void;
   campos: string[];
-  value?: string; // Nueva prop para sincronizar el valor del input
-  inputRef?: React.RefObject<HTMLInputElement>; // Agregar inputRef a las props
+  value?: string;
+  inputRef?: React.RefObject<HTMLInputElement>;
 }
 
 export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
   endpoint,
   onSeleccionado,
   campos,
-  value = '', // Valor por defecto vacío
+  value = '',
   inputRef,
 }) => {
-  const [query, setQuery] = useState<string>(value); // Inicializar con el valor de la prop
-  const [resultados, setResultados] = useState<any[]>([]);
+  const [query, setQuery] = useState<string>(value);
+  const [resultados, setResultados] = useState<Op[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null); // Para manejar el timeout
+  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  // Utilizar la ref pasada a través de props o crear una nueva si no se pasa ninguna
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
 
-  // Sincronizar el estado interno `query` con la prop `value`
   useEffect(() => {
     setQuery(value);
   }, [value]);
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
 
-    // Limpiar el timeout anterior si existe
     if (timer) {
       clearTimeout(timer);
     }
 
-    // Si hay valor en el input, proceder con el retraso
     if (value) {
       setLoading(true);
 
-      // Establecer un nuevo timeout para la búsqueda
       const newTimer = setTimeout(async () => {
         try {
-          const response = await fetch(`${endpoint}?query=${value}`);
-          const data = await response.json();
+          const url = `${endpoint}/${encodeURIComponent(value)}`;
+          const response = await fetch(url);
 
-          // Formatear datos eliminando duplicados
-          const formattedData = data.map((item: any) => ({ nombre: item.op }));
+          if (!response.ok) {
+            throw new Error('Error al obtener los datos');
+          }
 
-          const filteredData = formattedData.filter((opLote: any) =>
-            opLote.nombre.toLowerCase().includes(value.toLowerCase())
-          );
+          const data: Op[] = await response.json();
 
-          // Eliminar duplicados usando la función
-          const uniqueData = filteredData
-            .map((item: any) => item.nombre)
-            .reduce((unique: string[], item: string) => {
-              return unique.includes(item) ? unique : [...unique, item];
-            }, [])
-            .map((name: string) => ({ nombre: name }));
-
-          setResultados(uniqueData);
+          // Almacenar TODAS las OPs en resultados (para usarlas en el filtrado luego)
+          setResultados(data);
         } catch (error) {
           console.error('Error buscando OP/Lote:', error);
+          setResultados([]);
         } finally {
           setLoading(false);
         }
@@ -79,34 +75,43 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
     }
   };
 
-  const handleSeleccionado = (opLote: any) => {
+  const handleSeleccionado = (opLote: Op) => {
     if (opLote) {
-      onSeleccionado(opLote);
-      setResultados([]);
-      setQuery(opLote.nombre); // Usar "nombre" en lugar de "op"
+      // Filtrar todas las filas de la OP seleccionada
+      const opCompleta = resultados.filter((item) => item.nombre === opLote.nombre);
+      onSeleccionado(opCompleta);
+      setResultados([]); // Vaciar sugerencias
+      setQuery(opLote.nombre);
       if (localInputRef.current && localInputRef.current.nextElementSibling) {
         (localInputRef.current.nextElementSibling as HTMLElement).focus();
       }
     }
   };
 
+  // Obtener solo OPs únicas para las sugerencias
+  const sugerenciasUnicas = Array.from(
+    new Map(resultados.map((item) => [item.nombre, item])).values()
+  );
+
   return (
     <div>
       <input
-        autoComplete='off'
+        autoComplete="off"
         type="text"
-        ref={localInputRef} // Usar la ref apropiada
+        ref={localInputRef}
         value={query}
         onChange={handleInputChange}
         placeholder="Buscar OP/Lote"
         className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
       />
-      {loading ? <Loader /> : (
+      {loading ? (
+        <Loader />
+      ) : (
         <FlechasNavigator
-          resultados={resultados}
+          resultados={sugerenciasUnicas} // Mostrar solo nombres únicos en el listado
           onSeleccionado={handleSeleccionado}
           campos={campos}
-          useUniqueKey={true}  // Aquí se pasa el nuevo prop
+          useUniqueKey={true}
         />
       )}
     </div>
