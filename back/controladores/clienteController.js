@@ -33,7 +33,7 @@ const gestionClientes = {
         condEntrega,
         condPago
       } = req.body;
-      console.log('req.body', req.body);
+      
       
 
       const campos = [

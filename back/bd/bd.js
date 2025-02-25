@@ -2,13 +2,7 @@ import dotenv from 'dotenv';
 import mysql from 'mysql2';
 
 dotenv.config(); // Cargar el archivo .env
-console.log( 'log de variables de entorno', {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT
-});
+
 
 // Verifica que las variables de entorno estén definidas
 if (
@@ -30,13 +24,7 @@ const poolConnection = mysql.createPool({
     connectionLimit: process.env.DB_CONNECTION_LIMIT,
     queueLimit: 0
 });
-console.log('Configuración del pool:', {
-    host: poolConnection.config.connectionConfig.host,
-    user: poolConnection.config.connectionConfig.user,
-    password: poolConnection.config.connectionConfig.password,
-    database: poolConnection.config.connectionConfig.database,
-    port: poolConnection.config.connectionConfig.port
-});
+
 
 
 export const conn = poolConnection.promise();

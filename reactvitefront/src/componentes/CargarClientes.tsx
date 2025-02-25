@@ -14,7 +14,7 @@ export const CargarClientes: React.FC = () => {
     urlClientes = 'http://localhost:8080/cargarCliente';
     urlBuscarTransporte = 'http://localhost:8080/buscarTransporte';
   }
-  console.log(transporteSeleccionado);
+  
   
 
   const enviarFormulario = async (nombre: string, cuit: string) => {
@@ -23,18 +23,19 @@ export const CargarClientes: React.FC = () => {
       
       const data = {
         cliente: formData.get("cliente"),
-        cuit: formData.get("cuit"),
-        provincia: formData.get("provincia"),
-        ciudad: formData.get("ciudad"),
-        domicilio: formData.get("domicilio"),
-        telefono: formData.get("telefono"),
-        transporte: transporteSeleccionado.idTransporte, // Usamos el estado del transporte seleccionado
-        seguro: formData.get("seguro"),
-        condEntrega: formData.get("condEntrega"),
-        condPago: formData.get("condPago"),
+        cuit: formData.get("cuit")?.toString().trim() || null,
+        provincia: formData.get("provincia")?.toString().trim() || null,
+        ciudad: formData.get("ciudad")?.toString().trim() || null,
+        domicilio: formData.get("domicilio")?.toString().trim() || null,
+        telefono: formData.get("telefono")?.toString().trim() || null,
+        transporte: transporteSeleccionado?.idTransporte || null,
+        seguro: formData.get("seguro")?.toString().trim() || null,
+        condEntrega: formData.get("condEntrega")?.toString().trim() || null,
+        condPago: formData.get("condPago")?.toString().trim() || null,
       };
 
       try {
+      
         setLoading(true);
         const response = await fetch(urlClientes, {
           method: "POST",
@@ -43,7 +44,8 @@ export const CargarClientes: React.FC = () => {
           },
           body: JSON.stringify(data),
         });
-
+        
+        
         const result = await response.json();
 
         if (response.ok) {
