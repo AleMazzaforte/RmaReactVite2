@@ -9,9 +9,9 @@ interface Marca {
 }
 
 export const ActualizarMarca: React.FC = () => {
-  let urlActualizarMarca = 'https://rmareactvite2.onrender.com/actualizarMarca';
-  let urlEliminarMarca = 'https://rmareactvite2.onrender.com/eliminarMarca';
-  let urlMarcas = 'https://rmareactvite2.onrender.com/listarMarcas';  
+  let urlActualizarMarca = 'https://rma-back.vercel.app/actualizarMarca';
+  let urlEliminarMarca = 'https://rma-back.vercel.app/eliminarMarca';
+  let urlMarcas = 'https://rma-back.vercel.app/listarMarcas';  
 
   if (window.location.hostname === 'localhost') {
     urlActualizarMarca = 'http://localhost:8080/actualizarMarca';

@@ -4,7 +4,7 @@ import { TablaListarRmas } from './TablaListarRmas';
 import { BusquedaClientes } from './utilidades/BusquedaClientes';
 import { FlechasNavigator } from './utilidades/FlechasNavigator';
 
-let url = 'https://rmareactvite2.onrender.com';
+let url = 'https://rma-back.vercel.app';
 if (window.location.hostname === 'localhost') {
   url = 'http://localhost:8080';
 }

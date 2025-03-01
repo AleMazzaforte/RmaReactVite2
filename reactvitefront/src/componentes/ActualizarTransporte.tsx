@@ -10,9 +10,9 @@ export const ActualizarTransporte: React.FC = () => {
   const [transporteSeleccionado, setTransporteSeleccionado] = useState<any>(null);
   const [formValues, setFormValues] = useState({ nombre: '', direccionLocal: '', telefono: '' });
 
-  let urlActualizarTransporte = 'https://rmareactvite2.onrender.com/actualizarTransporte';
-  let urlEliminarTransporte = 'https://rmareactvite2.onrender.com/eliminarTransporte';
-  let urlBuscarTransporte = 'https://rmareactvite2.onrender.com/buscarTransporte';
+  let urlActualizarTransporte = 'https://rma-back.vercel.app/actualizarTransporte';
+  let urlEliminarTransporte = 'https://rma-back.vercel.app/eliminarTransporte';
+  let urlBuscarTransporte = 'https://rma-back.vercel.app/buscarTransporte';
 
   if (window.location.hostname === 'localhost') {
     urlActualizarTransporte = 'http://localhost:8080/actualizarTransporte';

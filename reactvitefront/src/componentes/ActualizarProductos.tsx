@@ -10,10 +10,10 @@ export const ActualizarProductos: React.FC = () => {
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<any>(null);  // Estado para la marca seleccionada
   const [productoSeleccionado, setProductoSeleccionado] = useState<any>(null);  // Estado para el producto seleccionado
 
-  let urlProductos = 'https://rmareactvite2.onrender.com/listarProductos';
-  let urlListarMarcas = 'https://rmareactvite2.onrender.com/listarMarcas';
-  let urlActualizarProducto = 'https://rmareactvite2.onrender.com/actualizarProducto';
-  let urlEliminarProducto = 'https://rmareactvite2.onrender.com/eliminarProducto';
+  let urlProductos = 'https://rma-back.vercel.app/listarProductos';
+  let urlListarMarcas = 'https://rma-back.vercel.app/listarMarcas';
+  let urlActualizarProducto = 'https://rma-back.vercel.app/actualizarProducto';
+  let urlEliminarProducto = 'https://rma-back.vercel.app/eliminarProducto';
 
   if (window.location.hostname === 'localhost') {
     urlProductos = 'http://localhost:8080/listarProductos';

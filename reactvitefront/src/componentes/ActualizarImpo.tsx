@@ -15,8 +15,8 @@ export const ActualizarImpo = () => {
   const [opSeleccionada, setOpSeleccionada] = useState<Op[]>([]);
 
 
-  let urlActualizarOp = 'https://rmareactvite2.onrender.com/actualizarOp';
-  let urlListarOp = 'https://rmareactvite2.onrender.com/listarOp';
+  let urlActualizarOp = 'https://rma-back.vercel.app/actualizarOp';
+  let urlListarOp = 'https://rma-back.vercel.app/listarOp';
   if (window.location.hostname == 'localhost') {
     urlActualizarOp = 'http://localhost:8080/actualizarOp'
     urlListarOp = 'http://localhost:8080/listarOp'

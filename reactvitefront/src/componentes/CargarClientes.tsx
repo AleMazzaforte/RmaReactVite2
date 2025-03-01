@@ -8,8 +8,8 @@ export const CargarClientes: React.FC = () => {
   const [transporteSeleccionado, setTransporteSeleccionado] = useState<any>(null); // Estado para el transporte seleccionado
   const formRef = useRef<HTMLFormElement>(null);
 
-  let urlClientes = 'https://rmareactvite2.onrender.com/cargarCliente';
-  let urlBuscarTransporte = 'https://rmareactvite2.onrender.com/buscarTransporte';
+  let urlClientes = 'https://rma-back.vercel.app/cargarCliente';
+  let urlBuscarTransporte = 'https://rma-back.vercel.app/buscarTransporte';
   if (window.location.hostname === 'localhost') {
     urlClientes = 'http://localhost:8080/cargarCliente';
     urlBuscarTransporte = 'http://localhost:8080/buscarTransporte';

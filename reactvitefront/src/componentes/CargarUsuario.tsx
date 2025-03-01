@@ -9,7 +9,7 @@ export const CargarUsuario: React.FC = () => {
   const enviarFormulario = async () => {
     const formData = { username, password };
 
-    let urlCargarUsuario = 'https://rmareactvite2.onrender.com/cargarUsuario'; // URL de producción 
+    let urlCargarUsuario = 'https://rma-back.vercel.app/cargarUsuario'; // URL de producción 
     if (window.location.hostname === 'localhost') { 
       urlCargarUsuario = 'http://localhost:8080/cargarUsuario'; // URL de desarrollo 
     } 

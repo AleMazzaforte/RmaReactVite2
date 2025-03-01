@@ -24,11 +24,11 @@ export const ActualizarClientes: React.FC = () => {
   const [transporteSeleccionado, setTransporteSeleccionado] = useState<string | null>(null); // Estado para el transporte seleccionado
   const formRef = useRef<HTMLFormElement>(null);
   const busquedaClientesRef = useRef<HTMLInputElement>(null);
-
-  let urlListarClientes = 'https://rmareactvite2.onrender.com/listarCliente';
-  let urlActualizarCliente = 'https://rmareactvite2.onrender.com/actualizarCliente';
-  let urlBuscarTransporte = 'https://rmareactvite2.onrender.com/buscarTransporte'; // URL para buscar transportes
-
+  
+  let urlListarClientes = 'https://rma-back.vercel.app/listarCliente';
+  let urlActualizarCliente = 'https://rma-back.vercel.app/actualizarCliente';
+  let urlBuscarTransporte = 'https://rma-back.vercel.app/buscarTransporte'; // URL para buscar transportes
+  
   if (window.location.hostname === 'localhost') {
     urlListarClientes = 'http://localhost:8080/listarCliente';
     urlActualizarCliente = 'http://localhost:8080/actualizarCliente';

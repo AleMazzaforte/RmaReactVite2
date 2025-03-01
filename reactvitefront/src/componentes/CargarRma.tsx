@@ -40,11 +40,11 @@ export const CargarRma: React.FC = () => {
 
   
   
-  let urlClientes = 'https://rmareactvite2.onrender.com/buscarCliente';
-  let urlProductos = 'https://rmareactvite2.onrender.com/listarProductos';
-  let urlMarcas = 'https://rmareactvite2.onrender.com/listarMarcas';
-  let urlAgregarRma = 'https://rmareactvite2.onrender.com/agregarRma';
-  let urlOp = 'https://rmareactvite2.onrender.com/listarOp';
+  let urlClientes = 'https://rma-back.vercel.app/buscarCliente';
+  let urlProductos = 'https://rma-back.vercel.app/listarProductos';
+  let urlMarcas = 'https://rma-back.vercel.app/listarMarcas';
+  let urlAgregarRma = 'https://rma-back.vercel.app/agregarRma';
+  let urlOp = 'https://rma-back.vercel.app/listarOp';
 
   if (window.location.hostname === 'localhost') {
     urlClientes = 'http://localhost:8080/buscarCliente';
@@ -59,7 +59,7 @@ export const CargarRma: React.FC = () => {
     setMostrarCampos(true);
   
     // Llamada a la API para obtener el último número de remito
-    let url = 'https://rmareactvite2.onrender.com/getUltimoNIngreso';
+    let url = 'https://rma-back.vercel.app/getUltimoNIngreso';
     if (window.location.hostname === 'localhost') {
       url = 'http://localhost:8080/getUltimoNIngreso';
     }

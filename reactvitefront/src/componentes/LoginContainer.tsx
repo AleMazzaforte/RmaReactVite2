@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
 
 // Determinar la URL de la API según la url
-let url = 'https://rmareactvite2.onrender.com';
+let url = 'https://rma-back.vercel.app';
 
 if (window.location.hostname === 'localhost') {
   url = 'http://localhost:8080';

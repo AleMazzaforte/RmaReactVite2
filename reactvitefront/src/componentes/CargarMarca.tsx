@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
 
-let urlMarca = 'https://rmareactvite2.onrender.com/cargarMarca';
+let urlMarca = 'https://rma-back.vercel.app/cargarMarca';
 
 if (window.location.hostname === 'localhost') {
   urlMarca = 'http://localhost:8080/cargarMarca';

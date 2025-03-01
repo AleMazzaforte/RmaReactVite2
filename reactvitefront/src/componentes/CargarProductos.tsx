@@ -8,8 +8,8 @@ export const CargarProductos: React.FC = () => {
   const formRef = useRef<HTMLFormElement>(null);
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<any>(null);  // Estado para la marca seleccionada
 
-  let urlProductos = 'https://rmareactvite2.onrender.com/cargarProducto';
-  let urlListarMarcas = 'https://rmareactvite2.onrender.com/listarMarcas';
+  let urlProductos = 'https://rma-back.vercel.app/cargarProducto';
+  let urlListarMarcas = 'https://rma-back.vercel.app/listarMarcas';
 
   if (window.location.hostname === 'localhost') {
     urlProductos = 'http://localhost:8080/cargarProducto';

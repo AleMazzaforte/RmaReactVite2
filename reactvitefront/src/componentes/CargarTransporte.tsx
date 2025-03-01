@@ -7,7 +7,7 @@ export const CargarTransporte: React.FC = () => {
   const [loading, setLoading] = useState(false);  // Estado para el loader
   const formRef = useRef<HTMLFormElement>(null);
   
-  let urlcargarTransporte = 'https://rmareactvite2.onrender.com/cargarTransporte';
+  let urlcargarTransporte = 'https://rma-back.vercel.app/cargarTransporte';
   
   if (window.location.hostname === 'localhost') {
     urlcargarTransporte = 'http://localhost:8080/cargarTransporte';

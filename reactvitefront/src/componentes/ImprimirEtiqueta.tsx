@@ -35,9 +35,9 @@ export const ImprimirEtiqueta = () => {
   const [datosEditables, setDatosEditables] = useState<Cliente | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  let urlListarClientes = 'https://rmareactvite2.onrender.com/listarCliente';
-  let urlListartransporte = 'https://rmareactvite2.onrender.com/buscarTransporte';
-  let urlBuscarRMA = 'https://rmareactvite2.onrender.com/buscarRMA';
+  let urlListarClientes = 'https://rma-back.vercel.app/listarCliente';
+  let urlListartransporte = 'https://rma-back.vercel.app/buscarTransporte';
+  let urlBuscarRMA = 'https://rma-back.vercel.app/buscarRMA';
 
   if (window.location.hostname === 'localhost') {
     urlListarClientes = 'http://localhost:8080/listarCliente';

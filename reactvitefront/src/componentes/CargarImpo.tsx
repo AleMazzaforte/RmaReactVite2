@@ -25,8 +25,8 @@ export const CargarImpo = () => {
   const cantidadRef = useRef<HTMLInputElement>(null);
   const listarProductoRef = useRef<HTMLInputElement>(null); // Ref para el input de ListarProductos
 
-  let urlProductos = 'https://rmareactvite2.onrender.com/listarProductos';
-  let urlGuardarOp = 'https://rmareactvite2.onrender.com/guardarOp';
+  let urlProductos = 'https://rma-back.vercel.app/listarProductos';
+  let urlGuardarOp = 'https://rma-back.vercel.app/guardarOp';
   if (window.location.hostname === 'localhost') {
     urlProductos = 'http://localhost:8080/listarProductos';
     urlGuardarOp = 'http://localhost:8080/guardarOp';
