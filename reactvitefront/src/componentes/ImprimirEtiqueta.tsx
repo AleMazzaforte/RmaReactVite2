@@ -53,14 +53,11 @@ export const ImprimirEtiqueta = () => {
       const respuesta = await fetch(`${urlListartransporte}`);
       const transporteData: TransporteData[] = await respuesta.json();
       if (respuesta.ok && transporteData) {
-        console.log('transporteData:', transporteData);
-        console.log('ID del transporte a buscar:', transporteId);
-
+       
         const transporteEncontrado = transporteData.find(
           (transporte) => transporte.idTransporte === Number(transporteId)
         );
-        console.log('transporteEncontrado:', transporteEncontrado);
-
+       
         return transporteEncontrado ? transporteEncontrado.nombre : "No disponible";
       } else {
         return "No disponible";
@@ -70,6 +67,8 @@ export const ImprimirEtiqueta = () => {
       return "Error al obtener transporte";
     }
   };
+  
+  
 
   // Efecto para actualizar el nombre del transporte cuando se selecciona un cliente
   useEffect(() => {
@@ -85,7 +84,7 @@ export const ImprimirEtiqueta = () => {
 
     actualizarNombreTransporte();
   }, [clienteSeleccionado]);
-
+  
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!clienteSeleccionado) {
@@ -119,9 +118,16 @@ export const ImprimirEtiqueta = () => {
             text: `No hay RMA pendiente para el cliente "${clienteSeleccionado.nombre}".`,
           });
         }
+
+        setDatosEditables(clienteSeleccionado);
+        const nombreTransporte = await obtenerNombreTransporte(clienteSeleccionado.transporte);
+        setDatosEditables((prevState) => ({
+          ...prevState!,
+          transporte: nombreTransporte,
+        }));
         setMostrarInput(true);
         setMostrarDatosEditable(true);
-        setDatosEditables(clienteSeleccionado);
+
       } else {
         Swal.fire({
           icon: 'error',

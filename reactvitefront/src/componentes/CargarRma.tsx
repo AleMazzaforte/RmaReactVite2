@@ -372,7 +372,7 @@ export const CargarRma: React.FC = () => {
         </form>
         {loading && <Loader />}
       </div>
-      {mostrarLista && (<div className="ml-3.5 fixed">
+      {mostrarLista && (<div className="ml-1 relative mr-5">
         <h3 className="text-xl font-semibold mb-4">N° de Remito: {ultimoNIngreso}</h3>
         <table>
           <thead>
