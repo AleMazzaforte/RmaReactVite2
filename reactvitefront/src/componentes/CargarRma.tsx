@@ -121,7 +121,7 @@ export const CargarRma: React.FC = () => {
       });
       return;
     }
-
+    
     const form = document.getElementById('formRma') as HTMLFormElement;
     const formData = new FormData(form);
     const producto = {
@@ -130,7 +130,7 @@ export const CargarRma: React.FC = () => {
       cantidad: formData.get('cantidad') || '',
       marca: marcaSeleccionada.id, // ID de la marca
       nombreMarca: marcaSeleccionada.nombre, // Nombre de la marca para mostrar en la lista
-      opLote: opLoteSeleccionado?.nombre || null,
+      opLote: opLoteSeleccionado[0].nombre || null,
       observaciones: formData.get('observaciones') || null,
       vencimiento,
       seRecibe,
@@ -167,11 +167,11 @@ export const CargarRma: React.FC = () => {
   const eliminarProducto = (index: number) => {
     const nuevosProductos = productosAgregados.filter((_, i) => i !== index);
     setProductosAgregados(nuevosProductos);
-    console.log(productosAgregados)
+    
     if (productosAgregados.length == 1) {
       setMostrarLista(false)
       setProductosAgregados([])
-      console.log( 'productosAgregadsos', productosAgregados)
+      
     }
   };
 
@@ -215,6 +215,7 @@ export const CargarRma: React.FC = () => {
         nEgreso: producto.nEgreso
       })),
     };
+    
     
     
     try {

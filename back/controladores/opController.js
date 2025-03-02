@@ -20,7 +20,7 @@ const listarOp = {
         "SELECT * FROM OP WHERE LOWER(nombre) LIKE LOWER(?) ORDER BY nombre ASC",
         [`%${query}%`] // Usar el valor de query en el patrón LIKE
       );
-      console.log(results);
+      
       
       // Verificar si se encontraron resultados
       if (results.length === 0) {
