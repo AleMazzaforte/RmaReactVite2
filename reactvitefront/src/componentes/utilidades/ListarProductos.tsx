@@ -67,6 +67,7 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
 
   const handleProductoSeleccionado = (producto: any) => {
     if (producto) {
+      
       onProductoSeleccionado(producto);
       setResultados([]);
       setQuery(producto.sku);  // Mostrar el SKU seleccionado en el input

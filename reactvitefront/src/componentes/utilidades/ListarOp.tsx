@@ -6,8 +6,6 @@ interface Op {
   id: number;
   nombre: string;
   fechaIngreso: string;
-  producto: string;
-  cantidad: number;
 }
 
 interface BusquedaOpLoteProps {

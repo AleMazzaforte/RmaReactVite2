@@ -17,6 +17,7 @@ import { ActualizarTransporte } from '../componentes/ActualizarTransporte';
 import { ImprimirEtiqueta  } from '../componentes/ImprimirEtiqueta';
 import { CargarImpo  } from '../componentes/CargarImpo';
 import { ActualizarImpo  } from '../componentes/ActualizarImpo';
+import { Estadisticas } from '../componentes/Estadisticas';
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -37,6 +38,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/imprimirEtiqueta" element={<ImprimirEtiqueta />} />
         <Route path="/cargarOp" element={<CargarImpo />} />
         <Route path="/actualizarOp" element={<ActualizarImpo />} />
+        <Route path="/estadisticas" element={<Estadisticas />} />
       </Route>
       <Route path="*" element={<NotFound />} /> {/* Ruta para manejar páginas no encontradas */}
     </Routes>

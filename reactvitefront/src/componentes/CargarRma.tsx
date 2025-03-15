@@ -37,6 +37,7 @@ export const CargarRma: React.FC = () => {
   const [mostrarCampos, setMostrarCampos] = useState(false);
   const [productosAgregados, setProductosAgregados] = useState<any[]>([]);
   const [mostrarLista, setMostrarLista] = useState(false)
+  const [listarProductosKey, setListarProductosKey] = useState(0);
 
   
   
@@ -145,6 +146,8 @@ export const CargarRma: React.FC = () => {
         skuInputRef.current.focus();
       }
     }, 200);
+
+    setListarProductosKey((prevKey) => prevKey + 1); // Forzar la actualización de la lista de productos
   };
 
  
@@ -197,9 +200,7 @@ export const CargarRma: React.FC = () => {
     }
 
     
-    const formData = {
-      
-      
+    const formData = {      
       cliente: clienteSeleccionado.id,
       solicita,
       nIngreso: ultimoNIngreso, // Tomar el valor de ultimoNIngreso
@@ -311,7 +312,13 @@ export const CargarRma: React.FC = () => {
 
               <div>
                 <label htmlFor="opLote" className="block text-sm font-medium text-gray-700 mb-1">OP/Lote<span className="text-red-500">*</span>:</label>
-                <ListarOp endpoint={urlOp} onSeleccionado={handleOpLoteSeleccionado} campos={['nombre']} value= {opLoteSeleccionado ? opLoteSeleccionado.nombre : ''} />
+                <ListarOp 
+                  key = {listarProductosKey}
+                  endpoint={urlOp} 
+                  onSeleccionado={handleOpLoteSeleccionado} 
+                  campos={['nombre']} 
+                  value= {opLoteSeleccionado ? opLoteSeleccionado.nombre : ''} 
+                />
               </div>
 
               <div>

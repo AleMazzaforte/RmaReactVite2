@@ -11,6 +11,7 @@ const listarOp = {
   
   getListarOp: async (req, res) => {
     const { query } = req.params; // Obtener el parámetro de búsqueda desde la ruta
+    
 
     try {
       const connection = await conn.getConnection();
@@ -37,42 +38,105 @@ const listarOp = {
   },
 
   postGuardarOp: async (req, res) => {
-    const { nombre, fechaIngreso, productos } = req.body;
-  
-    if (!nombre || !fechaIngreso || !productos || productos.length === 0) {
-      return res.status(400).json({ error: "Faltan datos obligatorios" });
-    }
-  
-    const connection = await conn.getConnection();
-    await connection.beginTransaction();
-  
+    let connection;
     try {
-      // Insertar cada producto en la nombre
-      for (const item of productos) {
-        const productoId = item.producto?.id; // Validación extra
-        const cantidad = item.cantidad;
-  
-        if (!productoId || !cantidad) {
-          throw new Error("Falta el ID del producto o la cantidad");
+        const { op, fechaIngreso } = req.body;
+
+        if (!op || !fechaIngreso) {
+            return res.status(400).json({ message: "Faltan datos obligatorios", success: false });
         }
-  
-        await connection.query(
-          "INSERT INTO OP (nombre, producto, cantidad, fechaIngreso) VALUES (?, ?, ?, ?)",
-          [nombre, productoId, cantidad, fechaIngreso]
+
+        connection = await conn.getConnection();
+        await connection.beginTransaction();
+
+        // Verificar si la OP ya existe
+        const [existingOp] = await connection.query(
+            "SELECT id FROM OP WHERE nombre = ?",
+            [op]
         );
-      }
-  
-      await connection.commit();
-      connection.release();
-  
-      res.status(201).json({ message: "OP guardada correctamente" });
+
+        if (existingOp.length > 0) {
+            return res.status(400).json({ message: "La OP ya existe", success: false });
+        }
+
+        await connection.query(
+            "INSERT INTO OP (nombre, fechaIngreso) VALUES (?, ?)",
+            [op, fechaIngreso]
+        );
+
+        const id = await connection.query("SELECT LAST_INSERT_ID() AS id");
+
+        const idOp = id[0][0].id;
+        console.log('idOp:', idOp);
+        
+        await connection.commit();
+        res.status(201).json({ message: "OP guardada correctamente", success: true, idOp });
     } catch (error) {
-      await connection.rollback();
-      connection.release();
-      console.error("Error al guardar la OP:", error);
-      res.status(500).json({ error: "Error al guardar la OP" });
+        console.error("Error al guardar la OP:", error);
+        if (connection) await connection.rollback();
+        res.status(500).json({ message: "Error interno del servidor", success: false });
+    } finally {
+        if (connection) connection.release();
     }
   },
+
+  postGuardarOpProductos: async (req, res) => {
+    let connection;
+    try {
+        const productos = req.body; // Array de productos: [{ idOp, sku, cantidad }]
+
+        if (!Array.isArray(productos) || productos.length === 0) {
+            return res.status(400).json({ message: "Debe enviar al menos un producto", success: false });
+        }
+
+        connection = await conn.getConnection();
+        await connection.beginTransaction();
+
+        // Verificar si la OP existe
+        const [opExistente] = await connection.query(
+            "SELECT id FROM OP WHERE id = ?",
+            [productos[0].idOp] // Tomamos el idOp del primer producto (todos deben tener el mismo idOp)
+        );
+
+        if (opExistente.length === 0) {
+            return res.status(400).json({ message: "La OP no existe", success: false });
+        }
+
+        // Insertar los productos en opProductos
+        for (const producto of productos) {
+            const { idOp, sku, cantidad } = producto;
+
+            if (!idOp || !sku || !cantidad) {
+                throw new Error("Faltan datos obligatorios en uno o más productos");
+            }
+
+            await connection.query(
+                "INSERT INTO opProductos (idOp, sku, cantidad) VALUES (?, ?, ?)",
+                [idOp, sku, cantidad]
+            );
+        }
+
+        await connection.commit();
+        res.status(201).json({ message: "Productos guardados correctamente", success: true });
+    } catch (error) {
+        console.error("Error al guardar los productos en opProductos:", error);
+
+        if (connection) {
+            await connection.rollback(); // Revertir la transacción en caso de error
+        }
+
+        res.status(500).json({ 
+            message: error.message || "Error interno del servidor", 
+            success: false 
+        });
+    } finally {
+        if (connection) {
+            connection.release(); // Liberar la conexión
+        }
+    }
+  }
+
+  
   
 };
 
