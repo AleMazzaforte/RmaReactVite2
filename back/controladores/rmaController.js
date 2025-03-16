@@ -273,19 +273,31 @@ const gestionarRma = {
 
   getListarProductosRma: async (req, res) => {
     const idCliente = req.params.idCliente;
+  
     const obtenerProductosPorCliente = async (idCliente) => {
       const query = `
-      SELECT rma.idRma, p.sku AS modelo_sku, rma.cantidad, m.nombre AS marca_nombre, 
-             rma.solicita, rma.opLote, rma.vencimiento, rma.seEntrega, rma.seRecibe, 
-             rma.observaciones, rma.nIngreso, rma.nEgreso 
-      FROM r_m_a rma
-      JOIN productos p ON rma.modelo = p.id
-      JOIN marcas m ON rma.marca = m.id
-      WHERE rma.idCliente = ?`;
+        SELECT 
+          rma.idRma, 
+          p.sku AS modelo_sku, 
+          rma.cantidad, 
+          m.nombre AS marca_nombre, 
+          rma.solicita, 
+          OP.nombre AS opLote_nombre,  -- Cambiamos opLote por el nombre de la OP
+          rma.vencimiento, 
+          rma.seEntrega, 
+          rma.seRecibe, 
+          rma.observaciones, 
+          rma.nIngreso, 
+          rma.nEgreso 
+        FROM r_m_a rma
+        JOIN productos p ON rma.modelo = p.id
+        JOIN marcas m ON rma.marca = m.id
+        LEFT JOIN OP ON rma.opLote = OP.id  -- Hacemos un JOIN con la tabla OP
+        WHERE rma.idCliente = ?`;
   
       try {
         const [rows] = await conn.execute(query, [idCliente]);
-        return rows;        
+        return rows;
       } catch (executeError) {
         console.error("Error en la ejecución de la consulta:", executeError);
         throw executeError;
@@ -304,7 +316,7 @@ const gestionarRma = {
         cantidad: producto.cantidad || "",
         marca: producto.marca_nombre || "",  // Asegúrate de que el nombre de la marca está siendo tomado correctamente
         solicita: formatFecha(producto.solicita) || "",
-        opLote: producto.opLote || "",
+        opLote: producto.opLote_nombre || "",  // Usamos el nombre de la OP
         vencimiento: formatFecha(producto.vencimiento || ""),
         seEntrega: formatFecha(producto.seEntrega) || "",
         seRecibe: formatFecha(producto.seRecibe) || "",

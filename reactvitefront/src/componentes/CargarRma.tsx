@@ -22,6 +22,12 @@ interface Marca {
   nombre: string;
 }
 
+ interface Op {
+   id: number;
+   nombre: string;
+   fechaIngreso?: string;
+ }
+
 export const CargarRma: React.FC = () => {
   const [ultimoNIngreso, setUltimoNIngreso] = useState<number>(0);
   const [solicita, setSolicita] = useState('');
@@ -36,47 +42,43 @@ export const CargarRma: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [mostrarCampos, setMostrarCampos] = useState(false);
   const [productosAgregados, setProductosAgregados] = useState<any[]>([]);
-  const [mostrarLista, setMostrarLista] = useState(false)
+  const [mostrarLista, setMostrarLista] = useState(false);
   const [listarProductosKey, setListarProductosKey] = useState(0);
+  const [opLoteSeleccionado, setOpLoteSeleccionado] = useState<Op | null>(null);
 
-  
-  
   let urlClientes = 'https://rma-back.vercel.app/buscarCliente';
   let urlProductos = 'https://rma-back.vercel.app/listarProductos';
   let urlMarcas = 'https://rma-back.vercel.app/listarMarcas';
   let urlAgregarRma = 'https://rma-back.vercel.app/agregarRma';
   let urlOp = 'https://rma-back.vercel.app/listarOp';
-
+  let urlNumeroRemito= 'https://rma-back.vercel.app/getUltimoNIngreso';
   if (window.location.hostname === 'localhost') {
     urlClientes = 'http://localhost:8080/buscarCliente';
     urlProductos = 'http://localhost:8080/listarProductos';
     urlMarcas = 'http://localhost:8080/listarMarcas';
     urlAgregarRma = 'http://localhost:8080/agregarRma';
     urlOp = 'http://localhost:8080/listarOp';
+    urlNumeroRemito= 'http://localhost:8080/getUltimoNIngreso';
   }
 
   const handleClienteSeleccionado = async (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
     setMostrarCampos(true);
-  
-    // Llamada a la API para obtener el último número de remito
-    let url = 'https://rma-back.vercel.app/getUltimoNIngreso';
-    if (window.location.hostname === 'localhost') {
-      url = 'http://localhost:8080/getUltimoNIngreso';
-    }
-  
+
+   
+
     try {
-      const response = await fetch(`${url}?clienteId=${cliente.id}`);
+      const response = await fetch(`${urlNumeroRemito}?clienteId=${cliente.id}`);
       const data = await response.json();
-  
+
       if (data.length !== 0) {
-        setUltimoNIngreso(data.nIngreso + 1); // Incrementar el número de ingreso
+        setUltimoNIngreso(data.nIngreso + 1);
       } else {
-        setUltimoNIngreso(1); // Si no hay registros, empezar desde 1
+        setUltimoNIngreso(1);
       }
     } catch (error) {
       console.error("Error al obtener el último nIngreso:", error);
-      setUltimoNIngreso(1); // En caso de error, empezar desde 1
+      setUltimoNIngreso(1);
     }
   };
 
@@ -93,10 +95,12 @@ export const CargarRma: React.FC = () => {
     setMarcaSeleccionada(marca);
   };
 
-  const [opLoteSeleccionado, setOpLoteSeleccionado] = useState<any>(null);
-
-  const handleOpLoteSeleccionado = (opLote: any) => {
-    setOpLoteSeleccionado(opLote);
+  const handleOpLoteSeleccionado = (opLote: Op[]) => {
+    if (opLote.length > 0) {
+      setOpLoteSeleccionado(opLote[0]); // Tomar el primer elemento del array
+    } else {
+      setOpLoteSeleccionado(null);
+    }
   };
 
   const limpiarInputsProducto = () => {
@@ -109,37 +113,83 @@ export const CargarRma: React.FC = () => {
     setSeRecibe('');
     setNEgreso('');
     const form = document.getElementById('formRma') as HTMLFormElement;
-    form.reset(); // Limpiar los valores de los inputs
+    form.reset();
   };
 
   const agregarProducto = () => {
-    setMostrarLista(true)
-    if (!productoSeleccionado || !marcaSeleccionada) {
+    setMostrarLista(true);
+    
+    if (!productoSeleccionado) {
+      const skuInput = document.getElementById('skuInput') as HTMLInputElement;
+      console.log(skuInput);
+      skuInput.focus();
       Swal.fire({
         icon: 'warning',
-        title: 'Campos vacíos',
-        text: 'Debe seleccionar un producto y una marca',
+        title: 'Campo vacío',
+        text: 'Debe seleccionar un producto',
+      })
+      skuInput.focus();
+      return;
+    }
+
+    const cantidadInput = document.getElementById('cantidad') as HTMLInputElement;
+    const cantidad = cantidadInput.value;
+
+    if (!cantidad || cantidad === '0') {
+      cantidadInput.focus();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campo vacío',
+        text: 'Debe ingresar una cantidad válida.',
+      }).then(() => {
+        cantidadInput.focus();
       });
       return;
     }
+
+
+    if (!marcaSeleccionada) {
+      const marcaInput = document.getElementById('marca') as HTMLInputElement;
+      marcaInput.focus();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campo vacío',
+        text: 'Debe seleccionar una marca',
+      })
+      marcaInput.focus();
+      return;      
+    }
+    if (!opLoteSeleccionado) {
+      const opLoteInput = document.getElementById('opLote') as HTMLInputElement;
+      opLoteInput.focus();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campo vacío',
+        text: 'Debe seleccionar una OP',
+      })
+      opLoteInput.focus();
+      return;      
+    }
     
+
     const form = document.getElementById('formRma') as HTMLFormElement;
     const formData = new FormData(form);
     const producto = {
-      modelo: productoSeleccionado.id, // ID del producto
-      sku: productoSeleccionado.sku, // SKU para mostrar en la lista
+      modelo: productoSeleccionado.id,
+      sku: productoSeleccionado.sku,
       cantidad: formData.get('cantidad') || '',
-      marca: marcaSeleccionada.id, // ID de la marca
-      nombreMarca: marcaSeleccionada.nombre, // Nombre de la marca para mostrar en la lista
-      opLote: opLoteSeleccionado[0].nombre || null,
+      marca: marcaSeleccionada.id,
+      nombreMarca: marcaSeleccionada.nombre,
+      opLote: opLoteSeleccionado ? opLoteSeleccionado.id : null, // Guardar el ID de la OP
       observaciones: formData.get('observaciones') || null,
       vencimiento,
       seRecibe,
       seEntrega,
       nEgreso,
     };
+
     setProductosAgregados([...productosAgregados, producto]);
-    limpiarInputsProducto(); // Limpiar los inputs después de agregar un producto
+    limpiarInputsProducto();
 
     setTimeout(() => {
       if (skuInputRef.current) {
@@ -147,34 +197,33 @@ export const CargarRma: React.FC = () => {
       }
     }, 200);
 
-    setListarProductosKey((prevKey) => prevKey + 1); // Forzar la actualización de la lista de productos
+    setListarProductosKey((prevKey) => prevKey + 1);
   };
 
- 
   const limpiarInputs = () => {
+    setClienteSeleccionado(null);
     setProductoSeleccionado(null);
     setMarcaSeleccionada(null);
     setOpLoteSeleccionado(null);
-    setSolicita('')
+    setSolicita('');
     setObservaciones('');
     setVencimiento('');
     setSeEntrega('');
     setSeRecibe('');
     setNEgreso('');
-    setMostrarCampos(false)
-    setMostrarLista(false)
+    setMostrarCampos(false);
+    setMostrarLista(false);
     const form = document.getElementById('formRma') as HTMLFormElement;
-    form.reset(); // Limpiar los valores de los inputs
+    form.reset();
   };
 
   const eliminarProducto = (index: number) => {
     const nuevosProductos = productosAgregados.filter((_, i) => i !== index);
     setProductosAgregados(nuevosProductos);
-    
+
     if (productosAgregados.length == 1) {
-      setMostrarLista(false)
-      setProductosAgregados([])
-      
+      setMostrarLista(false);
+      setProductosAgregados([]);
     }
   };
 
@@ -198,27 +247,24 @@ export const CargarRma: React.FC = () => {
       });
       return;
     }
-
-    
-    const formData = {      
+  
+    const formData = {
       cliente: clienteSeleccionado.id,
       solicita,
-      nIngreso: ultimoNIngreso, // Tomar el valor de ultimoNIngreso
+      nIngreso: ultimoNIngreso,
       productos: productosAgregados.map((producto) => ({
-        modelo: producto.modelo, // ID del producto
+        modelo: producto.modelo,
         cantidad: producto.cantidad,
-        marca: producto.marca, // ID de la marca
-        opLote: producto.opLote,
+        marca: producto.marca,
+        opLote: producto.opLote, // Enviar el ID de la OP
         observaciones: producto.observaciones,
         vencimiento: producto.vencimiento,
         seEntrega: producto.seEntrega,
         seRecibe: producto.seRecibe,
-        nEgreso: producto.nEgreso
+        nEgreso: producto.nEgreso,
       })),
     };
-    
-    
-    
+
     try {
       setLoading(true);
       const response = await fetch(urlAgregarRma, {
@@ -234,11 +280,10 @@ export const CargarRma: React.FC = () => {
           icon: 'success',
           title: 'RMA agregado',
           text: 'El RMA se ha agregado correctamente',
-          confirmButtonText: 'Aceptar', // Personalizar el texto del botón
+          confirmButtonText: 'Aceptar',
         }).then(() => {
-          limpiarInputs(); // Limpiar los inputs después de guardar
-          setProductosAgregados([]); // Limpiar la lista de productos agregados
-          //window.location.reload(); // Recargar la página
+          limpiarInputs();
+          setProductosAgregados([]);
         });
       } else {
         Swal.fire({
@@ -257,6 +302,8 @@ export const CargarRma: React.FC = () => {
     } finally {
       setLoading(false);
     }
+
+    setListarProductosKey((prevKey) => prevKey + 1);
   };
 
   return (
@@ -273,12 +320,11 @@ export const CargarRma: React.FC = () => {
         <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Cargar RMA</h2>
         <form id="formRma" className="space-y-6">
           <div>
-          <h3 className="hidden">N° de Remito: {ultimoNIngreso}</h3>
+            <h3 className="hidden">N° de Remito: {ultimoNIngreso}</h3>
             <label htmlFor="clienteSearch" className="block text-sm font-medium text-gray-700 mb-1">
               Cliente<span className="text-red-500">*</span>:
             </label>
-            <BusquedaClientes endpoint={urlClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} value={clienteSeleccionado ? clienteSeleccionado.nombre : ''}/>
-            
+            <BusquedaClientes endpoint={urlClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} value={clienteSeleccionado ? clienteSeleccionado.nombre : ''} />
           </div>
           {clienteSeleccionado && <input type="hidden" name="idCliente" value={clienteSeleccionado.id} />}
 
@@ -291,11 +337,7 @@ export const CargarRma: React.FC = () => {
             <>
               <div>
                 <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1">SKU<span className="text-red-500">*</span>:</label>
-                <ListarProductos endpoint={urlProductos} 
-                onProductoSeleccionado={handleProductoSeleccionado} 
-                campos={['sku']} 
-                inputRef={skuInputRef}
-                value = {productoSeleccionado ? productoSeleccionado.sku : '' } />
+                <ListarProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} inputRef={skuInputRef} value={productoSeleccionado ? productoSeleccionado.sku : ''} />
               </div>
               {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} required />}
 
@@ -306,20 +348,21 @@ export const CargarRma: React.FC = () => {
 
               <div>
                 <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1">Marca<span className="text-red-500">*</span>:</label>
-                <ListarMarcas endpoint={urlMarcas} onMarcaSeleccionada={handleMarcaSeleccionada} campos={['nombre']} value={marcaSeleccionada ? marcaSeleccionada.nombre :''} />
+                <ListarMarcas endpoint={urlMarcas} onMarcaSeleccionada={handleMarcaSeleccionada} campos={['nombre']} value={marcaSeleccionada ? marcaSeleccionada.nombre : ''} />
               </div>
               {marcaSeleccionada && <input type="hidden" name="idMarca" required value={marcaSeleccionada.id} />}
 
               <div>
                 <label htmlFor="opLote" className="block text-sm font-medium text-gray-700 mb-1">OP/Lote<span className="text-red-500">*</span>:</label>
-                <ListarOp 
-                  key = {listarProductosKey}
-                  endpoint={urlOp} 
-                  onSeleccionado={handleOpLoteSeleccionado} 
-                  campos={['nombre']} 
-                  value= {opLoteSeleccionado ? opLoteSeleccionado.nombre : ''} 
+                <ListarOp
+                  key={listarProductosKey}
+                  endpoint={urlOp}
+                  onSeleccionado={(opLote: Op[]) => handleOpLoteSeleccionado(opLote)} // Pasar el array de OPs
+                  campos={['nombre']}
+                  value={opLoteSeleccionado ? opLoteSeleccionado.nombre : ''}
                 />
               </div>
+              {opLoteSeleccionado && <input type="hidden" name="idOp" value={opLoteSeleccionado.id} />}
 
               <div>
                 <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700 mb-1">Observaciones:</label>
@@ -360,6 +403,7 @@ export const CargarRma: React.FC = () => {
               </div>
 
               <button
+                key={listarProductosKey}
                 type="button"
                 onClick={agregarProducto}
                 className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring focus:ring-green-300"
@@ -379,38 +423,38 @@ export const CargarRma: React.FC = () => {
         </form>
         {loading && <Loader />}
       </div>
-      {mostrarLista && (<div className="ml-1 relative mr-5">
-        <h3 className="text-xl font-semibold mb-4">N° de Remito: {ultimoNIngreso}</h3>
-        <table>
-          <thead>
-            <tr>
-              <th></th>
-              <th></th>
-              <th></th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {productosAgregados.map((producto, index) => (
-              <tr key={index} className={index % 2 === 0 ? 'bg-gray-200' : 'bg-white'}>
-                <td className='pl-2'>{producto.sku}</td>
-                <td className='w-20 text-center'>{producto.cantidad}</td>
-                <td className='pr-2'>{producto.nombreMarca}</td>
-                <td>
-                  <button
-                   className="text-red-600 hover:text-red-800 pl-1.5 pr-2"
-                    onClick={() => eliminarProducto(index)}
-                   >
-                   Eliminar
-                  </button>
-                </td>
-
+      {mostrarLista && (
+        <div className="ml-1 relative mr-5">
+          <h3 className="text-xl font-semibold mb-4">N° de Remito: {ultimoNIngreso}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
               </tr>
-            ) )}
-          </tbody>
-        </table>
-        
-      </div>)}
+            </thead>
+            <tbody>
+              {productosAgregados.map((producto, index) => (
+                <tr key={index} className={index % 2 === 0 ? 'bg-gray-200' : 'bg-white'}>
+                  <td className='pl-2'>{producto.sku}</td>
+                  <td className='w-20 text-center'>{producto.cantidad}</td>
+                  <td className='pr-2'>{producto.nombreMarca}</td>
+                  <td>
+                    <button
+                      className="text-red-600 hover:text-red-800 pl-1.5 pr-2"
+                      onClick={() => eliminarProducto(index)}
+                    >
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

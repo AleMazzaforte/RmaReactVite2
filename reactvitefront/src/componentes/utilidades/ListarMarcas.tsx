@@ -77,6 +77,7 @@ export const ListarMarcas: React.FC<ListarMarcasProps> = ({
   return (
     <div>
       <input
+        id='marca'
         autoComplete='off'
         type="text"
         ref={localInputRef} // Usar la ref apropiada

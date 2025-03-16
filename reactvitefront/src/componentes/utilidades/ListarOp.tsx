@@ -5,7 +5,7 @@ import Loader from './Loader';
 interface Op {
   id: number;
   nombre: string;
-  fechaIngreso: string;
+  fechaIngreso?: string;
 }
 
 interface BusquedaOpLoteProps {
@@ -94,6 +94,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
   return (
     <div>
       <input
+      id='opLote'
         autoComplete="off"
         type="text"
         ref={localInputRef}

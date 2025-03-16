@@ -21,8 +21,8 @@ const listarOp = {
         "SELECT * FROM OP WHERE LOWER(nombre) LIKE LOWER(?) ORDER BY nombre ASC",
         [`%${query}%`] // Usar el valor de query en el patrón LIKE
       );
-      
-      
+      console.log('results', results);
+            
       // Verificar si se encontraron resultados
       if (results.length === 0) {
         return res.status(404).json({ message: "No se encontraron OPs." });
@@ -67,7 +67,7 @@ const listarOp = {
         const id = await connection.query("SELECT LAST_INSERT_ID() AS id");
 
         const idOp = id[0][0].id;
-        console.log('idOp:', idOp);
+        
         
         await connection.commit();
         res.status(201).json({ message: "OP guardada correctamente", success: true, idOp });
