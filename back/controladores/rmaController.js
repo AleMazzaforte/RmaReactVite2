@@ -6,6 +6,7 @@ events.EventEmitter.defaultMaxListeners = 15;
 
 dotenv.config();
 
+
 // Definición de la función formatFecha
 const formatFecha = (fecha) => {
   if (!fecha) {
@@ -60,7 +61,7 @@ const productosGeneralController = {
       connection = await conn.getConnection();
       const [results] = await connection.query(query);
       res.json(results);
-      connection.release();
+      
     } catch (error) {
       console.error("Error al listar productos:", error);
       res.status(500).send("Error al listar productos");
@@ -336,15 +337,12 @@ const gestionarRma = {
       }
     }
   },
-
-  
   
 };
 
 export {
   clienteController,
   productosGeneralController,
-  
   cargarRma,
   gestionarRma,
 };

@@ -123,16 +123,26 @@ export const CargarImpo = () => {
 
   // Función para agregar un producto a la lista
   const agregarProducto = () => {
+    const inputProductos = document.getElementById('skuInput') as HTMLInputElement;
+    if (!productoSeleccionado) {
+      inputProductos.focus() 
+      Swal.fire({ 
+        icon: 'error', 
+        title: 'Error', 
+        text: 'Debe seleccionar un producto válido.' 
+      }).then (() => {
+        inputProductos.focus();
         
+      });
+        return;
+    }
+      
+    
+
     if ( !cantidadRef.current || !cantidadRef.current.value) {
       Swal.fire({ icon: 'error', title: 'Error', text: 'Debe seleccionar una cantidad válida.' });
       return;
-    }
-
-    if (!productoSeleccionado) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Debe seleccionar un producto válido.' });
-      return;
-    }
+    }    
 
     const cantidad = parseInt(cantidadRef.current.value, 10);
     if (isNaN(cantidad)) {
@@ -159,9 +169,11 @@ export const CargarImpo = () => {
     
     if (localInputRef.current) {
       localInputRef.current.value = '';
-      localInputRef.current.focus(); // Enfocar el input de producto      
+      localInputRef.current.focus(); // Enfocar el input de producto 
+      inputProductos.focus(); 
+         
     }
-
+    inputProductos.focus();
     setListarProductosKey((prevKey) => prevKey + 1); // Forzar la actualización de la lista de productos
   };
 

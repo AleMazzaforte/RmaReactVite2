@@ -30,7 +30,7 @@ const listarOp = {
 
       // Devolver los resultados en el formato esperado
       res.json(results);
-      connection.release();
+      
     } catch (error) {
       console.error("Error al obtener las OPs:", error);
       res.status(500).json({ error: "Error al obtener las OPs." });

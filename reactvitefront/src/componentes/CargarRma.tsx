@@ -61,6 +61,8 @@ export const CargarRma: React.FC = () => {
     urlNumeroRemito= 'http://localhost:8080/getUltimoNIngreso';
   }
 
+
+
   const handleClienteSeleccionado = async (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
     setMostrarCampos(true);
