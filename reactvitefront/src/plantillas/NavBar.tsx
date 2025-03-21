@@ -29,6 +29,7 @@ export const NavBar: React.FC = () => {
           <option value="/cargarProductos">Cargar Productos</option>
           <option value="/actualizarProductos">Actualizar Productos</option>
           <option value="/">Cargar RMA</option>
+          <option value="/devolucionAGondola">Devolución a góndola</option>
           <option value="/gestionarRma">Gestionar RMA</option>
           <option value="/imprimirEtiqueta">Imprimir etiqueta</option>
           <option value="/cargarTransporte">Cargar transportes</option>
