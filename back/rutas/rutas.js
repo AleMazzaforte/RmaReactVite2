@@ -14,6 +14,8 @@ import productosController from '../controladores/productosController.js';
 import { marcas } from '../controladores/marcasController.js';
 import transportes from '../controladores/transportesController.js';
 import etiquetas from '../controladores/etiquetasController.js';
+import agregarDevolucion from '../controladores/devolucionController.js';
+
 const router = express.Router();
 
 router.post('/login', postLogin);
@@ -54,6 +56,9 @@ router.get('/getRmaCLiente/:idCliente', gestionarRma.getListarProductosRma);
 router.post('/actualizarProductoRma/:idRma', gestionarRma.postActualizarCliente); 
 router.delete('/eliminarRma/:idRma', gestionarRma.deleteRma);
 router.get('/getUltimoNIngreso', cargarRma.getUltimoNum);
+
+//Ruta para agregar devoluciones
+router.post('/agregarDevolucion', agregarDevolucion.postAgregarDevolucion);
 
 //Ruta para agregar usuario
 router.post('/cargarUsuario', usuario.postCargarUsuario);
