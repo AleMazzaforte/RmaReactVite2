@@ -84,54 +84,66 @@ const listarOp = {
     let connection;
     try {
         const productos = req.body; // Array de productos: [{ idOp, sku, cantidad }]
-
+  
         if (!Array.isArray(productos) || productos.length === 0) {
             return res.status(400).json({ message: "Debe enviar al menos un producto", success: false });
         }
-
+  
         connection = await conn.getConnection();
         await connection.beginTransaction();
-
+  
         // Verificar si la OP existe
         const [opExistente] = await connection.query(
             "SELECT id FROM OP WHERE id = ?",
-            [productos[0].idOp] // Tomamos el idOp del primer producto (todos deben tener el mismo idOp)
+            [productos[0].idOp]
         );
-
+  
         if (opExistente.length === 0) {
             return res.status(400).json({ message: "La OP no existe", success: false });
         }
-
-        // Insertar los productos en opProductos
+  
+        // Insertar los productos en opProductos con idSku
         for (const producto of productos) {
             const { idOp, sku, cantidad } = producto;
-
+  
             if (!idOp || !sku || !cantidad) {
                 throw new Error("Faltan datos obligatorios en uno o más productos");
             }
-
+  
+            // Obtener el id del producto correspondiente al sku
+            const [productoInfo] = await connection.query(
+                "SELECT id FROM productos WHERE sku = ?",
+                [sku]
+            );
+  
+            if (productoInfo.length === 0) {
+                throw new Error(`No se encontró el producto con SKU: ${sku}`);
+            }
+  
+            const idSku = productoInfo[0].id;
+  
             await connection.query(
-                "INSERT INTO opProductos (idOp, sku, cantidad) VALUES (?, ?, ?)",
-                [idOp, sku, cantidad]
+                "INSERT INTO opProductos (idOp, sku, cantidad, idSku) VALUES (?, ?, ?, ?)",
+                [idOp, sku, cantidad, idSku]
             );
         }
-
+  
         await connection.commit();
         res.status(201).json({ message: "Productos guardados correctamente", success: true });
     } catch (error) {
         console.error("Error al guardar los productos en opProductos:", error);
-
+  
         if (connection) {
-            await connection.rollback(); // Revertir la transacción en caso de error
+            await connection.rollback();
         }
-
+  
         res.status(500).json({ 
             message: error.message || "Error interno del servidor", 
             success: false 
         });
     } finally {
         if (connection) {
-            connection.release(); // Liberar la conexión
+            connection.release();
         }
     }
   }

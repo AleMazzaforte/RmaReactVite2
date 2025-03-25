@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { conn } from "../bd/bd.js";
 import events from "events";
-import { log } from "console";
+
 events.EventEmitter.defaultMaxListeners = 15;
 
 dotenv.config();
@@ -71,6 +71,8 @@ const productosGeneralController = {
       }
     }
   },
+
+  
 };
 
 

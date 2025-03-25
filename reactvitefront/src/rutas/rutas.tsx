@@ -19,6 +19,7 @@ import { CargarImpo  } from '../componentes/CargarImpo';
 import { ActualizarImpo  } from '../componentes/ActualizarImpo';
 import { Estadisticas } from '../componentes/Estadisticas';
 import { DevolucionAGondola} from '../componentes/DevolucionAGondola';
+import { PokemonList } from '../componentes/PokemonList'
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -41,6 +42,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/actualizarOp" element={<ActualizarImpo />} />
         <Route path="/estadisticas" element={<Estadisticas />} />
         <Route path="/devolucionAGondola" element={<DevolucionAGondola />} />
+        <Route path="/pokemon" element={<PokemonList />} />
       </Route>
       <Route path="*" element={<NotFound />} /> {/* Ruta para manejar páginas no encontradas */}
     </Routes>

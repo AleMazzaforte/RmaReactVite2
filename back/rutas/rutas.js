@@ -15,6 +15,7 @@ import { marcas } from '../controladores/marcasController.js';
 import transportes from '../controladores/transportesController.js';
 import etiquetas from '../controladores/etiquetasController.js';
 import agregarDevolucion from '../controladores/devolucionController.js';
+import estadisticas from '../controladores/estadisticasController.js'
 
 const router = express.Router();
 
@@ -71,5 +72,8 @@ router.get('/buscarTransporte', transportes.getBuscarTransporte);
 
 //Rutas para etiquetas
 router.get('/buscarRMA', etiquetas.getBuscarRma);
+
+//Rutas para estadisticas
+router.get('/api/estadisticas/rma', estadisticas.getEstadisticasRMA);
 
 export default router;

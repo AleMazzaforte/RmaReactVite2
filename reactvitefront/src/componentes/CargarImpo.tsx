@@ -198,6 +198,7 @@ export const CargarImpo = () => {
             idOp,
             sku: p.producto.sku,
             cantidad: p.cantidad,
+            idSku: p.producto.id // Asegurarse de enviar el id del producto
           }))
         ),
       });
