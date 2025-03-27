@@ -12,9 +12,9 @@ const listarOp = {
   getListarOp: async (req, res) => {
     const { query } = req.params; // Obtener el parámetro de búsqueda desde la ruta
     
-
+    const connection = await conn.getConnection();
     try {
-      const connection = await conn.getConnection();
+      
 
       // Consulta para buscar OPs que coincidan con el parámetro de búsqueda (insensible a mayúsculas/minúsculas)
       const [results] = await connection.query(
@@ -34,6 +34,8 @@ const listarOp = {
     } catch (error) {
       console.error("Error al obtener las OPs:", error);
       res.status(500).json({ error: "Error al obtener las OPs." });
+    } finally {
+      if (connection) connection.release();
     }
   },
 

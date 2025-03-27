@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ListarOp } from './utilidades/ListarOp';
 
 interface Rma {
   idRma: string;
@@ -21,8 +22,14 @@ interface TablaRmasProps {
   handleEliminar: (id: string | undefined) => void;
 }
 
+let url = 'https://rma-back.vercel.app/listarOp';
+if (window.location.hostname === 'localhost') {
+  url = 'http://localhost:8080/listarOp';
+}
+
 export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualizar, handleEliminar }) => {
   const [editableRmas, setEditableRmas] = useState<Rma[]>(rmas);
+  const [showOpSelector, setShowOpSelector] = useState<number | null>(null);
 
   useEffect(() => {
     setEditableRmas(rmas);
@@ -34,6 +41,42 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
     setEditableRmas(updatedRmas);
   };
 
+  // Cuando se edita el campo OP manualmente
+  const handleOpChange = (index: number, value: string) => {
+    const updatedRmas = [...editableRmas];
+    updatedRmas[index] = { ...updatedRmas[index], opLote: value };
+    setEditableRmas(updatedRmas);
+    setShowOpSelector(null); // Oculta el selector
+  };
+
+  // Render condicional del campo OP
+  const renderOpField = (rma: Rma, index: number) => {
+    if (showOpSelector === index) {
+      return (
+        <div className="absolute z-10 -mt-5 bg-white shadow-lg text-left">
+          <ListarOp          
+            endpoint={`${url}`} // Endpoint existente
+            onSeleccionado={(ops) => {
+              handleOpChange(index, ops[0].nombre); // Envía solo el nombre como string
+            }}
+            campos={['nombre']}
+            value={rma.opLote}
+          />
+        </div>
+      );
+    }
+    return (
+      <div className="relative">
+        <input
+          type="text"
+          value={rma.opLote}
+          className="block w-full py-1 text-sm rounded-lg text-center"
+          onChange={(e) => handleOpChange(index, e.target.value)}
+          onFocus={() => setShowOpSelector(index)} // Muestra ListarOp al enfocar
+        />
+      </div>
+    );
+  };
   const handleSave = (rma: Rma) => {
     handleActualizar(rma);
 
@@ -99,12 +142,7 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
                   />
                 </td>
                 <td className="border py-1 text-sm text-center">
-                  <input
-                    type="text"
-                    value={rma.opLote}
-                    className="block w-full py-1 text-sm rounded-lg text-center"
-                    onChange={(e) => handleChange(index, 'opLote', e.target.value)}
-                  />
+                  {renderOpField(rma, index)}
                 </td>
                 <td className="border py-1 text-sm text-center">
                   <input

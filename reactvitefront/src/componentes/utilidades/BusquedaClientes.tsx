@@ -1,73 +1,83 @@
-import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
+import React, { useState, useRef, ChangeEvent, useEffect, useMemo } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
+import { Debounce } from './Debounce';
+
+
+interface Cliente {
+  id: string;
+  nombre: string;
+}
 
 interface BusquedaClientesProps {
   endpoint: string;
-  onClienteSeleccionado: (cliente: any) => void;
+  onClienteSeleccionado: (cliente: Cliente) => void;
   campos: string[];
-  value?: string; // Nueva prop para sincronizar el valor del input
-  inputRef?: React.RefObject<HTMLInputElement>; // Agregar inputRef a las props
+  value?: string;
+  inputRef?: React.RefObject<HTMLInputElement>;
 }
 
 export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
   endpoint,
   onClienteSeleccionado,
   campos,
-  value = '', // Valor por defecto vacío
+  value = '',
   inputRef,
 }) => {
-  const [query, setQuery] = useState<string>(value); // Inicializar con el valor de la prop
+  const [query, setQuery] = useState<string>(value);
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const timerRef = useRef<number | null>(null);
-
-  // Utilizar la ref pasada a través de props o crear una nueva si no se pasa ninguna
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
 
-  // Sincronizar el estado interno `query` con la prop `value`
+  // Sincronizar el estado interno con la prop value
   useEffect(() => {
     setQuery(value);
   }, [value]);
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+  
+  const buscarClientes = React.useCallback(async (value: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${endpoint}?query=${value}`);
+      const data = await response.json();
+      setResultados(data.filter((cliente: Cliente) => 
+        cliente.nombre.toLowerCase().includes(value.toLowerCase())
+      ));
+    } catch (error) {
+      console.error('Error buscando clientes:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [endpoint]); 
+
+  
+  const debouncedBuscarClientes = React.useMemo(() => 
+    Debounce((value: string) => buscarClientes(value), 800),
+    [buscarClientes] 
+  );
+
+  // Manejador de cambio en el input
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
 
-    // Limpiar el timeout anterior si existe
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-
-    // Si hay valor en el input, proceder con el retraso
     if (value) {
-      setLoading(true);
-
-      // Establecer un nuevo timeout para la búsqueda
-      timerRef.current = window.setTimeout(async () => {
-        try {
-          const response = await fetch(`${endpoint}?query=${value}`);
-          const data = await response.json();
-          setResultados(data.filter((cliente: any) => cliente.nombre.toLowerCase().includes(value.toLowerCase())));
-        } catch (error) {
-          console.error('Error buscando clientes:', error);
-        } finally {
-          setLoading(false);
-        }
-      }, 500); // 500 ms de retraso
+      debouncedBuscarClientes(value); 
     } else {
       setResultados([]);
-      setLoading(false);
     }
   };
 
-  const handleClienteSeleccionado = (cliente: any) => {
+
+  // Selección de cliente
+  const handleClienteSeleccionado = (cliente: Cliente) => {
+    
     if (cliente) {
       onClienteSeleccionado(cliente);
       setResultados([]);
-      setQuery(cliente.nombre); // Mostrar el nombre del cliente seleccionado en el input
-      if (localInputRef.current && localInputRef.current.nextElementSibling) {
-        (localInputRef.current.nextElementSibling as HTMLElement).focus(); // Saltar al siguiente campo
+      setQuery(cliente.nombre);
+      if (localInputRef.current?.nextElementSibling) {
+        (localInputRef.current.nextElementSibling as HTMLElement).focus();
       }
     }
   };
@@ -77,7 +87,7 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
       <input
         autoComplete='off'
         type="text"
-        ref={localInputRef} // Usar la ref apropiada
+        ref={localInputRef}
         value={query}
         onChange={handleInputChange}
         placeholder="Buscar cliente"

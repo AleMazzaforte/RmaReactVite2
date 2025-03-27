@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import Loader from './utilidades/Loader';
 import FechaInput from './utilidades/FechaInput';
 import { ListarProductos } from './utilidades/ListarProductos';
@@ -6,16 +6,11 @@ import Swal from 'sweetalert2';
 
 let guardarOp = 'https://rma-back.vercel.app/guardarOp';
 let urlProductos = 'https://rma-back.vercel.app/listarProductos';
-//let urlMarcas = 'https://rma-back.vercel.app/listarMarcas';
-//let urlAgregarRma = 'https://rma-back.vercel.app/agregarRma';
-//let urlOp = 'https://rma-back.vercel.app/listarOp';
+
 
 if (window.location.hostname === 'localhost') {
   guardarOp = 'http://localhost:8080/guardarOp';
   urlProductos = 'http://localhost:8080/listarProductos';
-  //urlMarcas = 'http://localhost:8080/listarMarcas';
-  //urlAgregarRma = 'http://localhost:8080/agregarRma';
-  //urlOp = 'http://localhost:8080/listarOp';
 }
 
 

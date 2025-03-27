@@ -167,7 +167,7 @@ const gestionarRma = {
       nIngreso,
       nEgreso,
     } = req.body;
-  
+      
     // Cambio de formato de fecha
     solicita = convertirFechaParaBackend(solicita);
     vencimiento = convertirFechaParaBackend(vencimiento);
@@ -201,6 +201,18 @@ const gestionarRma = {
       }
   
       const marcaId = marcaResult[0].id;
+
+      // Obtener el ID de la op a partir del nombre
+      const [opResult] = await connection.execute(
+        'SELECT id FROM OP WHERE nombre = ?',
+        [opLote]
+      );
+  
+      if (marcaResult.length === 0) {
+        throw new Error('Impo no encontrada');
+      }
+  
+      const opId = opResult[0].id;
   
       const query = `
         UPDATE r_m_a
@@ -214,7 +226,7 @@ const gestionarRma = {
         cantidad,
         marcaId,
         solicita,
-        opLote,
+        opId,
         vencimiento,
         seEntrega,
         seRecibe,

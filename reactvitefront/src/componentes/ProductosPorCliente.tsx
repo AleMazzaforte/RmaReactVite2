@@ -75,6 +75,7 @@
 
     const handleActualizar = async (rmaActualizada: Rma) => {
       
+     
       
       // Actualizar el estado local
       setRmas(rmas.map(rma => (rma.idRma === rmaActualizada.idRma ? rmaActualizada : rma)));
