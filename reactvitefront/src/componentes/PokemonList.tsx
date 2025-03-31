@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { data } from "react-router-dom";
+
 
 // Definir la interfaz para los datos básicos de un Pokémon
 interface Pokemon {
@@ -41,6 +41,7 @@ export const PokemonList: React.FC = () => {
 
   // Función para obtener la lista de Pokémon
   const fetchPokemonList = async () => {
+    console.log(pokemonList);
     try {
       const response = await fetch("https://pokeapi.co/api/v2/pokemon?limit=150"); // Limitamos a 151 Pokémon
       if (!response.ok) {

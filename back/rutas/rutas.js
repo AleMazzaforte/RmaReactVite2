@@ -34,7 +34,12 @@ router.post('/actualizarCliente/:idCliente', gestionClientes.actualizarCliente);
 router.get('/listarOp/:query', listarOp.getListarOp);
 router.post('/guardarOp', listarOp.postGuardarOp);
 router.post('/guardarOpProductos', listarOp.postGuardarOpProductos);
-
+router.get('/listarOpProductos/:idOp', listarOp.getListarOpProductos);
+router.get('/getSku/:idsProductos', listarOp.getSku);
+router.post('/actualizarOp', listarOp.postActualizarOp);
+router.post('/agregarProductoOp', listarOp.postAgregarProductoOp);
+// En tu archivo de rutas
+router.delete('/eliminarProductoOp', listarOp.eliminarProductoOp);
 
 // Ruta para listar clientes
 router.get('/buscarCliente', clienteController.getListarClientesRma);

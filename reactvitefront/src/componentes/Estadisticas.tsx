@@ -174,8 +174,8 @@ export const Estadisticas: React.FC = () => {
       style={{  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
       >
         <div className="overflow-x-auto">
-          <table className=" divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className=" divide-y divide-gray-300">
+            <thead className="bg-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Importado</th>
@@ -187,7 +187,7 @@ export const Estadisticas: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {estadisticasFiltradas.length > 0 ? (
                 estadisticasFiltradas.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
+                  <tr key={index} className="hover:bg-gray-100">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {item.producto_sku}
                     </td>

@@ -7,6 +7,15 @@ import { Debounce } from './Debounce';
 interface Cliente {
   id: string;
   nombre: string;
+  cuit: string;
+  provincia: string;
+  ciudad: string;
+  domicilio: string;
+  telefono: string;
+  transporte: string;
+  seguro: string;
+  condicionDeEntrega: string;
+  condicionDePago: string;
 }
 
 interface BusquedaClientesProps {

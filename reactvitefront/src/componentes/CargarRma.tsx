@@ -339,7 +339,13 @@ export const CargarRma: React.FC = () => {
             <>
               <div>
                 <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1">SKU<span className="text-red-500">*</span>:</label>
-                <ListarProductos endpoint={urlProductos} onProductoSeleccionado={handleProductoSeleccionado} campos={['sku']} inputRef={skuInputRef} value={productoSeleccionado ? productoSeleccionado.sku : ''} />
+                <ListarProductos 
+                  endpoint={urlProductos} 
+                  onProductoSeleccionado={handleProductoSeleccionado} 
+                  campos={['sku']} 
+                  inputRef={skuInputRef} 
+                  value={productoSeleccionado ? productoSeleccionado.sku : ''} 
+                />
               </div>
               {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} required />}
 

@@ -1,4 +1,4 @@
-import React from 'react';
+//import React from 'react';
 import { NavBar } from '../plantillas/NavBar';
 
 export const NotFound = (): JSX.Element => {
