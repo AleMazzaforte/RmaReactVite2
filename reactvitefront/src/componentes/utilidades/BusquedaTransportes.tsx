@@ -26,11 +26,11 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
       }
 
       if (value) {
-        setLoading(true);
+        
 
         // Retrasar la búsqueda por 500 ms
         debounceTimeout.current = setTimeout(async () => {
-          try {
+          try {setLoading(true);
             const response = await fetch(`${endpoint}?query=${value}`);
             const data = await response.json();
             const filtrados = data.filter((transporte: any) => 

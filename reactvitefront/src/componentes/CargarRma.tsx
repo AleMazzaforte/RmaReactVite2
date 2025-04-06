@@ -1,11 +1,12 @@
-import React, { useState, useRef } from 'react';
-import { BusquedaClientes } from './utilidades/BusquedaClientes';
-import { ListarProductos } from './utilidades/ListarProductos';
-import { ListarMarcas } from './utilidades/ListarMarcas';
-import { ListarOp } from './utilidades/ListarOp';
-import Swal from 'sweetalert2';
-import Loader from './utilidades/Loader';
-import FechaInput from './utilidades/FechaInput';
+import React, { useState, useRef } from "react";
+import { BusquedaClientes } from "./utilidades/BusquedaClientes";
+import { ListarProductos } from "./utilidades/ListarProductos";
+import { ListarMarcas } from "./utilidades/ListarMarcas";
+import { ListarOp } from "./utilidades/ListarOp";
+import Swal from "sweetalert2";
+import Loader from "./utilidades/Loader";
+import FechaInput from "./utilidades/FechaInput";
+import { Contenedor } from "./utilidades/Contenedor";
 
 interface Cliente {
   id: string;
@@ -22,23 +23,27 @@ interface Marca {
   nombre: string;
 }
 
- interface Op {
-   id: number;
-   nombre: string;
-   fechaIngreso?: string;
- }
+interface Op {
+  id: number;
+  nombre: string;
+  fechaIngreso?: string;
+}
 
 export const CargarRma: React.FC = () => {
   const [ultimoNIngreso, setUltimoNIngreso] = useState<number>(0);
-  const [solicita, setSolicita] = useState('');
-  const [vencimiento, setVencimiento] = useState('');
-  const [seEntrega, setSeEntrega] = useState('');
-  const [seRecibe, setSeRecibe] = useState('');
-  const [observaciones, setObservaciones] = useState('');
-  const [nEgreso, setNEgreso] = useState('');
-  const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
-  const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
-  const [marcaSeleccionada, setMarcaSeleccionada] = useState<Marca | null>(null);
+  const [solicita, setSolicita] = useState("");
+  const [vencimiento, setVencimiento] = useState("");
+  const [seEntrega, setSeEntrega] = useState("");
+  const [seRecibe, setSeRecibe] = useState("");
+  const [observaciones, setObservaciones] = useState("");
+  const [nEgreso, setNEgreso] = useState("");
+  const [clienteSeleccionado, setClienteSeleccionado] =
+    useState<Cliente | null>(null);
+  const [productoSeleccionado, setProductoSeleccionado] =
+    useState<Producto | null>(null);
+  const [marcaSeleccionada, setMarcaSeleccionada] = useState<Marca | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [mostrarCampos, setMostrarCampos] = useState(false);
   const [productosAgregados, setProductosAgregados] = useState<any[]>([]);
@@ -46,31 +51,29 @@ export const CargarRma: React.FC = () => {
   const [listarProductosKey, setListarProductosKey] = useState(0);
   const [opLoteSeleccionado, setOpLoteSeleccionado] = useState<Op | null>(null);
 
-  let urlClientes = 'https://rma-back.vercel.app/buscarCliente';
-  let urlProductos = 'https://rma-back.vercel.app/listarProductos';
-  let urlMarcas = 'https://rma-back.vercel.app/listarMarcas';
-  let urlAgregarRma = 'https://rma-back.vercel.app/agregarRma';
-  let urlOp = 'https://rma-back.vercel.app/listarOp';
-  let urlNumeroRemito= 'https://rma-back.vercel.app/getUltimoNIngreso';
-  if (window.location.hostname === 'localhost') {
-    urlClientes = 'http://localhost:8080/buscarCliente';
-    urlProductos = 'http://localhost:8080/listarProductos';
-    urlMarcas = 'http://localhost:8080/listarMarcas';
-    urlAgregarRma = 'http://localhost:8080/agregarRma';
-    urlOp = 'http://localhost:8080/listarOp';
-    urlNumeroRemito= 'http://localhost:8080/getUltimoNIngreso';
+  let urlClientes = "https://rma-back.vercel.app/buscarCliente";
+  let urlProductos = "https://rma-back.vercel.app/listarProductos";
+  let urlMarcas = "https://rma-back.vercel.app/listarMarcas";
+  let urlAgregarRma = "https://rma-back.vercel.app/agregarRma";
+  let urlOp = "https://rma-back.vercel.app/listarOp";
+  let urlNumeroRemito = "https://rma-back.vercel.app/getUltimoNIngreso";
+  if (window.location.hostname === "localhost") {
+    urlClientes = "http://localhost:8080/buscarCliente";
+    urlProductos = "http://localhost:8080/listarProductos";
+    urlMarcas = "http://localhost:8080/listarMarcas";
+    urlAgregarRma = "http://localhost:8080/agregarRma";
+    urlOp = "http://localhost:8080/listarOp";
+    urlNumeroRemito = "http://localhost:8080/getUltimoNIngreso";
   }
-
-
 
   const handleClienteSeleccionado = async (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
     setMostrarCampos(true);
 
-   
-
     try {
-      const response = await fetch(`${urlNumeroRemito}?clienteId=${cliente.id}`);
+      const response = await fetch(
+        `${urlNumeroRemito}?clienteId=${cliente.id}`
+      );
       const data = await response.json();
 
       if (data.length !== 0) {
@@ -109,81 +112,81 @@ export const CargarRma: React.FC = () => {
     setProductoSeleccionado(null);
     setMarcaSeleccionada(null);
     setOpLoteSeleccionado(null);
-    setObservaciones('');
-    setVencimiento('');
-    setSeEntrega('');
-    setSeRecibe('');
-    setNEgreso('');
-    const form = document.getElementById('formRma') as HTMLFormElement;
+    setObservaciones("");
+    setVencimiento("");
+    setSeEntrega("");
+    setSeRecibe("");
+    setNEgreso("");
+    const form = document.getElementById("formRma") as HTMLFormElement;
     form.reset();
   };
 
   const agregarProducto = () => {
     setMostrarLista(true);
-    
+
     if (!productoSeleccionado) {
-      const skuInput = document.getElementById('skuInput') as HTMLInputElement;
+      const skuInput = document.getElementById("skuInput") as HTMLInputElement;
       console.log(skuInput);
       skuInput.focus();
       Swal.fire({
-        icon: 'warning',
-        title: 'Campo vacío',
-        text: 'Debe seleccionar un producto',
-      })
+        icon: "warning",
+        title: "Campo vacío",
+        text: "Debe seleccionar un producto",
+      });
       skuInput.focus();
       return;
     }
 
-    const cantidadInput = document.getElementById('cantidad') as HTMLInputElement;
+    const cantidadInput = document.getElementById(
+      "cantidad"
+    ) as HTMLInputElement;
     const cantidad = cantidadInput.value;
 
-    if (!cantidad || cantidad === '0') {
+    if (!cantidad || cantidad === "0") {
       cantidadInput.focus();
       Swal.fire({
-        icon: 'warning',
-        title: 'Campo vacío',
-        text: 'Debe ingresar una cantidad válida.',
+        icon: "warning",
+        title: "Campo vacío",
+        text: "Debe ingresar una cantidad válida.",
       }).then(() => {
         cantidadInput.focus();
       });
       return;
     }
 
-
     if (!marcaSeleccionada) {
-      const marcaInput = document.getElementById('marca') as HTMLInputElement;
+      const marcaInput = document.getElementById("marca") as HTMLInputElement;
       marcaInput.focus();
       Swal.fire({
-        icon: 'warning',
-        title: 'Campo vacío',
-        text: 'Debe seleccionar una marca',
-      })
+        icon: "warning",
+        title: "Campo vacío",
+        text: "Debe seleccionar una marca",
+      });
       marcaInput.focus();
-      return;      
+      return;
     }
     if (!opLoteSeleccionado) {
-      const opLoteInput = document.getElementById('opLote') as HTMLInputElement;
+      const opLoteInput = document.getElementById("opLote") as HTMLInputElement;
       opLoteInput.focus();
       Swal.fire({
-        icon: 'warning',
-        title: 'Campo vacío',
-        text: 'Debe seleccionar una OP',
-      })
+        icon: "warning",
+        title: "Campo vacío",
+        text: "Debe seleccionar una OP",
+      });
       opLoteInput.focus();
-      return;      
+      return;
     }
-    
 
-    const form = document.getElementById('formRma') as HTMLFormElement;
+    const form = document.getElementById("formRma") as HTMLFormElement;
     const formData = new FormData(form);
     const producto = {
       modelo: productoSeleccionado.id,
       sku: productoSeleccionado.sku,
-      cantidad: formData.get('cantidad') || '',
+      cantidad: formData.get("cantidad") || "",
       marca: marcaSeleccionada.id,
       nombreMarca: marcaSeleccionada.nombre,
       opLote: opLoteSeleccionado ? opLoteSeleccionado.id : null, // Guardar el ID de la OP
-      observaciones: formData.get('observaciones') || null,
+      observaciones: formData.get("observaciones") || null,
       vencimiento,
       seRecibe,
       seEntrega,
@@ -207,15 +210,15 @@ export const CargarRma: React.FC = () => {
     setProductoSeleccionado(null);
     setMarcaSeleccionada(null);
     setOpLoteSeleccionado(null);
-    setSolicita('');
-    setObservaciones('');
-    setVencimiento('');
-    setSeEntrega('');
-    setSeRecibe('');
-    setNEgreso('');
+    setSolicita("");
+    setObservaciones("");
+    setVencimiento("");
+    setSeEntrega("");
+    setSeRecibe("");
+    setNEgreso("");
     setMostrarCampos(false);
     setMostrarLista(false);
-    const form = document.getElementById('formRma') as HTMLFormElement;
+    const form = document.getElementById("formRma") as HTMLFormElement;
     form.reset();
   };
 
@@ -234,22 +237,22 @@ export const CargarRma: React.FC = () => {
 
     if (!clienteSeleccionado) {
       Swal.fire({
-        icon: 'warning',
-        title: 'Campo vacío',
-        text: 'Debe seleccionar un cliente',
+        icon: "warning",
+        title: "Campo vacío",
+        text: "Debe seleccionar un cliente",
       });
       return;
     }
 
     if (productosAgregados.length === 0) {
       Swal.fire({
-        icon: 'warning',
-        title: 'Campo vacío',
-        text: 'Debe agregar al menos un producto',
+        icon: "warning",
+        title: "Campo vacío",
+        text: "Debe agregar al menos un producto",
       });
       return;
     }
-  
+
     const formData = {
       cliente: clienteSeleccionado.id,
       solicita,
@@ -270,36 +273,36 @@ export const CargarRma: React.FC = () => {
     try {
       setLoading(true);
       const response = await fetch(urlAgregarRma, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         Swal.fire({
-          icon: 'success',
-          title: 'RMA agregado',
-          text: 'El RMA se ha agregado correctamente',
-          confirmButtonText: 'Aceptar',
+          icon: "success",
+          title: "RMA agregado",
+          text: "El RMA se ha agregado correctamente",
+          confirmButtonText: "Aceptar",
         }).then(() => {
           limpiarInputs();
           setProductosAgregados([]);
         });
       } else {
         Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Hubo un problema al agregar el RMA',
+          icon: "error",
+          title: "Error",
+          text: "Hubo un problema al agregar el RMA",
         });
       }
     } catch (error) {
-      console.error('Error al enviar el formulario:', error);
+      console.error("Error al enviar el formulario:", error);
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Hubo un problema al enviar el formulario',
+        icon: "error",
+        title: "Error",
+        text: "Hubo un problema al enviar el formulario",
       });
     } finally {
       setLoading(false);
@@ -309,131 +312,243 @@ export const CargarRma: React.FC = () => {
   };
 
   return (
-    <div className='flex '>
-      <div
-        className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"
-        style={{ maxWidth: '590px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
-      >
-        <div className="flex justify-center mb-6">
-          <div className="h-16 w-16 bg-gray-300 rounded-full flex items-center justify-center">
-            <span className="text-gray-500 font-bold">LOGO</span>
-          </div>
-        </div>
-        <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Cargar RMA</h2>
-        <form id="formRma" className="space-y-6">
-          <div>
-            <h3 className="hidden">N° de Remito: {ultimoNIngreso}</h3>
-            <label htmlFor="clienteSearch" className="block text-sm font-medium text-gray-700 mb-1">
-              Cliente<span className="text-red-500">*</span>:
-            </label>
-            <BusquedaClientes endpoint={urlClientes} onClienteSeleccionado={handleClienteSeleccionado} campos={['nombre']} value={clienteSeleccionado ? clienteSeleccionado.nombre : ''} />
-          </div>
-          {clienteSeleccionado && <input type="hidden" name="idCliente" value={clienteSeleccionado.id} />}
+    <div className="absolute justify-end w-full h-full p-4">
+      <Contenedor>
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">
+            Cargar RMA
+          </h2>
+          <form id="formRma" className="space-y-6">
+            <div>
+              <h3 className="hidden">N° de Remito: {ultimoNIngreso}</h3>
+              <label
+                htmlFor="clienteSearch"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Cliente<span className="text-red-500">*</span>:
+              </label>
+              <BusquedaClientes
+                endpoint={urlClientes}
+                onClienteSeleccionado={handleClienteSeleccionado}
+                campos={["nombre"]}
+                value={clienteSeleccionado ? clienteSeleccionado.nombre : ""}
+              />
+            </div>
+            {clienteSeleccionado && (
+              <input
+                type="hidden"
+                name="idCliente"
+                value={clienteSeleccionado.id}
+              />
+            )}
 
-          <div>
-            <label htmlFor="solicita" className="block text-sm font-medium text-gray-700 mb-1">Solicita<span className="text-red-500">*</span>:</label>
-            <FechaInput id="solicita" value={solicita} onChange={setSolicita} />
-          </div>
+            <div>
+              <label
+                htmlFor="solicita"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Solicita<span className="text-red-500">*</span>:
+              </label>
+              <FechaInput
+                id="solicita"
+                value={solicita}
+                onChange={setSolicita}
+              />
+            </div>
 
-          {mostrarCampos && (
-            <>
-              <div>
-                <label htmlFor="modelo" className="block text-sm font-medium text-gray-700 mb-1">SKU<span className="text-red-500">*</span>:</label>
-                <ListarProductos 
-                  endpoint={urlProductos} 
-                  onProductoSeleccionado={handleProductoSeleccionado} 
-                  campos={['sku']} 
-                  inputRef={skuInputRef} 
-                  value={productoSeleccionado ? productoSeleccionado.sku : ''} 
-                />
-              </div>
-              {productoSeleccionado && <input type="hidden" name="idProducto" value={productoSeleccionado.id} required />}
+            {mostrarCampos && (
+              <>
+                <div>
+                  <label
+                    htmlFor="modelo"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    SKU<span className="text-red-500">*</span>:
+                  </label>
+                  <ListarProductos
+                    endpoint={urlProductos}
+                    onProductoSeleccionado={handleProductoSeleccionado}
+                    campos={["sku"]}
+                    inputRef={skuInputRef}
+                    value={productoSeleccionado ? productoSeleccionado.sku : ""}
+                  />
+                </div>
+                {productoSeleccionado && (
+                  <input
+                    type="hidden"
+                    name="idProducto"
+                    value={productoSeleccionado.id}
+                    required
+                  />
+                )}
 
-              <div>
-                <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700 mb-1">Cantidad<span className="text-red-500">*</span>:</label>
-                <input type="number" id="cantidad" name="cantidad" min="1" required className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
-              </div>
+                <div>
+                  <label
+                    htmlFor="cantidad"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Cantidad<span className="text-red-500">*</span>:
+                  </label>
+                  <input
+                    type="number"
+                    id="cantidad"
+                    name="cantidad"
+                    min="1"
+                    required
+                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="marca" className="block text-sm font-medium text-gray-700 mb-1">Marca<span className="text-red-500">*</span>:</label>
-                <ListarMarcas endpoint={urlMarcas} onMarcaSeleccionada={handleMarcaSeleccionada} campos={['nombre']} value={marcaSeleccionada ? marcaSeleccionada.nombre : ''} />
-              </div>
-              {marcaSeleccionada && <input type="hidden" name="idMarca" required value={marcaSeleccionada.id} />}
+                <div>
+                  <label
+                    htmlFor="marca"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Marca<span className="text-red-500">*</span>:
+                  </label>
+                  <ListarMarcas
+                    endpoint={urlMarcas}
+                    onMarcaSeleccionada={handleMarcaSeleccionada}
+                    campos={["nombre"]}
+                    value={marcaSeleccionada ? marcaSeleccionada.nombre : ""}
+                  />
+                </div>
+                {marcaSeleccionada && (
+                  <input
+                    type="hidden"
+                    name="idMarca"
+                    required
+                    value={marcaSeleccionada.id}
+                  />
+                )}
 
-              <div>
-                <label htmlFor="opLote" className="block text-sm font-medium text-gray-700 mb-1">OP/Lote<span className="text-red-500">*</span>:</label>
-                <ListarOp
+                <div>
+                  <label
+                    htmlFor="opLote"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    OP/Lote<span className="text-red-500">*</span>:
+                  </label>
+                  <ListarOp
+                    key={listarProductosKey}
+                    endpoint={urlOp}
+                    onSeleccionado={(opLote: Op[]) =>
+                      handleOpLoteSeleccionado(opLote)
+                    } // Pasar el array de OPs
+                    campos={["nombre"]}
+                    value={opLoteSeleccionado ? opLoteSeleccionado.nombre : ""}
+                  />
+                </div>
+                {opLoteSeleccionado && (
+                  <input
+                    type="hidden"
+                    name="idOp"
+                    value={opLoteSeleccionado.id}
+                  />
+                )}
+
+                <div>
+                  <label
+                    htmlFor="observaciones"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Observaciones:
+                  </label>
+                  <textarea
+                    id="observaciones"
+                    name="observaciones"
+                    value={observaciones}
+                    onChange={(e) => setObservaciones(e.target.value)}
+                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="vencimiento"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Vencimiento:
+                  </label>
+                  <FechaInput
+                    id="vencimiento"
+                    value={vencimiento}
+                    onChange={setVencimiento}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="seEntrega"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Se Entrega:
+                  </label>
+                  <FechaInput
+                    id="seEntrega"
+                    value={seEntrega}
+                    onChange={setSeEntrega}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="seRecibe"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Se Recibe:
+                  </label>
+                  <FechaInput
+                    id="seRecibe"
+                    value={seRecibe}
+                    onChange={setSeRecibe}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="nEgreso"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    N° de Egreso:
+                  </label>
+                  <input
+                    type="text"
+                    id="nEgreso"
+                    name="nEgreso"
+                    value={nEgreso}
+                    onChange={(e) => setNEgreso(e.target.value)}
+                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  />
+                </div>
+
+                <button
                   key={listarProductosKey}
-                  endpoint={urlOp}
-                  onSeleccionado={(opLote: Op[]) => handleOpLoteSeleccionado(opLote)} // Pasar el array de OPs
-                  campos={['nombre']}
-                  value={opLoteSeleccionado ? opLoteSeleccionado.nombre : ''}
-                />
-              </div>
-              {opLoteSeleccionado && <input type="hidden" name="idOp" value={opLoteSeleccionado.id} />}
+                  type="button"
+                  onClick={agregarProducto}
+                  className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring focus:ring-green-300"
+                >
+                  Agregar Producto
+                </button>
 
-              <div>
-                <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700 mb-1">Observaciones:</label>
-                <textarea
-                  id="observaciones"
-                  name="observaciones"
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
-                ></textarea>
-              </div>
-
-              <div>
-                <label htmlFor="vencimiento" className="block text-sm font-medium text-gray-700 mb-1">Vencimiento:</label>
-                <FechaInput id="vencimiento" value={vencimiento} onChange={setVencimiento} />
-              </div>
-
-              <div>
-                <label htmlFor="seEntrega" className="block text-sm font-medium text-gray-700 mb-1">Se Entrega:</label>
-                <FechaInput id="seEntrega" value={seEntrega} onChange={setSeEntrega} />
-              </div>
-
-              <div>
-                <label htmlFor="seRecibe" className="block text-sm font-medium text-gray-700 mb-1">Se Recibe:</label>
-                <FechaInput id="seRecibe" value={seRecibe} onChange={setSeRecibe} />
-              </div>
-
-              <div>
-                <label htmlFor="nEgreso" className="block text-sm font-medium text-gray-700 mb-1">N° de Egreso:</label>
-                <input
-                  type="text"
-                  id="nEgreso"
-                  name="nEgreso"
-                  value={nEgreso}
-                  onChange={(e) => setNEgreso(e.target.value)}
-                  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
-                />
-              </div>
-
-              <button
-                key={listarProductosKey}
-                type="button"
-                onClick={agregarProducto}
-                className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring focus:ring-green-300"
-              >
-                Agregar Producto
-              </button>
-
-              <button
-                type="button"
-                onClick={enviarFormulario}
-                className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
-              >
-                {loading ? 'Cargando...' : 'Guardar RMA'}
-              </button>
-            </>
-          )}
-        </form>
-        {loading && <Loader />}
-      </div>
+                <button
+                  type="button"
+                  onClick={enviarFormulario}
+                  className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
+                >
+                  {loading ? "Cargando..." : "Guardar RMA"}
+                </button>
+              </>
+            )}
+          </form>
+          {loading && <Loader />}
+        </div>
+      </Contenedor>
       {mostrarLista && (
-        <div className="ml-1 relative mr-5">
-          <h3 className="text-xl font-semibold mb-4">N° de Remito: {ultimoNIngreso}</h3>
+        <div className="bg-white absolute top-4 right-0 pb-2">
+          <h3 className="text-xl font-semibold mb-4">
+            N° de Remito: {ultimoNIngreso}
+          </h3>
           <table>
             <thead>
               <tr>
@@ -445,10 +560,13 @@ export const CargarRma: React.FC = () => {
             </thead>
             <tbody>
               {productosAgregados.map((producto, index) => (
-                <tr key={index} className={index % 2 === 0 ? 'bg-gray-200' : 'bg-white'}>
-                  <td className='pl-2'>{producto.sku}</td>
-                  <td className='w-20 text-center'>{producto.cantidad}</td>
-                  <td className='pr-2'>{producto.nombreMarca}</td>
+                <tr
+                  key={index}
+                  className={index % 2 === 0 ? "bg-gray-200" : "bg-gray-50"}
+                >
+                  <td className="pl-0">{producto.sku}</td>
+                  <td className="w-15 text-center">{producto.cantidad}</td>
+                  <td className="pr-2">{producto.nombreMarca}</td>
                   <td>
                     <button
                       className="text-red-600 hover:text-red-800 pl-1.5 pr-2"

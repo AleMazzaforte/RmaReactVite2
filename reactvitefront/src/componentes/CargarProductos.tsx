@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
 import { ListarMarcas } from './utilidades/ListarMarcas';  // Importar el componente ListarMarcas
+import { Contenedor } from './utilidades/Contenedor';  // Importar el componente Contenedor
 
 export const CargarProductos: React.FC = () => {
   const [loading, setLoading] = useState(false);  // Estado para el loader
@@ -88,13 +89,9 @@ export const CargarProductos: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-xl bg-white rounded-lg shadow-lg shadow-gray-500 p-8 mx-auto mb-6"
-      style={{ maxWidth: '600px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}>
-      <div className="flex justify-center mb-6">
-        <div className="h-16 w-16 bg-gray-300 rounded-full flex items-center justify-center">
-          <span className="text-gray-500 font-bold">LOGO</span>
-        </div>
-      </div>
+    <div>
+
+      <Contenedor>
       <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Cargar Productos</h2>
       <form id="formProductos" className="space-y-6" onSubmit={handleFormSubmit} ref={formRef}>
         <div>
@@ -129,6 +126,9 @@ export const CargarProductos: React.FC = () => {
           </button>
         </div>
       </form>
+
+      </Contenedor>
+      
     </div>
   );
 };

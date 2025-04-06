@@ -45,10 +45,11 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
     }
 
     if (value) {
-      setLoading(true);
+      
 
       const newTimer = setTimeout(async () => {
         try {
+          setLoading(true);
           const url = `${endpoint}/${encodeURIComponent(value)}`;
           const response = await fetch(url);
 
@@ -66,8 +67,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
         } finally {
           setLoading(false);
         }
-      }, 500); // 500 ms de retraso
-
+      }, 1000); 
       setTimer(newTimer);
     } else {
       setResultados([]);

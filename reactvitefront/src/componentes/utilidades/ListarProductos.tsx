@@ -6,9 +6,9 @@ interface ListarProductosProps {
   endpoint: string;
   onProductoSeleccionado: (producto: any) => void;
   campos: string[];
-  inputRef?: React.RefObject<HTMLInputElement>; // Agregar inputRef a las props
-  limpiarQuery?: () => void; // Prop para la función de limpiar query
-  value?: string; // Nueva prop para sincronizar el valor del input
+  inputRef?: React.RefObject<HTMLInputElement>;
+  limpiarQuery?: () => void;
+  value?: string;
 }
 
 export const ListarProductos: React.FC<ListarProductosProps> = ({
@@ -17,37 +17,45 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
   campos,
   inputRef,
   limpiarQuery,
-  value = '', // Valor por defecto vacío
+  value = '',
 }) => {
-  const [query, setQuery] = useState<string>(value); // Inicializar con el valor de la prop
+  const [query, setQuery] = useState<string>(value);
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // Usar useRef en lugar de useState
 
-  // Utilizar la ref pasada a través de props o crear una nueva si no se pasa ninguna
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
 
-  // Sincronizar el estado interno `query` con la prop `value`
   useEffect(() => {
     setQuery(value);
   }, [value]);
+
+  useEffect(() => {
+    // Limpiar el timer cuando el componente se desmonta
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
 
     // Limpiar el timeout anterior si existe
-    if (timer) {
-      clearTimeout(timer);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
     }
 
     // Si hay valor en el input, proceder con el retraso
     if (value) {
-      setLoading(true);
+      
 
       // Establecer un nuevo timeout para la búsqueda
-      const newTimer = setTimeout(async () => {
+      timerRef.current = setTimeout(async () => {
         try {
+          setLoading(true);
           const response = await fetch(`${endpoint}?query=${value}`);
           const data = await response.json();
           setResultados(data.filter((producto: any) => producto.sku.toLowerCase().includes(value.toLowerCase())));
@@ -56,9 +64,7 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
         } finally {
           setLoading(false);
         }
-      }, 500); // 500 ms de retraso
-
-      setTimer(newTimer);
+      }, 1000); // 500 ms de retraso
     } else {
       setResultados([]);
       setLoading(false);
@@ -67,12 +73,11 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
 
   const handleProductoSeleccionado = (producto: any) => {
     if (producto) {
-      
       onProductoSeleccionado(producto);
       setResultados([]);
-      setQuery(producto.sku);  // Mostrar el SKU seleccionado en el input
+      setQuery(producto.sku);
       if (localInputRef.current && localInputRef.current.nextElementSibling) {
-        (localInputRef.current.nextElementSibling as HTMLElement).focus();  // Saltar al siguiente campo
+        (localInputRef.current.nextElementSibling as HTMLElement).focus();
       }
     }
   };
@@ -83,7 +88,7 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
         id="skuInput"
         autoComplete='off'
         type="text"
-        ref={localInputRef} // Usar la ref apropiada
+        ref={localInputRef}
         value={query}
         onChange={handleInputChange}
         placeholder="Buscar SKU"

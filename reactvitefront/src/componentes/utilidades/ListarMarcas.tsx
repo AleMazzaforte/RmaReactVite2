@@ -41,11 +41,11 @@ export const ListarMarcas: React.FC<ListarMarcasProps> = ({
 
     // Si hay valor en el input, proceder con el retraso
     if (value) {
-      setLoading(true);
-
+      
       // Establecer un nuevo timeout para la búsqueda
       const newTimer = setTimeout(async () => {
         try {
+          setLoading(true);
           const response = await fetch(`${endpoint}?query=${value}`);
           const data = await response.json();
           setResultados(data.filter((marca: any) => marca.nombre.toLowerCase().includes(value.toLowerCase())));

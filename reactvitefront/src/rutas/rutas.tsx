@@ -20,6 +20,8 @@ import { ActualizarImpo  } from '../componentes/ActualizarImpo';
 import { Estadisticas } from '../componentes/Estadisticas';
 import { DevolucionAGondola} from '../componentes/DevolucionAGondola';
 import { PokemonList } from '../componentes/PokemonList'
+import { ContadorDeTintas } from '../componentes/ContadorDeTintas';
+import { Contenedor } from '../componentes/utilidades/Contenedor';
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -43,6 +45,8 @@ export const Rutas = (): JSX.Element => {
         <Route path="/estadisticas" element={<Estadisticas />} />
         <Route path="/devolucionAGondola" element={<DevolucionAGondola />} />
         <Route path="/pokemon" element={<PokemonList />} />
+        <Route path="/pokemon1" element={<Contenedor />} />
+        <Route path="/cargarTintas" element={<ContadorDeTintas />} />
       </Route>
       <Route path="*" element={<NotFound />} /> {/* Ruta para manejar páginas no encontradas */}
     </Routes>

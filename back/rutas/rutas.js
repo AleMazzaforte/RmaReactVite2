@@ -7,6 +7,7 @@ import {
 } from '../controladores/rmaController.js';
 
 import { postLogin } from '../controladores/loginController.js';
+import {getLogo} from '../controladores/logoController.js';
 import  usuario  from '../controladores/usuarioController.js';
 import gestionClientes from '../controladores/clienteController.js';
 import listarOp from '../controladores/opController.js';
@@ -17,7 +18,11 @@ import etiquetas from '../controladores/etiquetasController.js';
 import agregarDevolucion from '../controladores/devolucionController.js';
 import estadisticas from '../controladores/estadisticasController.js'
 
+
 const router = express.Router();
+
+//Logo
+router.get('/logo', getLogo);
 
 router.post('/login', postLogin);
 //Ruta para cargar clientes

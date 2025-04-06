@@ -102,15 +102,20 @@ const listarOp = {
         if (opExistente.length === 0) {
             return res.status(400).json({ message: "La OP no existe", success: false });
         }
-  
+        console.log('productos', productos)
         // Insertar los productos en opProductos con idSku
         for (const producto of productos) {
             const { idOp, sku, cantidad } = producto;
   
-            if (!idOp || !sku || !cantidad) {
-                throw new Error("Faltan datos obligatorios en uno o más productos");
+            if (!idOp) {
+                throw new Error("Falta identificador de la OP");
             }
-  
+            if (!cantidad) {
+              throw new Error("Falta cantidad del producto");
+            }
+            if (!sku) {
+              throw new Error("Falta el producto");
+            }
             // Obtener el id del producto correspondiente al sku
             const [productoInfo] = await connection.query(
                 "SELECT id FROM productos WHERE sku = ?",
@@ -124,8 +129,8 @@ const listarOp = {
             const idSku = productoInfo[0].id;
   
             await connection.query(
-                "INSERT INTO opProductos (idOp, sku, cantidad, idSku) VALUES (?, ?, ?, ?)",
-                [idOp, sku, cantidad, idSku]
+                "INSERT INTO opProductos (idOp, cantidad, idSku) VALUES (?, ?, ?)",
+                [idOp, cantidad, idSku]
             );
         }
   
