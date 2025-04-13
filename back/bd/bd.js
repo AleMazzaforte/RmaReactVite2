@@ -1,31 +1,32 @@
 import dotenv from 'dotenv';
 import mysql from 'mysql2';
 
-dotenv.config(); // Cargar el archivo .env
+dotenv.config();
 
+class MySQLDatabase {
+    static #instance; // Private static field (ES2022+)
+    pool;
 
-// Verifica que las variables de entorno estén definidas
-if (
-    !process.env.DB_HOST ||
-    !process.env.DB_USER ||
-    !process.env.DB_PASSWORD ||
-    !process.env.DB_NAME
-) {
-    throw new Error('Faltan variables de entorno para la conexión a la base de datos.');
+    constructor() {
+        this.pool = mysql.createPool({
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+            port: parseInt(process.env.DB_PORT),
+            waitForConnections: true,
+            connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
+            queueLimit: 0
+        });
+    }
+
+    static getInstance() {
+        if (!this.#instance) {
+            this.#instance = new MySQLDatabase();
+        }
+        return this.#instance;
+    }
 }
 
-const poolConnection = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT,
-    waitForConnections: true,
-    connectionLimit: process.env.DB_CONNECTION_LIMIT,
-    queueLimit: 0
-});
-
-
-
-export const conn = poolConnection.promise();
-
+// Exporta el pool.promise() igual que antes
+export const conn = MySQLDatabase.getInstance().pool.promise();
