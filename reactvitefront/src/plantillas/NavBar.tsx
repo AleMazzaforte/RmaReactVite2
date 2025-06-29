@@ -16,10 +16,15 @@ export const NavBar: React.FC = () => {
   }
 
   return (
-    <header className="h-32 mb-6 bg-gradient-to-b from-blue-500 to-green-500 text-white flex items-center justify-between p-4 relative mt-0 mr-0 ml-0">
-      <h1 className="text-3xl font-bold">Bienvenido al Sistema</h1>
-      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-        <select defaultValue="" onChange={handleSelectChange} className="p-2 rounded bg-white text-black">
+    <header className="h-32 mb-6 bg-gradient-to-b from-blue-500 to-green-500 text-white flex flex-col sm:flex-row items-center justify-between p-4 relative">
+      <h1 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-0">Bienvenido al Sistema</h1>
+      
+      <div className="w-full sm:w-auto flex justify-center sm:block sm:relative sm:right-0">
+        <select 
+          defaultValue="" 
+          onChange={handleSelectChange} 
+          className="w-full sm:w-auto p-2 rounded bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-300"
+        >
           <option value="" disabled>Selecciona una opción</option>
           <option value="/cargarUsuario">Cargar Usuario</option>
           <option value="/cargarCliente">Cargar cliente</option>
@@ -39,6 +44,8 @@ export const NavBar: React.FC = () => {
           <option value="/actualizarOp">Actualizar Impo</option>
           <option value="/estadisticas">Estadísticas</option>
           <option value="/cargarTintas">Contardor de tintas</option>
+          <option value="/inventario">Inventario</option>
+          <option value="/bloques">Bloques</option>
           <option value="/pokemon">Pokemon</option>
           <option value="logout">Logout</option>
         </select>

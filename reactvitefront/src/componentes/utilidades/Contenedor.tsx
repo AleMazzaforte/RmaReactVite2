@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 
 
 interface ContenedorProps {
-    children: React.ReactNode;
+    children?: React.ReactNode;
   }
 
 

@@ -17,6 +17,7 @@ import transportes from '../controladores/transportesController.js';
 import etiquetas from '../controladores/etiquetasController.js';
 import agregarDevolucion from '../controladores/devolucionController.js';
 import estadisticas from '../controladores/estadisticasController.js'
+import inventarioController from '../controladores/inventarioController.js'
 
 
 const router = express.Router();
@@ -25,10 +26,6 @@ const router = express.Router();
 router.get('/logo', getLogo);
 
 router.post('/login', postLogin);
-//Ruta para cargar clientes
-
-
-
 
 // Ruta para clientes
 router.post('/cargarCliente', gestionClientes.cargarCliente);
@@ -85,5 +82,9 @@ router.get('/buscarRMA', etiquetas.getBuscarRma);
 
 //Rutas para estadisticas
 router.get('/api/estadisticas/rma', estadisticas.getEstadisticasRMA);
+
+//rutas para Inventario
+router.get('/prepararInventario', inventarioController.getPrepararInventario);
+router.put('/actualizarBloques', inventarioController.putActualizarBloques);
 
 export default router;
