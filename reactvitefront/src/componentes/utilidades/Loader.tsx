@@ -12,9 +12,12 @@ const Loader = () => {
   }, []);
 
   return (
-    <div className="loader">
+    <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-18 w-18 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    /*<div className="loader">
       <div className="spinner"></div>
-    </div>
+    </div>*/
   );
 };
 
