@@ -189,7 +189,33 @@ export const Inventario: React.FC = () => {
     });
   };
 
-  console.log("Cambios pendientes:", cambiosPendientes);
+  const exportarAExcel = (productosParaExportar: Producto[]) => {
+  // Preparar los datos para exportar
+  const datosParaExportar = productosParaExportar.map((producto) => ({
+    SKU: producto.sku,
+    "Bloque/Estantería": producto.idBloque,
+
+    "Stock Sistema Total": producto.cantSistemaFemex + producto.cantSistemaBlow,
+    "Conteo Físico": producto.conteoFisico || 0,
+    "Diferencia": calcularDiferencia(producto),
+    "Fecha de Conteo": producto.fechaConteo || "",
+    "Observaciones": producto.observacion || ""
+  }));
+
+  // Crear hoja de trabajo
+  const ws = XLSX.utils.json_to_sheet(datosParaExportar);
+  
+  // Crear libro de trabajo
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+  
+  // Generar nombre de archivo con fecha
+  const fecha = new Date().toISOString().split('T')[0];
+  const nombreArchivo = `Inventario_${bloqueSeleccionado || 'Todos'}_${fecha}.xlsx`;
+  
+  // Exportar archivo
+  XLSX.writeFile(wb, nombreArchivo);
+};
 
   const handleGuardarTodo = async () => {
     try {
@@ -474,7 +500,21 @@ export const Inventario: React.FC = () => {
       </button>
     </div>
   </div>
-
+{/* Botón Exportar a Excel */}
+<div className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex flex-col">
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Exportar
+  </label>
+  <button
+    onClick={() => exportarAExcel(productosFiltrados)}
+    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+    Exportar a Excel
+  </button>
+</div>
   {/* Sección de carga de archivos */}
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
     {/* Cargar Femex */}
