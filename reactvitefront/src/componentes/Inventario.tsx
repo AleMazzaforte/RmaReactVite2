@@ -604,7 +604,7 @@ export const Inventario: React.FC = () => {
                         onChange={(e) =>
                           handleConteoChange(producto.id, e.target.value)
                         }
-                        className="w-full p-1 border rounded text-right"
+                        className="w-full p-1 rounded text-right"
                       />
                     </td>
                     <td
