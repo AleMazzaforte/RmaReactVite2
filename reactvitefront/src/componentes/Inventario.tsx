@@ -29,7 +29,33 @@ export const Inventario: React.FC = () => {
   const [filtro, setFiltro] = useState("");
   const [bloqueSeleccionado, setBloqueSeleccionado] = useState("");
   const [bloques, setBloques] = useState<string[]>([]);
+  const [cambiosPendientes, setCambiosPendientes] = useState<
+    Array<{ id: number; conteoFisico: number | null }>
+  >([]);
+  const [skuABuscar, setSkuABuscar] = useState("");
+  const [mostrarModalCoincidencias, setMostrarModalCoincidencias] =
+    useState(false);
+  const [coincidencias, setCoincidencias] = useState<Producto[]>([]);
+  const [skuSeleccionado, setSkuSeleccionado] = useState("");
+  const [coincidenciasEncontradas, setCoincidenciasEncontradas] = useState<
+    Producto[]
+  >([]);
 
+  ////////////////////////////////////////////////////
+  const [localStorageContent, setLocalStorageContent] = useState<string>("");
+
+  const mostrarLocalStorage = () => {
+    const content: Record<string, string | null> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        content[key] = localStorage.getItem(key);
+      }
+    }
+    setLocalStorageContent(JSON.stringify(content, null, 2));
+  };
+
+  //////////////////////////////////////////////////
   useEffect(() => {
     const fetchProductos = async () => {
       try {
@@ -58,6 +84,79 @@ export const Inventario: React.FC = () => {
       : 0;
   };
 
+  const encontrarCoincidenciasAproximadas = (
+    skuBuscado: string
+  ): Producto[] => {
+    if (!skuBuscado || skuBuscado.trim() === "") return [];
+
+    const skuLower = skuBuscado.toLowerCase();
+
+    return productos
+      .filter(
+        (producto) =>
+          producto.sku.toLowerCase().includes(skuLower) ||
+          producto.sku
+            .toLowerCase()
+            .replace(/\s+/g, "")
+            .includes(skuLower.replace(/\s+/g, ""))
+      )
+      .sort((a, b) => {
+        // Primero los que empiezan con el texto buscado
+        const aStartsWith = a.sku.toLowerCase().startsWith(skuLower) ? 0 : 1;
+        const bStartsWith = b.sku.toLowerCase().startsWith(skuLower) ? 0 : 1;
+
+        // Luego por longitud (los más cortos primero)
+        if (aStartsWith !== bStartsWith) {
+          return aStartsWith - bStartsWith;
+        }
+        return a.sku.length - b.sku.length;
+      });
+  };
+
+  const handleBuscarSku = () => {
+    if (!skuABuscar || skuABuscar.trim() === "") return;
+
+    // Buscar coincidencia exacta
+    const elementoExacto = document.getElementById(`sku-${skuABuscar}`);
+
+    if (elementoExacto) {
+      elementoExacto.scrollIntoView({ behavior: "smooth", block: "center" });
+      elementoExacto.parentElement?.classList.add("bg-yellow-100");
+      setTimeout(() => {
+        elementoExacto.parentElement?.classList.remove("bg-yellow-100");
+      }, 2000);
+      return;
+    }
+
+    // Buscar coincidencias aproximadas
+    const coincidencias = encontrarCoincidenciasAproximadas(skuABuscar);
+
+    if (coincidencias.length > 0) {
+      setCoincidenciasEncontradas(coincidencias);
+      setSkuSeleccionado(coincidencias[0].sku); // Seleccionar primero por defecto
+      setMostrarModalCoincidencias(true);
+    } else {
+      alert("No se encontraron coincidencias para el SKU ingresado");
+    }
+  };
+
+  // Función para confirmar selección
+  const confirmarSeleccion = () => {
+    setSkuABuscar(skuSeleccionado);
+    setMostrarModalCoincidencias(false);
+
+    setTimeout(() => {
+      const elemento = document.getElementById(`sku-${skuSeleccionado}`);
+      if (elemento) {
+        elemento.scrollIntoView({ behavior: "smooth", block: "center" });
+        elemento.parentElement?.classList.add("bg-yellow-100");
+        setTimeout(() => {
+          elemento.parentElement?.classList.remove("bg-yellow-100");
+        }, 2000);
+      }
+    }, 100);
+  };
+
   const handleConteoChange = (id: number, value: string) => {
     const numericValue = value === "" ? null : Number(value);
 
@@ -68,20 +167,46 @@ export const Inventario: React.FC = () => {
               ...producto,
               conteoFisico: numericValue,
               fechaConteo:
-                numericValue !== null ? new Date().toISOString() : null,
+                numericValue !== null
+                  ? new Date().toISOString().split("T")[0]
+                  : null,
             }
           : producto
       )
     );
 
     stockManager.actualizarConteoFisico(id, numericValue);
+
+    // Agregar el cambio al array de cambios pendientes
+    setCambiosPendientes((prev) => {
+      // Eliminar cualquier cambio existente para este ID
+      const cambiosFiltrados = prev.filter((cambio) => cambio.id !== id);
+      // Agregar el nuevo cambio si tiene valor
+      if (numericValue !== null) {
+        return [...cambiosFiltrados, { id, conteoFisico: numericValue }];
+      }
+      return cambiosFiltrados;
+    });
   };
+
+  console.log("Cambios pendientes:", cambiosPendientes);
 
   const handleGuardarTodo = async () => {
     try {
-      const productosParaGuardar = productos.filter(
-        (p) => p.conteoFisico !== null
-      );
+      // Usar los cambios pendientes acumulados en lugar de filtrar productos
+      const productosParaGuardar = productos
+        .filter((p) => cambiosPendientes.some((c) => c.id === p.id))
+        .map((p) => {
+          const cambio = cambiosPendientes.find((c) => c.id === p.id);
+          return {
+            ...p,
+            conteoFisico: cambio?.conteoFisico ?? p.conteoFisico,
+            fechaConteo:
+              cambio?.conteoFisico !== null
+                ? new Date().toISOString().split("T")[0]
+                : null,
+          };
+        });
 
       const response = await fetch(urlActualizarInventario, {
         method: "POST",
@@ -99,12 +224,14 @@ export const Inventario: React.FC = () => {
       alert(
         `${result.affectedRows} productos actualizados correctamente en la base de datos`
       );
+
+      // Limpiar los cambios pendientes después de guardar
+      setCambiosPendientes([]);
     } catch (error) {
       console.error("Error al guardar:", error);
       alert("Error al guardar los cambios en la base de datos");
     }
   };
-
   const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
     setLoading(true);
     try {
@@ -146,7 +273,7 @@ export const Inventario: React.FC = () => {
             ...producto,
             [empresa === "Femex" ? "cantSistemaFemex" : "cantSistemaBlow"]:
               cantidad,
-            conteoFisico: cantidad,
+            //  conteoFisico: cantidad,
             fechaConteo: new Date().toISOString(),
           };
         }
@@ -269,97 +396,143 @@ export const Inventario: React.FC = () => {
 
   return (
     <div className="p-4 max-w-6xl mx-auto bg-white rounded-lg shadow">
-      <h1 className="text-xl font-bold mb-4">Conteo Físico de Inventario</h1>
+  <h1 className="text-2xl font-bold mb-6 text-gray-800">Conteo Físico de Inventario</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Buscar SKU</label>
-          <input
-            type="text"
-            placeholder="Ej: EP504 N PI 130ML"
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-            className="w-full p-2 border rounded-md"
-          />
-        </div>
+  {/* Sección de controles superiores */}
+  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    {/* Filtro general */}
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Filtrar SKU
+      </label>
+      <input
+        type="text"
+        placeholder="Ej: EP504 N PI 130ML"
+        value={filtro}
+        onChange={(e) => setFiltro(e.target.value)}
+        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      />
+    </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Bloque/Estantería
+    {/* Búsqueda específica */}
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Buscar SKU específico
+      </label>
+      <div className="flex">
+        <input
+          type="text"
+          placeholder="Ej: EP504 N PI 130ML"
+          value={skuABuscar}
+          onChange={(e) => setSkuABuscar(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleBuscarSku()}
+          className="flex-1 p-2 border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <button
+          onClick={handleBuscarSku}
+          className="bg-blue-600 text-white px-4 py-2 rounded-r-md hover:bg-blue-700 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    {/* Selector de bloque */}
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Bloque/Estantería
+      </label>
+      <select
+        value={bloqueSeleccionado}
+        onChange={(e) => setBloqueSeleccionado(e.target.value)}
+        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      >
+        <option value="">Todos los bloques</option>
+        {bloques.map((bloque) => (
+          <option key={bloque} value={bloque}>
+            {bloque}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    {/* Botón Guardar Todo */}
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex flex-col">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Acciones
+      </label>
+      <button
+        onClick={handleGuardarTodo}
+        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+        Guardar Todo
+      </button>
+    </div>
+  </div>
+
+  {/* Sección de carga de archivos */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    {/* Cargar Femex */}
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+      <div className="flex items-center space-x-2">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Cargar Excel Femex
           </label>
-          <select
-            value={bloqueSeleccionado}
-            onChange={(e) => setBloqueSeleccionado(e.target.value)}
-            className="w-full p-2 border rounded-md"
-          >
-            <option value="">Todos los bloques</option>
-            {bloques.map((bloque) => (
-              <option key={bloque} value={bloque}>
-                {bloque}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-end">
-          <button
-            onClick={handleGuardarTodo}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 w-full"
-          >
-            Guardar Todo
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="flex space-x-2">
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">
-              Cargar Excel Femex
-            </label>
+          <div className="flex">
             <input
               type="file"
               accept=".xlsx, .xls"
-              onChange={(e) =>
-                e.target.files?.[0] &&
-                handleFileUpload(e.target.files[0], "Femex")
-              }
-              className="w-full p-2 border rounded-md"
+              onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "Femex")}
+              className="flex-1 p-2 border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:hidden "
             />
+            <button
+              onClick={() => handleBorrarDatos("Femex")}
+              className="bg-red-600 text-white px-3 py-2 rounded-r-md hover:bg-red-700 transition-colors"
+              title="Borrar todos los datos de Femex"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={() => handleBorrarDatos("Femex")}
-            className="bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 mt-6"
-            title="Borrar todos los datos de Femex"
-          >
-            ×
-          </button>
         </div>
+      </div>
+    </div>
 
-        <div className="flex space-x-2">
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">
-              Cargar Excel Blow
-            </label>
+    {/* Cargar Blow */}
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+      <div className="flex items-center space-x-2">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Cargar Excel Blow
+          </label>
+          <div className="flex">
             <input
               type="file"
               accept=".xlsx, .xls"
-              onChange={(e) =>
-                e.target.files?.[0] &&
-                handleFileUpload(e.target.files[0], "Blow")
-              }
-              className="w-full p-2 border rounded-md"
+              onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "Blow")}
+              className="flex-1 p-2 border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:hidden"
             />
+            <button
+              onClick={() => handleBorrarDatos("Blow")}
+              className="bg-red-600 text-white px-3 py-2 rounded-r-md hover:bg-red-700 transition-colors"
+              title="Borrar todos los datos de Blow"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={() => handleBorrarDatos("Blow")}
-            className="bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 mt-6"
-            title="Borrar todos los datos de Blow"
-          >
-            ×
-          </button>
         </div>
       </div>
+    </div>
+  </div>
 
       <div className="overflow-x-auto">
         <table className="min-w-full border">
@@ -369,7 +542,6 @@ export const Inventario: React.FC = () => {
               <th className="p-2 border text-right">Stock Sistema</th>
               <th className="p-2 border text-right">Conteo Físico</th>
               <th className="p-2 border text-right">Diferencia</th>
-              <th className="p-2 border text-right">Fecha Conteo</th>
             </tr>
           </thead>
           <tbody>
@@ -378,7 +550,9 @@ export const Inventario: React.FC = () => {
                 const diferencia = calcularDiferencia(producto);
                 return (
                   <tr key={producto.id} className="hover:bg-gray-50">
-                    <td className="p-2 border">{producto.sku}</td>
+                    <td className="p-2 border" id={`sku-${producto.sku}`}>
+                      {producto.sku}
+                    </td>
                     <td className="p-2 border text-right">
                       {producto.cantSistemaFemex + producto.cantSistemaBlow}
                     </td>
@@ -396,7 +570,7 @@ export const Inventario: React.FC = () => {
                     <td
                       className={`p-2 border text-right ${
                         diferencia > 0
-                          ? "text-green-600"
+                          ? "text-blue-700"
                           : diferencia < 0
                           ? "text-red-600"
                           : "text-gray-600"
@@ -407,11 +581,6 @@ export const Inventario: React.FC = () => {
                           ? `+${diferencia}`
                           : diferencia
                         : "0"}
-                    </td>
-                    <td className="p-2 border text-right text-sm">
-                      {producto.fechaConteo
-                        ? new Date(producto.fechaConteo).toLocaleString()
-                        : "-"}
                     </td>
                   </tr>
                 );
@@ -437,6 +606,51 @@ export const Inventario: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {mostrarModalCoincidencias && (
+        <div className="fixed inset-0  flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">
+              Seleccione el SKU deseado
+            </h3>
+            <p className="mb-4">
+              No se encontró el SKU exacto. Coincidencias aproximadas:
+            </p>
+            <div className="max-h-60 overflow-y-auto mb-4">
+              {coincidenciasEncontradas.slice(0, 10).map((producto) => (
+                <label
+                  key={producto.id}
+                  className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="skuSeleccionado"
+                    value={producto.sku}
+                    checked={skuSeleccionado === producto.sku}
+                    onChange={() => setSkuSeleccionado(producto.sku)}
+                    className="mr-2"
+                  />
+                  {producto.sku}
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setMostrarModalCoincidencias(false)}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarSeleccion}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
