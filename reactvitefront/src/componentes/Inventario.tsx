@@ -43,25 +43,37 @@ export const Inventario: React.FC = () => {
   const [mostrarNoAsignados, setMostrarNoAsignados] = useState(false);
 
   useEffect(() => {
-    const fetchProductos = async () => {
-      try {
-        const response = await fetch(`${urlPrepararInventario}`);
-        const data: Producto[] = await response.json();
-        setProductos(data);
-        stockManager.cargarProductos(data);
-        const bloquesUnicos: string[] = [
-          ...new Set(data.map((p) => p.idBloque)),
-        ].filter(b => b !== "").sort();
-        setBloques(bloquesUnicos);
-      } catch (error) {
-        console.error("Error al cargar productos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchProductos = async () => {
+    try {
+      const response = await fetch(`${urlPrepararInventario}`);
+      const data: Producto[] = await response.json();
+      const productosConConteoInicial = data.map(p => ({
+        ...p,
+        conteoFisico: p.conteoFisico ?? 0
+      }));
+      
+      setProductos(productosConConteoInicial);
+      stockManager.cargarProductos(productosConConteoInicial);
+      
+      // Obtener bloques únicos y agregar "No asignado" como opción
+      const bloquesUnicos: string[] = [
+        ...new Set(data.map((p) => p.idBloque || "No asignado")),
+      ].sort();
+      
+      setBloques(bloquesUnicos);
+    } catch (error) {
+      console.error("Error al cargar productos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchProductos();
-  }, []);
+  fetchProductos();
+}, []);
+
+const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+  event.target.select();
+};
 
   const calcularDiferencia = (producto: Producto): number => {
     const totalSistema = producto.cantSistemaFemex + producto.cantSistemaBlow;
@@ -170,14 +182,11 @@ export const Inventario: React.FC = () => {
   const exportarAExcel = (productosParaExportar: Producto[]) => {
     const datosParaExportar = productosParaExportar.map((producto) => ({
       SKU: producto.sku,
-      "Bloque/Estantería": producto.idBloque,
-      "Stock Sistema (Femex)": producto.cantSistemaFemex,
-      "Stock Sistema (Blow)": producto.cantSistemaBlow,
+      "Bloque": producto.idBloque,
       "Stock Sistema Total": producto.cantSistemaFemex + producto.cantSistemaBlow,
       "Conteo Físico": producto.conteoFisico || 0,
       "Diferencia": calcularDiferencia(producto),
-      "Fecha de Conteo": producto.fechaConteo || "",
-      "Observaciones": producto.observacion || ""
+      
     }));
 
     const ws = XLSX.utils.json_to_sheet(datosParaExportar);
@@ -376,19 +385,20 @@ export const Inventario: React.FC = () => {
   };
 
   const productosFiltrados = productos
-    .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))
-    .filter((p) => {
-      if (mostrarNoAsignados) {
-        return p.idBloque === "" || p.idBloque === null;
-      }
-      return bloqueSeleccionado === "" || p.idBloque === bloqueSeleccionado;
-    })
-    .sort((a, b) => {
-      if (bloqueSeleccionado !== "" || mostrarNoAsignados) {
-        return a.sku.localeCompare(b.sku);
-      }
-      return 0;
-    });
+  .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))
+  .filter((p) => {
+    if (bloqueSeleccionado === "") return true;
+    if (bloqueSeleccionado === "No asignado") {
+      return !p.idBloque || p.idBloque === "";
+    }
+    return p.idBloque == bloqueSeleccionado;
+  })
+  .sort((a, b) => {
+    if (bloqueSeleccionado !== "") {
+      return a.sku.localeCompare(b.sku);
+    }
+    return 0;
+  });
 
   if (loading) {
     return (
@@ -418,7 +428,7 @@ export const Inventario: React.FC = () => {
 
         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Buscar SKU específico
+            Buscar SKU
           </label>
           <div className="flex">
             <input
@@ -442,7 +452,7 @@ export const Inventario: React.FC = () => {
 
         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Bloque/Estantería
+            Bloque
           </label>
           <select
             value={bloqueSeleccionado}
@@ -459,18 +469,7 @@ export const Inventario: React.FC = () => {
               </option>
             ))}
           </select>
-          <label className="inline-flex items-center mt-2">
-            <input
-              type="checkbox"
-              checked={mostrarNoAsignados}
-              onChange={(e) => {
-                setMostrarNoAsignados(e.target.checked);
-                if (e.target.checked) setBloqueSeleccionado("");
-              }}
-              className="form-checkbox h-4 w-4 text-blue-600"
-            />
-            <span className="ml-2 text-sm text-gray-700">Mostrar no asignados</span>
-          </label>
+          
         </div>
 
         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex flex-col">
@@ -487,14 +486,15 @@ export const Inventario: React.FC = () => {
               </svg>
               Guardar
             </button>
+            
             <button
               onClick={() => exportarAExcel(productosFiltrados)}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center flex-1"
               title="Exportar a Excel"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
+              </svg>Excel
             </button>
           </div>
         </div>
@@ -563,7 +563,7 @@ export const Inventario: React.FC = () => {
               <th className="p-2 border text-left">SKU</th>
               <th className="p-2 border text-left">Bloque</th>
               <th className="p-2 border text-right">Stock Sistema</th>
-              <th className="p-2 border text-right">Conteo Físico</th>
+              <th className="p-2 border text-right">Conteo</th>
               <th className="p-2 border text-right">Diferencia</th>
             </tr>
           </thead>
@@ -590,7 +590,8 @@ export const Inventario: React.FC = () => {
                         onChange={(e) =>
                           handleConteoChange(producto.id, e.target.value)
                         }
-                        className="w-full p-1 border rounded text-right"
+                        onFocus={handleFocus}
+                        className="w-full p-1 rounded text-right"
                       />
                     </td>
                     <td
