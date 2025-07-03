@@ -6,7 +6,7 @@ export const inventarioController = {
     try {
       connection = await conn.getConnection();
 
-      // Consulta para obtener los datos de bloquesConteo
+      // Consulta para obtener los datos de productos
       const [results] = await connection.query(
         `SELECT 
                     id, 
@@ -15,9 +15,8 @@ export const inventarioController = {
                     cantSistemaFemex, 
                     cantSistemaBlow, 
                     NULLIF(conteoFisico, 0) as conteoFisico, 
-                    DATE_FORMAT(fechaConteo, '%Y-%m-%d %H:%i:%s') as fechaConteo, 
-                    observacion 
-                FROM bloquesConteo`
+                    DATE_FORMAT(fechaConteo, '%Y-%m-%d %H:%i:%s') as fechaConteo                     
+                FROM productos`
       );
 
       // Formatear los datos exactamente como los espera el frontend
@@ -29,7 +28,7 @@ export const inventarioController = {
         cantSistemaBlow: item.cantSistemaBlow || 0, // Solo para cantidades
         conteoFisico: item.conteoFisico, // Puede ser NULL
         fechaConteo: item.fechaConteo,
-        observacion: item.observacion,
+       
       }));
 
       res.status(200).json(datosParaFront);
@@ -62,12 +61,11 @@ export const inventarioController = {
       // Actualizar cada producto
       for (const producto of productosActualizados) {
         await connection.query(
-          `UPDATE bloquesConteo SET 
+          `UPDATE productos SET 
                         conteoFisico = NULLIF(?, 0), 
-                        fechaConteo = NOW(), 
-                        observacion = ? 
+                        fechaConteo = NOW(),  
                     WHERE id = ?`,
-          [producto.conteoFisico, producto.observacion, producto.id]
+          [producto.conteoFisico, producto.id]
         );
       }
 
@@ -103,7 +101,7 @@ export const inventarioController = {
       await connection.beginTransaction();
 
       await connection.query(
-        `UPDATE bloquesConteo SET 
+        `UPDATE productos SET 
                 idBloque = ?
             WHERE id IN (?)`,
         [bloque, productos]
@@ -139,7 +137,7 @@ export const inventarioController = {
         if (accion === 'borrar') {
             // Lógica para borrado masivo
             const [result] = await connection.query(
-                `UPDATE bloquesConteo SET 
+                `UPDATE productos SET 
                     ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = 0,
                     fechaConteo = ?
                 `,
@@ -154,7 +152,7 @@ export const inventarioController = {
 
             for (const producto of productos) {
                 const [result] = await connection.query(
-                    `UPDATE bloquesConteo SET 
+                    `UPDATE productos SET 
                         ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = ?,
                         fechaConteo = ?
                     WHERE sku = ?`,

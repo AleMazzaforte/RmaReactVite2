@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { StockManager } from "./utilidades/StockManager";
 import * as XLSX from "xlsx";
 import { FiltrosInventario } from "./utilidades/FiltrosInventario";
+import { GetInventarioStock } from "./utilidades/GetInventarioStock"
 
 interface Producto {
   id: number;
@@ -25,52 +26,21 @@ if (window.location.hostname === "localhost") {
 
 export const Inventario: React.FC = () => {
   const [stockManager] = useState(() => new StockManager());
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState("");
   const [bloqueSeleccionado, setBloqueSeleccionado] = useState("");
-  const [bloques, setBloques] = useState<string[]>([]);
   const [cambiosPendientes, setCambiosPendientes] = useState<
     Array<{ id: number; conteoFisico: number | null }>
   >([]);
   const [skuABuscar, setSkuABuscar] = useState("");
   const [mostrarModalCoincidencias, setMostrarModalCoincidencias] =
     useState(false);
-  const [coincidencias, setCoincidencias] = useState<Producto[]>([]);
   const [skuSeleccionado, setSkuSeleccionado] = useState("");
   const [coincidenciasEncontradas, setCoincidenciasEncontradas] = useState<
     Producto[]
   >([]);
   const [mostrarNoAsignados, setMostrarNoAsignados] = useState(false);
 
-  useEffect(() => {
-  const fetchProductos = async () => {
-    try {
-      const response = await fetch(`${urlPrepararInventario}`);
-      const data: Producto[] = await response.json();
-      const productosConConteoInicial = data.map(p => ({
-        ...p,
-        conteoFisico: p.conteoFisico ?? 0
-      }));
-      
-      setProductos(productosConConteoInicial);
-      stockManager.cargarProductos(productosConConteoInicial);
-      
-      // Obtener bloques únicos y agregar "No asignado" como opción
-      const bloquesUnicos: string[] = [
-        ...new Set(data.map((p) => p.idBloque || "No asignado")),
-      ].sort();
-      
-      setBloques(bloquesUnicos);
-    } catch (error) {
-      console.error("Error al cargar productos:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchProductos();
-}, []);
+ const { productos, setProductos, setLoading, bloques, loading, error } = GetInventarioStock(urlPrepararInventario);
 
 const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
   event.target.select();
@@ -426,15 +396,6 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
           setBloqueSeleccionado={setBloqueSeleccionado}
           bloques={bloques}
         />
-
-
-
-
-
-
-
-
-
 
 
         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex flex-col">

@@ -1,9 +1,9 @@
-// src/data/tintasConfig.ts (por ejemplo)
+
 
 export const FieldSetTintasConfig = [
     {
       legend: 'Tintas 664/673 1 L',
-      
+      disableCombo: true,
       inputs: [
         { label: 'Negro', id: 'negro1L', name: 'negro1L' },
         { label: 'Cian', id: 'cian1L', name: 'cian1L' },
