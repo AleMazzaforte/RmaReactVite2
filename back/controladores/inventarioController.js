@@ -181,7 +181,58 @@ export const inventarioController = {
     } finally {
         if (connection) connection.release();
     }
-}
+},
+
+putGuardarInventario: async (req, res) => {
+    let connection;
+    try {
+      const productosActualizados = req.body;
+      
+      if (!Array.isArray(productosActualizados)) {
+        return res.status(400).json({ error: "Se esperaba un array de productos" });
+      }
+
+      // Filtrar solo productos con conteo válido (no null)
+      const productosValidos = productosActualizados.filter(
+        p => p.conteoFisico !== null && p.conteoFisico !== undefined
+      );
+
+      if (productosValidos.length === 0) {
+        return res.status(400).json({ error: "No hay conteos válidos para guardar" });
+      }
+
+      connection = await conn.getConnection();
+      await connection.beginTransaction();
+
+      // Actualización masiva con un solo query
+      const [result] = await connection.query(
+        `UPDATE productos 
+         SET conteoFisico = CASE id
+           ${productosValidos.map(p => `WHEN ${p.id} THEN ${p.conteoFisico}`).join(' ')}
+           END,
+           fechaConteo = NOW()
+         WHERE id IN (${productosValidos.map(p => p.id).join(',')})`
+      );
+
+      await connection.commit();
+      
+      res.status(200).json({
+        success: true,
+        updatedCount: result.affectedRows,
+        message: `${result.affectedRows} productos actualizados correctamente`
+      });
+
+    } catch (error) {
+      if (connection) await connection.rollback();
+      console.error("Error al guardar inventario:", error);
+      res.status(500).json({
+        error: "Error al guardar el inventario",
+        details: error.message
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  },
 };
 
 export default inventarioController;

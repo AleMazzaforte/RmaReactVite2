@@ -87,5 +87,6 @@ router.get('/api/estadisticas/rma', estadisticas.getEstadisticasRMA);
 router.get('/prepararInventario', inventarioController.getPrepararInventario);
 router.put('/actualizarBloques', inventarioController.putActualizarBloques);
 router.put('/actualizarProductoInventario', inventarioController.putActualizarProductoInventario);
+router.put('/guardarInventario', inventarioController.putGuardarInventario);
 
 export default router;

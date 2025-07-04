@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { StockManager } from "./utilidades/StockManager";
 import * as XLSX from "xlsx";
 import { FiltrosInventario } from "./utilidades/FiltrosInventario";
-import { GetInventarioStock } from "./utilidades/GetInventarioStock"
+import { GetInventarioStock } from "./utilidades/GetInventarioStock";
+import { GuardarInventario } from "./utilidades/GuardarInventario";
+import Swal from "sweetalert2";
 
 interface Producto {
   id: number;
@@ -14,23 +16,28 @@ interface Producto {
   fechaConteo: string | null;
   observacion: string | null;
 }
+interface ProductoConteo {
+  id: number;
+  sku: string;
+  conteoFisico: number | null;
+}
 
 let urlPrepararInventario = "https://rma-back.vercel.app/prepararInventario";
 let urlActualizarInventario =
   "https://rma-back.vercel.app/actualizarProductoInventario";
+let urlGuardarInventario = "https://rma-back.vercel.app/guardarInventario";
 if (window.location.hostname === "localhost") {
   urlPrepararInventario = "http://localhost:8080/prepararInventario";
   urlActualizarInventario =
     "http://localhost:8080/actualizarProductoInventario";
+  urlGuardarInventario = "http://localhost:8080/guardarInventario";
 }
 
 export const Inventario: React.FC = () => {
   const [stockManager] = useState(() => new StockManager());
   const [filtro, setFiltro] = useState("");
   const [bloqueSeleccionado, setBloqueSeleccionado] = useState("");
-  const [cambiosPendientes, setCambiosPendientes] = useState<
-    Array<{ id: number; conteoFisico: number | null }>
-  >([]);
+
   const [skuABuscar, setSkuABuscar] = useState("");
   const [mostrarModalCoincidencias, setMostrarModalCoincidencias] =
     useState(false);
@@ -39,12 +46,16 @@ export const Inventario: React.FC = () => {
     Producto[]
   >([]);
   const [mostrarNoAsignados, setMostrarNoAsignados] = useState(false);
+  const [cambiosPendientes, setCambiosPendientes] = useState<
+    { id: number; conteoFisico: number | null }[]
+  >([]);
 
- const { productos, setProductos, setLoading, bloques, loading, error } = GetInventarioStock(urlPrepararInventario);
+  const { productos, setProductos, setLoading, bloques, loading, error } =
+    GetInventarioStock(urlPrepararInventario);
 
-const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
-  event.target.select();
-};
+  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
+  };
 
   const calcularDiferencia = (producto: Producto): number => {
     const totalSistema = producto.cantSistemaFemex + producto.cantSistemaBlow;
@@ -101,7 +112,11 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
       setSkuSeleccionado(coincidencias[0].sku);
       setMostrarModalCoincidencias(true);
     } else {
-      alert("No se encontraron coincidencias para el SKU ingresado");
+      Swal.fire({
+        icon: "warning",
+        title: "Sin coincidencias",
+        text: "No se encontraron coincidencias para el SKU ingresado",
+      });
     }
   };
 
@@ -153,72 +168,116 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
   const exportarAExcel = (productosParaExportar: Producto[]) => {
     const datosParaExportar = productosParaExportar.map((producto) => ({
       SKU: producto.sku,
-      "Bloque": producto.idBloque,
-      "Stock Sistema Total": producto.cantSistemaFemex + producto.cantSistemaBlow,
+      Bloque: producto.idBloque,
+      "Stock Sistema Total":
+        producto.cantSistemaFemex + producto.cantSistemaBlow,
       "Conteo Físico": producto.conteoFisico || 0,
-      "Diferencia": calcularDiferencia(producto),
-      
+      Diferencia: calcularDiferencia(producto),
     }));
 
     const ws = XLSX.utils.json_to_sheet(datosParaExportar);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Inventario");
-    
-    const fecha = new Date().toISOString().split('T')[0];
+
+    const fecha = new Date().toISOString().split("T")[0];
     let nombreArchivo = `Inventario_${fecha}`;
-    
+
     if (mostrarNoAsignados) {
       nombreArchivo += "_NoAsignados";
     } else if (bloqueSeleccionado) {
       nombreArchivo += `_Bloque-${bloqueSeleccionado}`;
     }
-    
+
     if (filtro) {
       nombreArchivo += `_Filtro-${filtro.substring(0, 10)}`;
     }
-    
+
     nombreArchivo += ".xlsx";
-    
+
     XLSX.writeFile(wb, nombreArchivo);
   };
 
-  const handleGuardarTodo = async () => {
+  const handleGuardar = async (productosParaGuardar: ProductoConteo[]) => {
     try {
-      const productosParaGuardar = productos
-        .filter((p) => cambiosPendientes.some((c) => c.id === p.id))
-        .map((p) => {
-          const cambio = cambiosPendientes.find((c) => c.id === p.id);
-          return {
-            ...p,
-            conteoFisico: cambio?.conteoFisico ?? p.conteoFisico,
-            fechaConteo:
-              cambio?.conteoFisico !== null
-                ? new Date().toISOString().split("T")[0]
-                : null,
-          };
-        });
-
-      const response = await fetch(urlActualizarInventario, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await fetch(urlGuardarInventario, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(productosParaGuardar),
       });
 
-      if (!response.ok) {
-        throw new Error("Error en la respuesta del servidor");
-      }
+      if (!response.ok) throw new Error("Error al guardar");
 
       const result = await response.json();
-      alert(
-        `${result.affectedRows} productos actualizados correctamente en la base de datos`
-      );
+      Swal.fire({
+        icon: "success",
+        title: "Guardado exitoso",
+        text: `${result.affectedRows} productos actualizados`,
+      });
 
       setCambiosPendientes([]);
     } catch (error) {
-      console.error("Error al guardar:", error);
-      alert("Error al guardar los cambios en la base de datos");
+      console.error("Error:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al guardar",
+        text: "No se pudo guardar los cambios.",
+      });
+    }
+  };
+
+  const handleBorrarConteos = async () => {
+    const { isConfirmed } = await Swal.fire({
+      title: "¿Resetear conteos?",
+      text: "¿Estás seguro que deseas resetear TODOS los conteos físicos a cero?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, resetear",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      // Crear array con todos los IDs y conteoFisico como 0
+      const productosParaResetear = productos.map((p) => ({
+        id: p.id,
+        sku: p.sku,
+        conteoFisico: 0, // O null si prefieres
+      }));
+
+      const response = await fetch(urlGuardarInventario, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(productosParaResetear),
+      });
+
+      if (!response.ok) throw new Error("Error al resetear conteos");
+
+      const result = await response.json();
+      Swal.fire({
+        icon: "success",
+        title: "Conteos reseteados",
+        text: `${result.updatedCount} conteos reseteados correctamente`,
+      });
+
+      // Actualizar estado local
+      setProductos((prev) =>
+        prev.map((p) => ({
+          ...p,
+          conteoFisico: 0, // O null
+          fechaConteo: null,
+        }))
+      );
+      setCambiosPendientes([]);
+    } catch (error) {
+      console.error("Error al resetear conteos:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al resetear",
+        text: "Error al resetear conteos físicos.",
+      });
     }
   };
 
@@ -266,26 +325,34 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
       });
 
       setProductos(productosActualizados);
-      alert(
-        result.message ||
-          `Archivo de ${empresa} procesado correctamente. ${result.updatedCount} productos actualizados.`
-      );
+      Swal.fire({
+        icon: "success",
+        title: "Archivo procesado",
+        text: `Archivo de ${empresa} procesado correctamente. ${result.updatedCount} productos actualizados.`,
+      });
     } catch (error) {
       console.error(`Error al procesar archivo de ${empresa}:`, error);
-      alert(`Error al procesar archivo de ${empresa}`);
+      Swal.fire({
+        icon: "error",
+        title: "Error al guardar",
+        text: `Error al procesar archivo de ${empresa}`,
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleBorrarDatos = async (tipoArchivo: "Femex" | "Blow") => {
-    if (
-      !window.confirm(
-        `¿Estás seguro que deseas borrar TODOS los datos de ${tipoArchivo}?`
-      )
-    ) {
-      return;
-    }
+    const { isConfirmed } = await Swal.fire({
+      title: `Borrar datos de ${tipoArchivo}`,
+      text: `¿Estás seguro que deseas borrar TODOS los datos de ${tipoArchivo}? Esta acción no se puede deshacer.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, borrar",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (!isConfirmed) return;
 
     try {
       const response = await fetch(urlActualizarInventario, {
@@ -310,11 +377,18 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
           fechaConteo: new Date().toISOString(),
         }))
       );
-
-      alert(result.message);
+      Swal.fire({
+        icon: "success",
+        title: "Datos borrados correctamente",
+        text: `${result.message}`,
+      });
     } catch (error) {
       console.error(`Error al borrar datos de ${tipoArchivo}:`, error);
-      alert(`Error al borrar datos de ${tipoArchivo}`);
+      Swal.fire({
+        icon: "error",
+        title: "Error al borrar datos",
+        text: `Error al borrar datos de ${tipoArchivo}`,
+      });
     }
   };
 
@@ -356,20 +430,20 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
   };
 
   const productosFiltrados = productos
-  .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))
-  .filter((p) => {
-    if (bloqueSeleccionado === "") return true;
-    if (bloqueSeleccionado === "No asignado") {
-      return !p.idBloque || p.idBloque === "";
-    }
-    return p.idBloque == bloqueSeleccionado;
-  })
-  .sort((a, b) => {
-    if (bloqueSeleccionado !== "") {
-      return a.sku.localeCompare(b.sku);
-    }
-    return 0;
-  });
+    .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))
+    .filter((p) => {
+      if (bloqueSeleccionado === "") return true;
+      if (bloqueSeleccionado === "No asignado") {
+        return !p.idBloque || p.idBloque === "";
+      }
+      return p.idBloque == bloqueSeleccionado;
+    })
+    .sort((a, b) => {
+      if (bloqueSeleccionado !== "") {
+        return a.sku.localeCompare(b.sku);
+      }
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -381,11 +455,11 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
 
   return (
     <div className="p-4 max-w-6xl mx-auto bg-white rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Conteo Físico de Inventario</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">
+        Conteo Físico de Inventario
+      </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        
-        
         <FiltrosInventario
           filtro={filtro}
           setFiltro={setFiltro}
@@ -397,30 +471,51 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
           bloques={bloques}
         />
 
-
         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex flex-col">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Acciones
           </label>
           <div className="flex space-x-2">
-            <button
-              onClick={handleGuardarTodo}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center flex-1"
+            <GuardarInventario
+              productos={cambiosPendientes.map((c) => ({
+                id: c.id,
+                conteoFisico: c.conteoFisico,
+                sku: productos.find((p) => p.id === c.id)?.sku || "",
+              }))}
+              onGuardar={handleGuardar}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
               </svg>
               Guardar
-            </button>
-            
+            </GuardarInventario>
             <button
               onClick={() => exportarAExcel(productosFiltrados)}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center flex-1"
               title="Exportar a Excel"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>Excel
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-1.5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Excel
             </button>
           </div>
         </div>
@@ -437,7 +532,10 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
                 <input
                   type="file"
                   accept=".xlsx, .xls"
-                  onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "Femex")}
+                  onChange={(e) =>
+                    e.target.files?.[0] &&
+                    handleFileUpload(e.target.files[0], "Femex")
+                  }
                   className="flex-1 p-2 border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:hidden"
                 />
                 <button
@@ -445,8 +543,17 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
                   className="bg-red-600 text-white px-3 py-2 rounded-r-md hover:bg-red-700 transition-colors"
                   title="Borrar todos los datos de Femex"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </button>
               </div>
@@ -464,7 +571,10 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
                 <input
                   type="file"
                   accept=".xlsx, .xls"
-                  onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "Blow")}
+                  onChange={(e) =>
+                    e.target.files?.[0] &&
+                    handleFileUpload(e.target.files[0], "Blow")
+                  }
                   className="flex-1 p-2 border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:hidden"
                 />
                 <button
@@ -472,9 +582,26 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
                   className="bg-red-600 text-white px-3 py-2 rounded-r-md hover:bg-red-700 transition-colors"
                   title="Borrar todos los datos de Blow"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
                   </svg>
+                </button>
+
+                <button
+                  onClick={handleBorrarConteos}
+                  className="bg-red-600 text-white px-3 py-2 rounded-r-md hover:bg-red-700 transition-colors rounded-l-md ml-2"
+                  title="Resetear todos los conteos físicos"
+                >
+                  Borrar Conteos
                 </button>
               </div>
             </div>
@@ -517,7 +644,7 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
                           handleConteoChange(producto.id, e.target.value)
                         }
                         onFocus={handleFocus}
-                        className="w-full p-1 rounded text-right"
+                        className="w-full p-1 rounded text-right border-0 focus:border-0 focus:ring-0 focus:outline-none"
                       />
                     </td>
                     <td
@@ -559,7 +686,7 @@ const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
           </span>
           {mostrarNoAsignados && (
             <span className="text-red-600">
-              No asignados: {productos.filter(p => !p.idBloque).length}
+              No asignados: {productos.filter((p) => !p.idBloque).length}
             </span>
           )}
         </div>
