@@ -211,8 +211,9 @@ export const Inventario: React.FC = () => {
       Swal.fire({
         icon: "success",
         title: "Guardado exitoso",
-        text: `${result.affectedRows} productos actualizados`,
+        text: `${result.updatedCount} productos actualizados`,
       });
+
 
       setCambiosPendientes([]);
     } catch (error) {
