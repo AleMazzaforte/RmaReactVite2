@@ -24,7 +24,7 @@ interface ProductoConteo {
 
 let urlPrepararInventario = "https://rma-back.vercel.app/prepararInventario";
 let urlActualizarInventario =
-  "https://rma-back.vercel.app/actualizarProductoInventario";
+  "https://rmareactvite2.onrender.com/actualizarProductoInventario";
 let urlGuardarInventario = "https://rma-back.vercel.app/guardarInventario";
 if (window.location.hostname === "localhost") {
   urlPrepararInventario = "http://localhost:8080/prepararInventario";
