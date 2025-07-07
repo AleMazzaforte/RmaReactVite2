@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calculator } from './Calculator';
-import { N } from 'vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P';
+
 
 interface InputWithLongTouchCalculatorProps {
   value: number | null;
@@ -129,7 +129,11 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
           <div 
             ref={calculatorRef}
             onClick={(e) => e.stopPropagation()}
-            className="bg-gray-400 p-4 rounded-lg w-80"
+            className="bg-gray-400 p-4 rounded-lg"
+            style={{width:'420px',
+              height: '800px',
+              position: 'fixed'
+            }}
           >
             <Calculator 
               onClose={handleCalculatorClose}

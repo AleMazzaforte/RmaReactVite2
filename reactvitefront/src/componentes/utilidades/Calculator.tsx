@@ -131,65 +131,149 @@ export const Calculator: React.FC<CalculatorProps> = ({
     setActiveInput(inputType);
   };
 
-  return (
-    <div>
-      {/* Display principal */}
-      <div 
-        className={`bg-gray-100 p-1 pr-2 mb-2 mt-2 text-right text-3xl font-mono rounded cursor-pointer ${activeInput === 'display' ? 'ring-2 ring-blue-500' : ''}`}
-        onClick={() => handleInputClick('display')}
-      >
-        {display}
-      </div>
-      
-      {/* Inputs de bultos y unidades */}
-      <div className="mb-4 flex justify-between space-x-2">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700">Bultos</label>
-          <div 
-            className={`w-full p-1 pl-2 bg-gray-100 rounded border border-gray-300 text-right cursor-pointer ${activeInput === 'bultos' ? 'ring-2 ring-blue-500' : ''}`}
-            onClick={() => handleInputClick('bultos')}
-          >
-            {bultos}
-          </div>
-        </div>
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700">Unid. x Bulto</label>
-<div 
-  className={`w-full p-1 pl-2 bg-gray-100 rounded border border-gray-300 text-right cursor-pointer ${activeInput === 'unidades' ? 'ring-2 ring-blue-500' : ''}`}
-  onClick={() => handleInputClick('unidades')}
->
-  {isNaN(parseFloat(unidadesPorBulto)) ? "0" : unidadesPorBulto}
-</div>
-        </div>
-      </div>
-
-      {/* Teclado de la calculadora */}
-      <div className="grid grid-cols-4 gap-2">
-        {["7", "8", "9", "/", "4", "5", "6", "*", "1", "2", "3", "-", "0", ".", "=", "+", "(", ")"].map((btn) => (
-          <button
-            key={btn}
-            onClick={() => btn === "=" ? calculateResult() : handleButtonClick(btn)}
-            className={`p-3 rounded text-lg ${
-              btn === "=" ? "bg-green-500" : "bg-blue-500"
-            } text-white hover:opacity-80`}
-          >
-            {btn === "*" ? "×" : btn}
-          </button>
-        ))}
-        <button
-          onClick={clearActiveInput}
-          className="col-span-2 bg-red-500 text-white p-3 rounded hover:opacity-80"
+ return (
+  <div 
+    style={{ 
+      backgroundColor: 'rgb(138, 139, 141)',
+      padding: '20px',
+      transform: 'scale(1.2)'
+    }}
+  >
+    {/* Display principal */}
+    <div 
+      style={{
+        backgroundColor: '#f3f4f6',
+        padding: '0.25rem 0.5rem 0.25rem 0.25rem',
+        marginBottom: '0.5rem',
+        marginTop: '0.5rem',
+        textAlign: 'right',
+        fontSize: '1.875rem',
+        fontFamily: 'monospace',
+        borderRadius: '0.375rem',
+        border: '1px solid rgb(138, 139, 141)',
+        cursor: 'pointer',
+        ...(activeInput === 'display' && {
+          boxShadow: '0 0 0 2px #3b82f6'
+        })
+      }}
+      onClick={() => handleInputClick('display')}
+    >
+      {display}
+    </div>
+    
+    {/* Inputs de bultos y unidades */}
+    <div style={{
+      marginBottom: '1rem',
+      display: 'flex',
+      justifyContent: 'space-between',
+      gap: '0.5rem'
+    }}>
+      <div style={{flex: 1}}>
+        <label style={{
+          display: 'block',
+          fontSize: '0.875rem',
+          fontWeight: '500',
+          color: '#374151',
+          border: '1px solid rgb(138, 139, 141)'
+        }}>Bultos</label>
+        <div 
+          style={{
+            width: '100%',
+            padding: '0.25rem 0.5rem 0.25rem 0.25rem',
+            backgroundColor: '#f3f4f6',
+            borderRadius: '0.375rem',
+            border: '1px solid rgb(138, 139, 141)',
+            textAlign: 'right',
+            cursor: 'pointer',
+            ...(activeInput === 'bultos' && {
+              boxShadow: '0 0 0 2px #3b82f6'
+            })
+          }}
+          onClick={() => handleInputClick('bultos')}
         >
-          C
-        </button>
-        <button
-          onClick={handleSubmit}
-          className="col-span-4 bg-green-600 text-white p-3 rounded hover:opacity-80"
+          {bultos}
+        </div>
+      </div>
+      <div style={{flex: 1}}>
+        <label style={{
+          display: 'block',
+          fontSize: '0.875rem',
+          fontWeight: '500',
+          color: '#374151'
+        }}>Unid. x Bulto</label>
+        <div 
+          style={{
+            width: '100%',
+            padding: '0.25rem 0.5rem 0.25rem 0.25rem',
+            backgroundColor: '#f3f4f6',
+            borderRadius: '0.375rem',
+            border: '1px solid rgb(138, 139, 141)',
+            textAlign: 'right',
+            
+            ...(activeInput === 'unidades' && {
+              boxShadow: '0 0 0 2px #3b82f6'
+            })
+          }}
+          onClick={() => handleInputClick('unidades')}
         >
-          Ingresar
-        </button>
+          {isNaN(parseFloat(unidadesPorBulto)) ? "0" : unidadesPorBulto}
+        </div>
       </div>
     </div>
-  );
+
+    {/* Teclado de la calculadora */}
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      gap: '0.5rem'
+    }}>
+      {["7", "8", "9", "/", "4", "5", "6", "*", "1", "2", "3", "-", "0", ".", "=", "+", "(", ")"].map((btn) => (
+        <button
+          key={btn}
+          onClick={() => btn === "=" ? calculateResult() : handleButtonClick(btn)}
+          style={{
+            padding: '0.75rem',
+            borderRadius: '0.375rem',
+            fontSize: '1.125rem',
+            color: 'white',
+            backgroundColor: btn === "=" ? '#22c55e' : '#3b82f6',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          {btn === "*" ? "×" : btn}
+        </button>
+      ))}
+      <button
+        onClick={clearActiveInput}
+        style={{
+          gridColumn: 'span 2',
+          backgroundColor: '#ef4444',
+          color: 'white',
+          padding: '0.75rem',
+          borderRadius: '0.375rem',
+          border: 'none',
+          cursor: 'pointer'
+        }}
+      >
+        C
+      </button>
+      <button
+        onClick={handleSubmit}
+        style={{
+          gridColumn: 'span 4',
+          backgroundColor: '#16a34a',
+          color: 'white',
+          padding: '0.75rem',
+          borderRadius: '0.375rem',
+          border: 'none',
+          cursor: 'pointer'
+        }}
+      >
+        Ingresar
+      </button>
+    </div>
+  </div>
+);
 };
 

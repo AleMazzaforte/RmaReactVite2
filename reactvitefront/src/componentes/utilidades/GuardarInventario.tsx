@@ -11,11 +11,13 @@ interface GuardarInventarioProps {
     id: number;
     conteoFisico: number | null;
     sku: string;
+    
   }[];
   onGuardar: (productosGuardados: ProductoConteo[]) => void;
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  style?: React.CSSProperties;
 }
 
 export const GuardarInventario: React.FC<GuardarInventarioProps> = ({ 
@@ -23,7 +25,7 @@ export const GuardarInventario: React.FC<GuardarInventarioProps> = ({
   onGuardar,
   children,
   disabled = false,
-  className = "bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center flex-1"
+  style= {}
 }) => {
   const handleClick = () => {
     const productosValidos = productos.filter(p => p.conteoFisico !== null);
@@ -34,10 +36,24 @@ export const GuardarInventario: React.FC<GuardarInventarioProps> = ({
     onGuardar(productosValidos);
   };
 
+  const baseStyle: React.CSSProperties = {
+    backgroundColor: '#064e3b', // green-600
+    color: 'white',
+    padding: '0.5rem 1rem',
+    borderRadius: '0.375rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    border: 'none',
+    cursor: 'pointer',
+    opacity: productos.filter(p => p.conteoFisico !== null).length === 0 ? 0.5 : 1
+  };
+
   return (
     <button 
       onClick={handleClick}
-      className={className}
+      style={{...baseStyle, ...style}}
       disabled={productos.filter(p => p.conteoFisico !== null).length === 0}
     >
       {children}
