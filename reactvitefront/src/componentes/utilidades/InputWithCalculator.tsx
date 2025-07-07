@@ -1,22 +1,44 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Calculator } from './Calculator';
+import { N } from 'vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P';
 
 interface InputWithLongTouchCalculatorProps {
   value: number | null;
   onChange: (value: number | null) => void;
   onFocus?: () => void;
+  cantidadPorBulto: number;
+  idProducto: Number; 
+}
+
+let urlClientes = 'https://rma-back.vercel.app/buscarCliente';
+let urlProductos = 'https://rma-back.vercel.app/listarProductos';
+let urlMarcas = 'https://rma-back.vercel.app/listarMarcas';
+let urlAgregarRma = 'https://rma-back.vercel.app/agregarRma';
+let urlOp = 'https://rma-back.vercel.app/listarOp';
+let urlActualizarCantidadPorBulto = 'https://rma-back.vercel.app/actualizarCantidadPorBulto';
+
+if (window.location.hostname === 'localhost') {
+  urlClientes = 'http://localhost:8080/buscarCliente';
+  urlProductos = 'http://localhost:8080/listarProductos';
+  urlMarcas = 'http://localhost:8080/listarMarcas';
+  urlAgregarRma = 'http://localhost:8080/agregarRma';
+  urlOp = 'http://localhost:8080/listarOp';
+  urlActualizarCantidadPorBulto = 'http://localhost:8080/actualizarCantidadPorBulto';
 }
 
 export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = ({ 
   value, 
   onChange,
-  onFocus
+  onFocus,
+  cantidadPorBulto,
+  idProducto
 }) => {
   const [showCalculator, setShowCalculator] = useState(false);
   const longPressTimer = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const calculatorRef = useRef<HTMLDivElement>(null);
 
-     useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (calculatorRef.current && !calculatorRef.current.contains(event.target as Node)) {
         setShowCalculator(false);
@@ -33,9 +55,6 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [showCalculator]);
-
-
-
 
   const handleTouchStart = () => {
     longPressTimer.current = window.setTimeout(() => {
@@ -61,6 +80,30 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
     onChange(value === "" ? null : Number(value));
   };
 
+  const handleUpdateCantidadPorBulto = async (id: number, nuevaCantidad: number) => {
+    try {
+      const response = await fetch(`${urlActualizarCantidadPorBulto}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          idProducto: id,
+          nuevaCantidad: nuevaCantidad
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al actualizar cantidad por bulto');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error:', error);
+      throw error;
+    }
+  };
+
   return (
     <div className="relative">
       <input
@@ -84,12 +127,16 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
       {showCalculator && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div 
-          ref={calculatorRef}
+            ref={calculatorRef}
             onClick={(e) => e.stopPropagation()}
-          className="bg-gray-400 p-4 rounded-lg w-80">
+            className="bg-gray-400 p-4 rounded-lg w-80"
+          >
             <Calculator 
-            onClose={handleCalculatorClose}
-             initialValue={value?.toString() || ""}
+              onClose={handleCalculatorClose}
+              initialValue={value?.toString() || ""}
+              cantidadPorBulto={cantidadPorBulto}
+              idProducto={Number(idProducto)}
+              onUpdateCantidadPorBulto={handleUpdateCantidadPorBulto}
             />
           </div>
         </div>
@@ -98,62 +145,5 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
   );
 };
 
-const Calculator = ({ 
-  onClose, 
-  initialValue 
-}: { 
-  onClose: (result: string) => void; 
-  initialValue: string;
-}) => {
-  const [display, setDisplay] = useState(initialValue);
 
-  const handleButtonClick = (value: string) => {
-    setDisplay(prev => prev === "0" ? value : prev + value);
-  };
-
-  const calculateResult = () => {
-    try {
-      const result = eval(display).toString();
-      setDisplay(result);
-    } catch {
-      setDisplay("Error");
-    }
-  };
-
-  const clearDisplay = () => {
-    setDisplay("0");
-  };
-
-  return (
-    <div>
-      <div className="bg-gray-100 p-4 mb-4 text-right text-3xl font-mono rounded">
-        {display}
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-  {["7", "8", "9", "/", "4", "5", "6", "*", "1", "2", "3", "-", "0", ".", "=", "+", "(", ")"].map((btn) => (
-    <button
-      key={btn}
-      onClick={() => btn === "=" ? calculateResult() : handleButtonClick(btn)}
-      className={`p-3 rounded text-lg ${
-        btn === "=" ? "bg-green-500" : "bg-blue-500"
-      } text-white hover:opacity-80`}
-    >
-      {btn === "*" ? "×" : btn} {/* Mostrar "×" en lugar de "*" */}
-    </button>
-  ))}
-  <button
-    onClick={clearDisplay}
-    className="col-span-2 bg-red-500 text-white p-3 rounded hover:opacity-80"
-  >
-    C
-  </button>
-  <button
-    onClick={() => onClose(display)}
-    className="col-span-4 bg-green-600 text-white p-3 rounded hover:opacity-80"
-  >
-    Ingresar
-  </button>
-</div>
-    </div>
-  );
-};
+;

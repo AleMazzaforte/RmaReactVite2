@@ -10,9 +10,8 @@ interface Producto {
   cantSistemaBlow: number;
   conteoFisico: number | null;
   fechaConteo: string | null;
-  observacion: string | null;
+  cantidadPorBulto: number;
 }
-
 interface InventarioLoaderResult {
   productos: Producto[];
   bloques: string[];
@@ -28,6 +27,7 @@ export const GetInventarioStock = (urlPrepararInventario: string): InventarioLoa
   const [bloques, setBloques] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [cantidadPorBulto, setCantidadPorBulto] = useState<number>(0);
 
   useEffect(() => {
     const fetchProductos = async () => {

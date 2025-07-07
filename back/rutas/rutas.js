@@ -88,5 +88,6 @@ router.get('/prepararInventario', inventarioController.getPrepararInventario);
 router.put('/actualizarBloques', inventarioController.putActualizarBloques);
 router.put('/actualizarProductoInventario', inventarioController.putActualizarProductoInventario);
 router.put('/guardarInventario', inventarioController.putGuardarInventario);
+router.put('/actualizarCantidadPorBulto', inventarioController.putactualizarCantidadPorBulto);
 
 export default router;

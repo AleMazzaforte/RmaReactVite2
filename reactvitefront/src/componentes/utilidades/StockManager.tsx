@@ -7,7 +7,7 @@ interface Producto {
   cantSistemaBlow: number;
   conteoFisico: number | null;
   fechaConteo: string | null;
-  observacion: string | null;
+  cantidadPorBulto: number;
 }
 
 

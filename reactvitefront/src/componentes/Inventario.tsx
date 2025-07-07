@@ -16,7 +16,7 @@ interface Producto {
   cantSistemaBlow: number;
   conteoFisico: number | null;
   fechaConteo: string | null;
-  observacion: string | null;
+  cantidadPorBulto: number;
 }
 interface ProductoConteo {
   id: number;
@@ -467,15 +467,6 @@ export const Inventario: React.FC = () => {
       return 0;
     });
 
-  /*
-  if (loading) {
-    return (
-      <div className="fixed inset-0 flex justify-center items-center z-50>
-        <Loader />
-      </div>
-    );
-  }*/
-
   return (
     <>
       {loading && (
@@ -654,6 +645,7 @@ export const Inventario: React.FC = () => {
               {productosFiltrados.length > 0 ? (
                 productosFiltrados.map((producto) => {
                   const diferencia = calcularDiferencia(producto);
+
                   return (
                     <tr key={producto.id} className="hover:bg-gray-50">
                       <td className="p-2 border" id={`sku-${producto.sku}`}>
@@ -674,6 +666,8 @@ export const Inventario: React.FC = () => {
                               value?.toString() ?? ""
                             )
                           }
+                          cantidadPorBulto={producto.cantidadPorBulto}
+                          idProducto={producto.id}
                           onFocus={() =>
                             handleFocus({
                               target: document.createElement("input"),

@@ -15,7 +15,8 @@ export const inventarioController = {
                     cantSistemaFemex, 
                     cantSistemaBlow, 
                     NULLIF(conteoFisico, 0) as conteoFisico, 
-                    DATE_FORMAT(fechaConteo, '%Y-%m-%d %H:%i:%s') as fechaConteo                     
+                    DATE_FORMAT(fechaConteo, '%Y-%m-%d %H:%i:%s') as fechaConteo,
+                    cantidadPorBulto                     
                 FROM productos`
       );
 
@@ -28,9 +29,10 @@ export const inventarioController = {
         cantSistemaBlow: item.cantSistemaBlow || 0, // Solo para cantidades
         conteoFisico: item.conteoFisico, // Puede ser NULL
         fechaConteo: item.fechaConteo,
-       
+        cantidadPorBulto: item.cantidadPorBulto || 0,       
       }));
-
+      console.log("Datos obtenidos para el inventario:", datosParaFront);
+      
       res.status(200).json(datosParaFront);
     } catch (error) {
       console.error("Error al obtener bloques de conteo:", error);
@@ -233,6 +235,50 @@ putGuardarInventario: async (req, res) => {
       if (connection) connection.release();
     }
   },
+
+  putactualizarCantidadPorBulto: async (req, res) => {
+  let connection;
+  try {
+    const { idProducto, nuevaCantidad } = req.body;
+    
+    if (!idProducto || nuevaCantidad === undefined || nuevaCantidad < 0) {
+      return res.status(400).json({ 
+        error: "Datos inválidos. Se requiere idProducto y nuevaCantidad válida" 
+      });
+    }
+
+    connection = await conn.getConnection();
+    await connection.beginTransaction();
+
+    const [result] = await connection.query(
+      `UPDATE productos 
+       SET cantidadPorBulto = ?
+       WHERE id = ?`,
+      [nuevaCantidad, idProducto]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Producto no encontrado" });
+    }
+
+    await connection.commit();
+    res.status(200).json({ 
+      success: true,
+      message: "Cantidad por bulto actualizada correctamente"
+    });
+
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error al actualizar cantidad por bulto:", error);
+    res.status(500).json({ 
+      error: "Error al actualizar cantidad por bulto",
+      details: error.message 
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+}
 };
 
 export default inventarioController;
