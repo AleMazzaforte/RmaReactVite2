@@ -1,28 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calculator } from './Calculator';
-
+import Swal from 'sweetalert2';
 
 interface InputWithLongTouchCalculatorProps {
   value: number | null;
   onChange: (value: number | null) => void;
   onFocus?: () => void;
   cantidadPorBulto: number;
-  idProducto: Number; 
+  idProducto: number; 
 }
 
-let urlClientes = 'https://rma-back.vercel.app/buscarCliente';
-let urlProductos = 'https://rma-back.vercel.app/listarProductos';
-let urlMarcas = 'https://rma-back.vercel.app/listarMarcas';
-let urlAgregarRma = 'https://rma-back.vercel.app/agregarRma';
-let urlOp = 'https://rma-back.vercel.app/listarOp';
 let urlActualizarCantidadPorBulto = 'https://rma-back.vercel.app/actualizarCantidadPorBulto';
 
 if (window.location.hostname === 'localhost') {
-  urlClientes = 'http://localhost:8080/buscarCliente';
-  urlProductos = 'http://localhost:8080/listarProductos';
-  urlMarcas = 'http://localhost:8080/listarMarcas';
-  urlAgregarRma = 'http://localhost:8080/agregarRma';
-  urlOp = 'http://localhost:8080/listarOp';
   urlActualizarCantidadPorBulto = 'http://localhost:8080/actualizarCantidadPorBulto';
 }
 
@@ -98,9 +88,20 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
       }
 
       return await response.json();
+       Swal.fire({
+        title: 'Éxito',
+        text: 'Cantidad por bulto actualizada correctamente',
+        icon: 'success',
+      });
+
     } catch (error) {
       console.error('Error:', error);
       throw error;
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudo actualizar la cantidad por bulto',
+        icon: 'error',
+      });
     }
   };
 
@@ -129,9 +130,9 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
           <div 
             ref={calculatorRef}
             onClick={(e) => e.stopPropagation()}
-            className="bg-gray-400 p-4 rounded-lg"
+            className="bg-blue-400 p-4 rounded-lg"
             style={{width:'420px',
-              height: '800px',
+              height: '550px',
               position: 'fixed'
             }}
           >

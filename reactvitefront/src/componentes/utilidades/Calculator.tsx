@@ -113,13 +113,19 @@ export const Calculator: React.FC<CalculatorProps> = ({
     };
 
     const unidadesSueltas = display === "Error" ? 0 : safeEval(display);
-    
-    // Conversión segura a número
     const parsedBultos = parseFloat(bultos) || 0;
     const parsedUnidades = parseFloat(unidadesPorBulto) || 0;
     
     const unidadesEnBultos = parsedBultos * parsedUnidades;
     const total = unidadesSueltas + unidadesEnBultos;
+
+     if (parsedUnidades !== cantidadPorBulto && onUpdateCantidadPorBulto) {
+      onUpdateCantidadPorBulto(idProducto, parsedUnidades).catch((err) => {
+        console.error("No se pudo guardar la nueva cantidad por bulto:", err);
+        // Opcional: revertir visualmente el valor si falla
+        setUnidadesPorBulto(cantidadPorBulto.toString());
+      });
+    }
     
     onClose(total.toString());
   } catch {
