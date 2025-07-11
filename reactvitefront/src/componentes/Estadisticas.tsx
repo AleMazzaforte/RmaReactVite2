@@ -6,8 +6,11 @@ interface EstadisticaRMA {
   producto_id: number;
   producto_sku: string;
   total_importado: number;
+  total_vendido: number; // Nuevo campo
   total_devuelto: number;
   porcentaje_fallados: number;
+  cantidadSistemaFemex?: number; // Nuevo campo opcional
+  cantidadSistemaBlow?: number; // Nuevo campo opcional
 }
 
 export const Estadisticas: React.FC = () => {
@@ -20,50 +23,65 @@ export const Estadisticas: React.FC = () => {
     : 'https://rma-back.vercel.app/api/estadisticas/rma';
 
   const fetchEstadisticas = async () => {
-    setLoading(true);
-    
-    try {
-      
+  setLoading(true);
+  
+  try {
+    const response = await fetch(urlEstadisticas);
+    const data = await response.json();
 
-      const response = await fetch(urlEstadisticas);
-      const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al cargar estadísticas');
+    }
 
-      if (!response.ok) throw new Error(data.message || 'Error al cargar estadísticas');
-       
-      // Verificar que los datos tengan la estructura correcta
-      const datosValidados: EstadisticaRMA[] = data.map((item: Partial<EstadisticaRMA>): EstadisticaRMA => ({
-        producto_id: item.producto_id || 0,
-        producto_sku: item.producto_sku || 'N/A',
-        total_importado: Number(item.total_importado) || 0,
-        total_devuelto: Number(item.total_devuelto) || 0,
-        porcentaje_fallados: Number(item.porcentaje_fallados) || 0
-      }));
+    // Verificar si hay datos de stock
+    const hasStockData = data.some((item: any) => 
+      item.cantidadSistemaFemex !== undefined || item.cantidadSistemaBlow !== undefined
+    );
 
-      setEstadisticas(datosValidados);
-      
-      /*
-        if (data.length > 0) {
-          await sweetAlert.fire({
-            icon: 'success',
-            title: 'Datos cargados',
-            text: `Se cargaron ${data.length} productos`,
-            timer: 2000,
-            showConfirmButton: false
-          });
-        }
-      */
-    } catch (error) {
-      sweetAlert.close();
+    if (!hasStockData) {
       await sweetAlert.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error instanceof Error ? error.message : 'Error desconocido',
+        icon: 'warning',
+        title: 'Datos incompletos',
+        text: 'No se encontraron datos de stock para calcular estadísticas reales',
         confirmButtonText: 'Entendido'
       });
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    // Validar y transformar datos
+    const datosValidados: EstadisticaRMA[] = data.map((item: any) => {
+      const stockTotal = (item.cantidadSistemaFemex || 0) + (item.cantidadSistemaBlow || 0);
+      const totalVendido = Math.max(0, (item.total_importado || 0) - stockTotal);
+      const totalDevuelto = Number(item.total_devuelto) || 0;
+
+      return {
+        producto_id: item.producto_id || 0,
+        producto_sku: item.producto_sku || 'N/A',
+        total_importado: item.total_importado || 0,
+        total_vendido: totalVendido,
+        cantidadSistemaFemex: item.cantidadSistemaFemex,
+        cantidadSistemaBlow: item.cantidadSistemaBlow,
+        total_devuelto: totalDevuelto,
+        porcentaje_fallados: totalVendido > 0 
+          ? parseFloat((totalDevuelto * 100 / totalVendido).toFixed(2))
+          : 0
+      };
+    });
+
+    setEstadisticas(datosValidados);
+    
+  } catch (error) {
+    sweetAlert.close();
+    await sweetAlert.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error instanceof Error ? error.message : 'Error desconocido',
+      confirmButtonText: 'Entendido'
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => { fetchEstadisticas(); }, []);
 
@@ -135,6 +153,7 @@ export const Estadisticas: React.FC = () => {
       className="p-4 max-w-2xl mx-auto  bg-white rounded-lg shadow-lg shadow-gray-500  mb-6"
       style={{  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
     >
+      {loading && <Loader />}
       <h1 className="text-2xl font-bold mb-6 text-center">Estadísticas de Devoluciones (RMA)</h1>
       
       {/* Controles */}
@@ -178,7 +197,7 @@ export const Estadisticas: React.FC = () => {
             <thead className="bg-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Importado</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Vendidos</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Devuelto</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">% Fallos</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -192,7 +211,7 @@ export const Estadisticas: React.FC = () => {
                       {item.producto_sku}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                      {item.total_importado.toLocaleString()}
+                      {item.total_vendido.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
                       {item.total_devuelto.toLocaleString()}

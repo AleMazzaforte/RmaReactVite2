@@ -8,20 +8,20 @@ export const getEstadisticasRMA = async (req, res) => {
     connection = await conn.getConnection();
 
     const [results] = await connection.query(`
-      -- Primero obtenemos todos los productos con sus importaciones (excluyendo opProductos.id = 1)
+      -- Primero obtenemos todos los productos con sus importaciones
       WITH importaciones AS (
         SELECT 
           p.id AS producto_id,
           p.sku AS producto_sku,
+          p.cantSistemaFemex AS cantidadSistemaFemex,
+          p.cantSistemaBlow AS cantidadSistemaBlow,
           SUM(op.cantidad) AS total_importado
         FROM 
           productos p
         JOIN 
           opProductos op ON op.idSku = p.id
-        WHERE
-          op.id != 1  -- Excluimos específicamente el registro con id = 1
         GROUP BY 
-          p.id, p.sku
+          p.id, p.sku, p.cantSistemaFemex, p.cantSistemaBlow
       ),
 
       -- Luego obtenemos las devoluciones de r_m_a
@@ -51,11 +51,15 @@ export const getEstadisticasRMA = async (req, res) => {
         i.producto_id,
         i.producto_sku,
         i.total_importado,
+        i.cantidadSistemaFemex,
+        i.cantidadSistemaBlow,
+        GREATEST(0, i.total_importado - (i.cantidadSistemaFemex + i.cantidadSistemaBlow)) AS total_vendido,
         COALESCE(dr.total_devuelto, 0) + COALESCE(dv.total_devuelto, 0) AS total_devuelto,
         CASE 
-          WHEN i.total_importado > 0 THEN 
+          WHEN (i.total_importado - (i.cantidadSistemaFemex + i.cantidadSistemaBlow)) > 0 THEN 
             ROUND(
-              (COALESCE(dr.total_devuelto, 0) + COALESCE(dv.total_devuelto, 0)) * 100.0 / i.total_importado, 
+              (COALESCE(dr.total_devuelto, 0) + COALESCE(dv.total_devuelto, 0)) * 100.0 / 
+              (i.total_importado - (i.cantidadSistemaFemex + i.cantidadSistemaBlow)), 
               2
             )
           ELSE 0 
@@ -67,7 +71,8 @@ export const getEstadisticasRMA = async (req, res) => {
       LEFT JOIN 
         devoluciones_viejos dv ON dv.producto_id = i.producto_id
       ORDER BY 
-        porcentaje_fallados DESC
+        i.producto_sku ASC  -- Orden principal por SKU ascendente
+       
     `);
 
     res.json(results);
