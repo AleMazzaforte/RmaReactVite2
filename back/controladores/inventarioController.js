@@ -31,7 +31,6 @@ export const inventarioController = {
         fechaConteo: item.fechaConteo,
         cantidadPorBulto: item.cantidadPorBulto || 0,       
       }));
-      console.log("Datos obtenidos para el inventario:", datosParaFront);
       
       res.status(200).json(datosParaFront);
     } catch (error) {

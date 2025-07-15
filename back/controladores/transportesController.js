@@ -67,7 +67,7 @@ export const transportes = {
         }
     },
     postEliminarTransporte: async (req, res) => {
-        const { id } = req.body;     console.log(req.body);
+        const { id } = req.body;   
         try {
            const results = await conn.query(
                 "DELETE FROM transportes WHERE idTransporte = ?",

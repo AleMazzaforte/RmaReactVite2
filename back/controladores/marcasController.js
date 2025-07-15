@@ -12,7 +12,6 @@ const marcas = {
         
         const [results] = await connection.query("SELECT id, nombre FROM marcas ORDER By nombre ASC");
         
-        //console.log("Marcas:", results);
         res.json(results);
         
       } catch (error) {
@@ -55,7 +54,7 @@ const marcas = {
 
   postActualizarMarca: async (req, res) => {
     const { id, nombre } = req.body;
-    console.log("Datos recibidos para actualizar:", req.body);
+   
 
     let connection;
     try {

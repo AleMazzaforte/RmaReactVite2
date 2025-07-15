@@ -78,7 +78,7 @@ export const ActualizarClientes: React.FC = () => {
         condicionDeEntrega: formData.get('condicionDeEntrega'),
         condicionDePago: formData.get('condicionDePago')
       };
-      //console.log('Datos enviados:', data);
+
       try {
         setLoading(true);
         const response = await fetch(url, {

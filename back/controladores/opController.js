@@ -102,7 +102,6 @@ const listarOp = {
         if (opExistente.length === 0) {
             return res.status(400).json({ message: "La OP no existe", success: false });
         }
-        console.log('productos', productos)
         // Insertar los productos en opProductos con idSku
         for (const producto of productos) {
             const { idOp, sku, cantidad } = producto;
@@ -173,7 +172,6 @@ const listarOp = {
 
   getSku: async (req, res) => {
     const { idsProductos } = req.params;
-    console.log('idsProductos recibidos:', idsProductos);
     
     connection = await conn.getConnection();
     try {
@@ -188,7 +186,6 @@ const listarOp = {
             idsArray
         );
         
-        console.log('Resultados de SKUs:', results);
         res.json(results);
     } catch (error) {
         console.error("Error al obtener los SKUs de los productos:", error);
