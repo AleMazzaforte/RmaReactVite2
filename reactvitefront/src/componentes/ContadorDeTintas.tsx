@@ -158,7 +158,6 @@ export const ContadorDeTintas: React.FC = () => {
           { nombre: "EP544-EP664-EP673 C", cantidad: leerValor("cian1L") },
           { nombre: "EP544-EP664-EP673 M", cantidad: leerValor("magenta1L") },
           { nombre: "EP544-EP664-EP673 A", cantidad: leerValor("amarillo1L") },
-
           { nombre: "EP673 LC", cantidad: leerValor("lightCian1L") },
           { nombre: "EP673 LM", cantidad: leerValor("lightMagenta1L") },
         ],
@@ -215,6 +214,10 @@ export const ContadorDeTintas: React.FC = () => {
             nombre: "EP544 N 70ML",
             cantidad: leerValor("combo544") + leerValor("negro544"),
           },
+          {
+  nombre: "EP555 G 70ML",
+  cantidad: leerValor("gris555")
+},
           {
             nombre: "EP504-EP544 C 70ML",
             cantidad:

@@ -1,5 +1,7 @@
 
 
+
+
 export const FieldSetTintasConfig = [
     {
       legend: 'Tintas 664/673 1 L',
@@ -33,6 +35,7 @@ export const FieldSetTintasConfig = [
         { label: 'Cian', id: 'cian544', name: 'cian544' },
         { label: 'Magenta', id: 'magenta544', name: 'magenta544' },
         { label: 'Amarillo', id: 'amarillo544', name: 'amarillo544' },
+        { label: 'Gris', id: 'gris555', name: 'gris544' },
       ],
     },
     {
