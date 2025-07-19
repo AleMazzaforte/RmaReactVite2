@@ -26,6 +26,36 @@ interface TransporteData {
   direccionLocal: string;
 }
 
+// Agrega esto en tu archivo o en declarations.d.ts
+declare global {
+  interface Navigator {
+    usb?: {
+      requestDevice: (options: {
+        filters: { vendorId: number }[];
+      }) => Promise<USBDevice>;
+      getDevices: () => Promise<USBDevice[]>;
+    };
+  }
+}
+
+interface USBDevice {
+  open: () => Promise<void>;
+  selectConfiguration: (configurationValue: number) => Promise<void>;
+  claimInterface: (interfaceNumber: number) => Promise<void>;
+  transferOut: (
+    endpointNumber: number,
+    data: BufferSource
+  ) => Promise<USBOutTransferResult>;
+  close: () => Promise<void>;
+  vendorId: number;
+  productId: number;
+}
+
+interface USBOutTransferResult {
+  bytesWritten: number;
+  status: string;
+}
+
 export const ImprimirEtiqueta = () => {
   const [loading, setLoading] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] =
@@ -167,103 +197,120 @@ export const ImprimirEtiqueta = () => {
     }
   };
 
-  const generarPDF = async () => {
+  const generarZPL = (): string => {
     if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
+      throw new Error("Datos incompletos o cantidad de bultos inválida");
+    }
+
+    const zplCodes = [];
+    const desplazamientoVertical = 320; // 4 cm en dots (203 DPI)
+
+    for (let i = 1; i <= cantidadBultos; i++) {
+      let zpl = `
+            ^XA
+            ^PW800       // Ancho: 800 dots (10 cm)
+            ^LL1520      // Longitud total: 1200 + 320 = 1520 dots (15 cm + área no imprimible)
+            ^FO20,${320 + 20}^A0N,40,40^FD${datosEditables.nombre}^FS
+            ^FO20,${320 + 70}^A0N,30,30^FDDomicilio: ${datosEditables.domicilio}^FS
+            ^FO20,${320 + 110}^A0N,30,30^FDCiudad: ${datosEditables.ciudad}, ${
+                    datosEditables.provincia
+                  }^FS
+            ^FO20,${320 + 150}^A0N,30,30^FDTeléfono: ${datosEditables.telefono}^FS
+            ^FO20,${320 + 190}^A0N,30,30^FDTransporte: ${datosEditables.transporte}^FS
+            ^FO20,${320 + 230}^A0N,30,30^FDSeguro: ${datosEditables.seguro}^FS
+            ^FO20,${320 + 270}^A0N,30,30^FDEntrega a ${datosEditables.condicionDeEntrega}^FS
+            ^FO20,${320 + 310}^A0N,30,30^FDPago en ${datosEditables.condicionDePago}^FS
+            ^FO20,${320 + 350}^A0N,30,30^FD------------------------^FS
+            ^FO20,${320 + 390}^A0N,30,30^FDRte: Femex S.A.^FS
+            ^FO20,${320 + 430}^A0N,30,30^FDCUIT: 30-71130830-6^FS
+            ^FO20,${320 + 470}^A0N,30,30^FDDomicilio: Duarte Quirós 4105^FS
+            ^FO20,${320 + 510}^A0N,30,30^FDProvincia: Córdoba^FS
+            ^FO20,${320 + 550}^A0N,30,30^FDCiudad: Córdoba^FS
+            ^FO20,${320 + 590}^A0N,30,30^FDTeléfono: 351 8509718^FS
+            ^FO20,${320 + 650}^A0N,50,50^FDBulto ${i} de ${cantidadBultos}^FS
+            ^XZ
+          `;
+      zplCodes.push(zpl);
+    }
+
+    return zplCodes.join("\n");
+  };
+
+  const imprimirDirectamenteUSB = async () => {
+    try {
+      if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Ingrese una cantidad de bultos válida y verifique los datos del cliente.",
+        });
+        return;
+      }
+
+      if (!navigator.usb) {
+        throw new Error("Web USB API no soportada en este navegador");
+      }
+
+      // Solicitar dispositivo
+      const device = await navigator.usb.requestDevice({
+        filters: [{ vendorId: 0x0a5f }], // Zebra Technologies vendor ID
+      });
+
+      await device.open();
+      await device.selectConfiguration(1);
+      await device.claimInterface(0);
+
+      // Generar el código ZPL
+      const zplToPrint = generarZPL();
+
+      // Convertir el texto a ArrayBuffer
+      const encoder = new TextEncoder();
+      const data = encoder.encode(zplToPrint);
+
+      // Enviar a la impresora
+      await device.transferOut(1, data);
+
+      await device.close();
+
+      Swal.fire({
+        icon: "success",
+        title: "Impresión exitosa",
+        text: `Se enviaron ${cantidadBultos} etiquetas.`,
+      });
+    } catch (error) {
+      console.error("Error al imprimir:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error de impresión",
+        text: "No se pudo conectar con la impresora. Asegúrese de que está conectada por USB y tiene los drivers instalados.",
+      });
+    }
+  };
+
+  const descargarArchivoZPL = () => {
+    try {
+      const zplToPrint = generarZPL();
+
+      const blob = new Blob([zplToPrint], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `etiqueta_${datosEditables?.nombre.replace(
+        /\s+/g,
+        "_"
+      )}_${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Ingrese una cantidad de bultos válida y verifique los datos del cliente.",
+        text: "No se pudo generar el archivo ZPL. Verifique los datos.",
       });
-      return;
     }
-
-    const doc = new jsPDF(
-      paginaHorizontal ? "landscape" : "p",
-      "mm",
-      paginaHorizontal ? [210, 150] : [100, 190]
-    );
-
-    const marginTop = 40;
-    const fontSize = paginaHorizontal ? 12 : 16;
-
-    for (let i = 1; i < cantidadBultos + 1; i++) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(fontSize);
-      doc.text(
-        `${datosEditables.nombre}`,
-        doc.internal.pageSize.getWidth() / 2,
-        marginTop,
-        { align: "center" }
-      );
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      const lineHeight = 1;
-
-      doc.text(
-        `Domicilio: ${datosEditables.domicilio}`,
-        14,
-        marginTop + 10 + lineHeight
-      );
-      doc.text(
-        `Ciudad: ${datosEditables.ciudad}, ${datosEditables.provincia}`,
-        14,
-        marginTop + 18 + lineHeight
-      );
-      doc.text(
-        `Teléfono: ${datosEditables.telefono}`,
-        14,
-        marginTop + 26 + lineHeight
-      );
-      doc.text(
-        `Transporte: ${datosEditables.transporte}`,
-        14,
-        marginTop + 34 + lineHeight
-      );
-      doc.text(
-        `Seguro: ${datosEditables.seguro}`,
-        14,
-        marginTop + 42 + lineHeight
-      );
-      doc.text(
-        `Entrega a ${datosEditables.condicionDeEntrega}`,
-        14,
-        marginTop + 50 + lineHeight
-      );
-      doc.text(
-        `Pago en ${datosEditables.condicionDePago}`,
-        14,
-        marginTop + 58 + lineHeight
-      );
-
-      doc.text(`------------------------`, 14, marginTop + 68 + lineHeight);
-
-      // Datos del remitente
-      doc.text(`Rte: Femex S.A.`, 14, marginTop + 80 + lineHeight);
-      doc.text(`CUIT: 30-71130830-6`, 14, marginTop + 88 + lineHeight);
-      doc.text(
-        `Domicilio: Duarte Quirós 4105`,
-        14,
-        marginTop + 96 + lineHeight
-      );
-      doc.text(`Provincia: Córdoba`, 14, marginTop + 104 + lineHeight);
-      doc.text(`Ciudad: Córdoba`, 14, marginTop + 112 + lineHeight);
-      doc.text(`Teléfono: 351 8509718`, 14, marginTop + 120 + lineHeight);
-
-      doc.setFontSize(16);
-      doc.text(
-        `Bulto ${i} de ${cantidadBultos}`,
-        doc.internal.pageSize.getWidth() / 2,
-        marginTop + 140,
-        { align: "center" }
-      );
-
-      if (i < cantidadBultos) doc.addPage();
-    }
-
-    doc.output("dataurlnewwindow");
   };
-
   return (
     <Contenedor>
       <h2 className="text-2xl font-semibold text-gray-700 mb-8 text-center">
@@ -429,12 +476,20 @@ export const ImprimirEtiqueta = () => {
               </button>
             </div>
           </div>
-          <button
-            onClick={generarPDF}
-            className="mt-2 w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-lg"
-          >
-            Generar etiquetas
-          </button>
+          <div className="mt-4 flex space-x-4">
+            <button
+              onClick={imprimirDirectamenteUSB}
+              className="flex-1 py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg"
+            >
+              Imprimir directamente (USB)
+            </button>
+            <button
+              onClick={descargarArchivoZPL}
+              className="flex-1 py-2 px-4 bg-green-600 text-white font-semibold rounded-lg"
+            >
+              Descargar ZPL (.txt)
+            </button>
+          </div>
         </div>
       )}
     </Contenedor>

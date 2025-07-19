@@ -110,6 +110,8 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
       <input
         ref={inputRef}
         type="number"
+        inputMode="numeric"
+        pattern="[0-9]*"
         min="0"
         value={value ?? ""}
         onChange={handleInputChange}
