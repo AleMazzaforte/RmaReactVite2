@@ -19,43 +19,6 @@ interface Cliente {
   condicionDePago: string;
 }
 
-interface TransporteData {
-  idTransporte: number;
-  nombre: string;
-  telefono: number;
-  direccionLocal: string;
-}
-
-// Agrega esto en tu archivo o en declarations.d.ts
-declare global {
-  interface Navigator {
-    usb?: {
-      requestDevice: (options: {
-        filters: { vendorId: number }[];
-      }) => Promise<USBDevice>;
-      getDevices: () => Promise<USBDevice[]>;
-    };
-  }
-}
-
-interface USBDevice {
-  open: () => Promise<void>;
-  selectConfiguration: (configurationValue: number) => Promise<void>;
-  claimInterface: (interfaceNumber: number) => Promise<void>;
-  transferOut: (
-    endpointNumber: number,
-    data: BufferSource
-  ) => Promise<USBOutTransferResult>;
-  close: () => Promise<void>;
-  vendorId: number;
-  productId: number;
-}
-
-interface USBOutTransferResult {
-  bytesWritten: number;
-  status: string;
-}
-
 export const ImprimirEtiqueta = () => {
   const [loading, setLoading] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] =
@@ -76,49 +39,6 @@ export const ImprimirEtiqueta = () => {
     urlListartransporte = "http://localhost:8080/buscarTransporte";
     urlBuscarRMA = "http://localhost:8080/buscarRMA";
   }
-
-  // Función para obtener el nombre del transporte
-  const obtenerNombreTransporte = async (
-    transporteId: string
-  ): Promise<string> => {
-    if (!transporteId) return "No disponible";
-
-    try {
-      const respuesta = await fetch(`${urlListartransporte}`);
-      const transporteData: TransporteData[] = await respuesta.json();
-      if (respuesta.ok && transporteData) {
-        const transporteEncontrado = transporteData.find(
-          (transporte) => transporte.idTransporte === Number(transporteId)
-        );
-
-        return transporteEncontrado
-          ? transporteEncontrado.nombre
-          : "No disponible";
-      } else {
-        return "No disponible";
-      }
-    } catch (error) {
-      console.error("Error al obtener el transporte:", error);
-      return "Error al obtener transporte";
-    }
-  };
-
-  // Efecto para actualizar el nombre del transporte cuando se selecciona un cliente
-  useEffect(() => {
-    const actualizarNombreTransporte = async () => {
-      if (clienteSeleccionado && clienteSeleccionado.transporte) {
-        const nombreTransporte = await obtenerNombreTransporte(
-          clienteSeleccionado.transporte
-        );
-        setDatosEditables((prevState) => ({
-          ...prevState!,
-          transporte: nombreTransporte,
-        }));
-      }
-    };
-
-    actualizarNombreTransporte();
-  }, [clienteSeleccionado]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -141,7 +61,7 @@ export const ImprimirEtiqueta = () => {
 
       if (response.ok) {
         const rmaPendiente = data.some(
-          (rma: any) => !rma.nEgreso || rma.nEgreso === null
+          (rma: { nEgreso: string | null }) => !rma.nEgreso || rma.nEgreso === null
         );
 
         if (rmaPendiente) {
@@ -159,13 +79,6 @@ export const ImprimirEtiqueta = () => {
         }
 
         setDatosEditables(clienteSeleccionado);
-        const nombreTransporte = await obtenerNombreTransporte(
-          clienteSeleccionado.transporte
-        );
-        setDatosEditables((prevState) => ({
-          ...prevState!,
-          transporte: nombreTransporte,
-        }));
         setMostrarInput(true);
         setMostrarDatosEditable(true);
       } else {
@@ -203,86 +116,204 @@ export const ImprimirEtiqueta = () => {
     }
 
     const zplCodes = [];
-    const desplazamientoVertical = 320; // 4 cm en dots (203 DPI)
+
+    if (datosEditables.telefono === null) datosEditables.telefono = "";
+    if (datosEditables.transporte === null) datosEditables.transporte = "";
+    if (datosEditables.seguro === null) datosEditables.seguro = "";
+    if (datosEditables.condicionDeEntrega === null) datosEditables.condicionDeEntrega = "";
+    if (datosEditables.condicionDePago === null) datosEditables.condicionDePago = "";
+    if (datosEditables.domicilio === null) datosEditables.domicilio = "";
+    if (datosEditables.cuit === null) datosEditables.cuit = "";
 
     for (let i = 1; i <= cantidadBultos; i++) {
       let zpl = `
-            ^XA
-            ^PW800       // Ancho: 800 dots (10 cm)
-            ^LL1520      // Longitud total: 1200 + 320 = 1520 dots (15 cm + área no imprimible)
-            ^FO20,${320 + 20}^A0N,40,40^FD${datosEditables.nombre}^FS
-            ^FO20,${320 + 70}^A0N,30,30^FDDomicilio: ${datosEditables.domicilio}^FS
-            ^FO20,${320 + 110}^A0N,30,30^FDCiudad: ${datosEditables.ciudad}, ${
-                    datosEditables.provincia
-                  }^FS
-            ^FO20,${320 + 150}^A0N,30,30^FDTeléfono: ${datosEditables.telefono}^FS
-            ^FO20,${320 + 190}^A0N,30,30^FDTransporte: ${datosEditables.transporte}^FS
-            ^FO20,${320 + 230}^A0N,30,30^FDSeguro: ${datosEditables.seguro}^FS
-            ^FO20,${320 + 270}^A0N,30,30^FDEntrega a ${datosEditables.condicionDeEntrega}^FS
-            ^FO20,${320 + 310}^A0N,30,30^FDPago en ${datosEditables.condicionDePago}^FS
-            ^FO20,${320 + 350}^A0N,30,30^FD------------------------^FS
-            ^FO20,${320 + 390}^A0N,30,30^FDRte: Femex S.A.^FS
-            ^FO20,${320 + 430}^A0N,30,30^FDCUIT: 30-71130830-6^FS
-            ^FO20,${320 + 470}^A0N,30,30^FDDomicilio: Duarte Quirós 4105^FS
-            ^FO20,${320 + 510}^A0N,30,30^FDProvincia: Córdoba^FS
-            ^FO20,${320 + 550}^A0N,30,30^FDCiudad: Córdoba^FS
-            ^FO20,${320 + 590}^A0N,30,30^FDTeléfono: 351 8509718^FS
-            ^FO20,${320 + 650}^A0N,50,50^FDBulto ${i} de ${cantidadBultos}^FS
-            ^XZ
-          `;
+        ^XA
+        ^PW800                  // Ancho: 800 dots (10 cm)
+        ^LL1520                 // Longitud total: 19 cm (1520 dots)
+        ^CI28                   // Soporte para caracteres especiales
+        ^LH0,20                 // Origen de coordenadas
+
+        // ==============================================
+        // BLOQUE SUPERIOR (VACÍO - RESERVADO)
+        // ==============================================
+        ^FO0,0^GB800,350,1^FS   // Área reducida a 350 dots (4.4cm)
+        ^FO20,150^A0N,30,30^FB760,1,0,C^F^FS
+
+        // ==============================================
+        // SEPARADOR ENTRE BLOQUES (MEJORADO)
+        // ==============================================
+        ^FO0,350^GB800,3,3^FS   // Línea divisoria más visible
+
+        // ==============================================
+        // BLOQUE INFERIOR (DATOS PRINCIPALES)
+        // ==============================================
+        ^FO20,400^A0N,55,55^FB760,1,0,C^FD${datosEditables.nombre}^FS 
+        ^FO20,520^A0N,38,38^FDCUIT: ${datosEditables.cuit}^FS
+        ^FO20,570^A0N,38,38^FDDomicilio: ${datosEditables.domicilio}^FS
+        ^FO20,620^A0N,38,38^FDCiudad: ${datosEditables.ciudad}, ${datosEditables.provincia}^FS
+        ^FO20,670^A0N,38,38^FDTeléfono: ${datosEditables.telefono}^FS
+        ^FO20,720^A0N,38,38^FDTransporte: ${datosEditables.transporte}^FS
+        ^FO20,770^A0N,38,38^FDSeguro: ${datosEditables.seguro}^FS
+        ^FO20,820^A0N,38,38^FDEntrega a ${datosEditables.condicionDeEntrega}^FS
+        ^FO20,870^A0N,38,38^FDPago en ${datosEditables.condicionDePago}^FS
+
+        // Espacio aumentado antes de la línea divisoria (20 dots extra)
+        ^FO20,970^A0N,38,38^--------------------------^FS  
+
+        // Espacio aumentado después de la línea (30 dots en lugar de 20)
+        ^FO20,1070^A0N,38,38^FDRte: Femex S.A.^FS
+        ^FO20,1120^A0N,38,38^FDCUIT: 30-71130830-6^FS
+        ^FO20,1170^A0N,38,38^FDDomicilio: Duarte Quirós 4105^FS
+        ^FO20,1220^A0N,38,38^FDProvincia: Córdoba^FS
+        ^FO20,1270^A0N,38,38^FDCiudad: Córdoba^FS
+        ^FO20,1320^A0N,38,38^FDTeléfono: 351 8509718^FS
+        ^FO120,1400^A0N,75,75^FB560,1,0,C^FDBulto ${i} de ${cantidadBultos}^FS  // Centrado y con más espacio
+        ^XZ
+      `;
       zplCodes.push(zpl);
     }
 
     return zplCodes.join("\n");
   };
 
-  const imprimirDirectamenteUSB = async () => {
+  const generarPDF = () => {
     try {
       if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
         Swal.fire({
           icon: "error",
           title: "Error",
-          text: "Ingrese una cantidad de bultos válida y verifique los datos del cliente.",
+          text: "Verifique los datos del cliente y la cantidad de bultos.",
         });
         return;
       }
 
-      if (!navigator.usb) {
-        throw new Error("Web USB API no soportada en este navegador");
-      }
-
-      // Solicitar dispositivo
-      const device = await navigator.usb.requestDevice({
-        filters: [{ vendorId: 0x0a5f }], // Zebra Technologies vendor ID
+      // Crear un nuevo PDF
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [100, 170] // Tamaño aproximado de una etiqueta Zebra
       });
 
-      await device.open();
-      await device.selectConfiguration(1);
-      await device.claimInterface(0);
+      // Configuración de estilo
+      const styles = {
+        title: {
+          fontSize: 17,
+          fontStyle: 'bold' as const,
+          textColor: [0, 0, 0] as [number, number, number],
+          fontFamily: 'helvetica'
+        },
+        subtitle: {
+          fontSize: 14,
+          textColor: [0, 0, 0] as [number, number, number],
+          fontFamily: 'helvetica'
+        },
+        header: {
+          fontSize: 14,
+          fontStyle: 'bold' as const,
+          textColor: [0, 0, 0] as [number, number, number],
+          fontFamily: 'helvetica'
+        },
+        normal: {
+          fontSize: 12,
+          textColor: [0, 0, 0] as [number, number, number],
+          fontFamily: 'helvetica'
+        }
+      };
 
-      // Generar el código ZPL
-      const zplToPrint = generarZPL();
+      const marginLeft = 15;
+      let y = 20;
 
-      // Convertir el texto a ArrayBuffer
-      const encoder = new TextEncoder();
-      const data = encoder.encode(zplToPrint);
+      if (datosEditables.telefono === null) datosEditables.telefono = "";
+      if (datosEditables.transporte === null) datosEditables.transporte = "";
+      if (datosEditables.seguro === null) datosEditables.seguro = "";
+      if (datosEditables.condicionDeEntrega === null) datosEditables.condicionDeEntrega = "";
+      if (datosEditables.condicionDePago === null) datosEditables.condicionDePago = "";
+      if (datosEditables.domicilio === null) datosEditables.domicilio = "";
+      if (datosEditables.cuit === null) datosEditables.cuit = "";
+      // Generar una página por cada bulto
+      for (let i = 1; i <= cantidadBultos; i++) {
+        if (i > 1) {
+          doc.addPage([100, 170], "portrait");
+          y = 20; // Resetear posición Y para nueva página
+        }
 
-      // Enviar a la impresora
-      await device.transferOut(1, data);
+        // Título (nombre del cliente)
+        doc.setFontSize(styles.title.fontSize);
+        doc.setFont(styles.title.fontFamily, styles.title.fontStyle);
+        doc.setTextColor(...styles.title.textColor);
+        doc.text(datosEditables.nombre, 50, y, { align: 'center' });
+        y += 12;
 
-      await device.close();
+        // Datos del cliente
+        doc.setFontSize(styles.normal.fontSize);
+        doc.setFont(styles.normal.fontFamily, 'normal');
+        doc.setTextColor(...styles.normal.textColor);
+
+        doc.text(`CUIT: ${datosEditables.cuit}`, marginLeft, y);
+        y += 8;
+        doc.text(`Domicilio: ${datosEditables.domicilio}`, marginLeft, y);
+        y += 8;
+        doc.text(`Ciudad: ${datosEditables.ciudad}, ${datosEditables.provincia}`, marginLeft, y);
+        y += 8;
+        doc.text(`Teléfono: ${datosEditables.telefono}`, marginLeft, y);
+        y += 8;
+        doc.text(`Transporte: ${datosEditables.transporte}`, marginLeft, y);
+        y += 8;
+        doc.text(`Seguro: ${datosEditables.seguro}`, marginLeft, y);
+        y += 8;
+        doc.text(`Entrega: ${datosEditables.condicionDeEntrega}`, marginLeft, y);
+        y += 8;
+        doc.text(`Pago: ${datosEditables.condicionDePago}`, marginLeft, y);
+        y += 12;
+
+        // Línea divisoria
+        doc.line(marginLeft, y, 85, y);
+        y += 8;
+
+        // Datos de Femex
+        doc.setFontSize(styles.subtitle.fontSize);
+        doc.text("Rte: Femex S.A.", marginLeft, y);
+        y += 8;
+        doc.text("CUIT: 30-71130830-6", marginLeft, y);
+        y += 8;
+        doc.text("Domicilio: Duarte Quirós 4105", marginLeft, y);
+        y += 8;
+        doc.text("Provincia: Córdoba", marginLeft, y);
+        y += 8;
+        doc.text("Ciudad: Córdoba", marginLeft, y);
+        y += 8;
+        doc.text("Teléfono: 351 8509718", marginLeft, y);
+        y += 12;
+
+        // Número de bulto
+        doc.setFontSize(styles.header.fontSize);
+        doc.setFont(styles.header.fontFamily, styles.header.fontStyle);
+        doc.text(`Bulto ${i} de ${cantidadBultos}`, 50, y, { align: 'center' });
+      }
+
+      // Generar URL para el PDF
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      // Abrir en nueva pestaña
+      window.open(pdfUrl, '_blank');
+
+      // Liberar memoria después de un tiempo
+      setTimeout(() => {
+        URL.revokeObjectURL(pdfUrl);
+      }, 1000);
 
       Swal.fire({
         icon: "success",
-        title: "Impresión exitosa",
-        text: `Se enviaron ${cantidadBultos} etiquetas.`,
+        title: "PDF generado",
+        text: `Se abrió el PDF con ${cantidadBultos} etiquetas en una nueva pestaña.`,
       });
     } catch (error) {
-      console.error("Error al imprimir:", error);
+      console.error("Error al generar PDF:", error);
       Swal.fire({
         icon: "error",
-        title: "Error de impresión",
-        text: "No se pudo conectar con la impresora. Asegúrese de que está conectada por USB y tiene los drivers instalados.",
+        title: "Error",
+        text: "No se pudo generar el PDF. Intente nuevamente.",
       });
     }
   };
@@ -352,6 +383,18 @@ export const ImprimirEtiqueta = () => {
                   type="text"
                   name="nombre"
                   value={datosEditables?.nombre || ""}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CUIT
+                </label>
+                <input
+                  type="text"
+                  name="cuit"
+                  value={datosEditables?.cuit || ""}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
@@ -478,10 +521,10 @@ export const ImprimirEtiqueta = () => {
           </div>
           <div className="mt-4 flex space-x-4">
             <button
-              onClick={imprimirDirectamenteUSB}
+              onClick={generarPDF}
               className="flex-1 py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg"
             >
-              Imprimir directamente (USB)
+              Generar PDF
             </button>
             <button
               onClick={descargarArchivoZPL}

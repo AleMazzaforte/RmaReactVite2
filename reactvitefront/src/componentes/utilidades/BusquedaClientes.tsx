@@ -2,6 +2,7 @@ import React, { useState, useRef, ChangeEvent, useEffect, useMemo } from 'react'
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 import { Debounce } from './Debounce';
+import Swal from 'sweetalert2';
 
 
 interface Cliente {
@@ -43,26 +44,42 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
     setQuery(value);
   }, [value]);
 
-  
+
   const buscarClientes = React.useCallback(async (value: string) => {
     try {
       setLoading(true);
       const response = await fetch(`${endpoint}?query=${value}`);
+
+      if (!response.ok) {
+        throw new Error('Error en la respuesta del servidor');
+      }
+
       const data = await response.json();
-      setResultados(data.filter((cliente: Cliente) => 
-        cliente.nombre.toLowerCase().includes(value.toLowerCase())
-      ));
+      if (Array.isArray(data)) {
+        const resultadosFiltrados = data.filter((cliente: Cliente) =>
+          cliente?.nombre?.toLowerCase().includes(value.toLowerCase())
+        );
+        setResultados(resultadosFiltrados);
+      } else {
+        setResultados([]);
+      }
     } catch (error) {
       console.error('Error buscando clientes:', error);
+      Swal.fire ({
+        icon: "error",
+        title: "Error",
+        text: "Error buscando clientes"
+      })
+      setResultados([]);
     } finally {
       setLoading(false);
     }
-  }, [endpoint]); 
+  }, [endpoint]);;
 
-  
-  const debouncedBuscarClientes = React.useMemo(() => 
+
+  const debouncedBuscarClientes = React.useMemo(() =>
     Debounce((value: string) => buscarClientes(value), 800),
-    [buscarClientes] 
+    [buscarClientes]
   );
 
   // Manejador de cambio en el input
@@ -70,8 +87,8 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
     const value = e.target.value;
     setQuery(value);
 
-    if (value) {
-      debouncedBuscarClientes(value); 
+    if (value.trim()) {
+      debouncedBuscarClientes(value);
     } else {
       setResultados([]);
     }
@@ -80,7 +97,7 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
 
   // Selección de cliente
   const handleClienteSeleccionado = (cliente: Cliente) => {
-    
+
     if (cliente) {
       onClienteSeleccionado(cliente);
       setResultados([]);
