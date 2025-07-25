@@ -26,7 +26,7 @@ export const ImprimirEtiqueta = () => {
   const [cantidadBultos, setCantidadBultos] = useState<number | null>(null);
   const [mostrarInput, setMostrarInput] = useState(false);
   const [mostrarDatosEditable, setMostrarDatosEditable] = useState(false);
-  const [paginaHorizontal, setPaginaHorizontal] = useState(false);
+  //const [paginaHorizontal, setPaginaHorizontal] = useState(false);
   const [datosEditables, setDatosEditables] = useState<Cliente | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -136,37 +136,37 @@ export const ImprimirEtiqueta = () => {
         // ==============================================
         // BLOQUE SUPERIOR (VACÍO - RESERVADO)
         // ==============================================
-        ^FO0,0^GB800,350,1^FS   // Área reducida a 350 dots (4.4cm)
-        ^FO20,150^A0N,30,30^FB760,1,0,C^F^FS
+        //^FO0,0^GB800,350,1^FS   // Área reducida a 350 dots (4.4cm)
+        //^FO20,150^A0N,30,30^FB760,1,0,C^F^FS
 
         // ==============================================
         // SEPARADOR ENTRE BLOQUES (MEJORADO)
         // ==============================================
-        ^FO0,350^GB800,3,3^FS   // Línea divisoria más visible
+        //^FO0,350^GB800,3,3^FS   // Línea divisoria más visible
 
         // ==============================================
         // BLOQUE INFERIOR (DATOS PRINCIPALES)
         // ==============================================
-        ^FO20,400^A0N,55,55^FB760,1,0,C^FD${datosEditables.nombre}^FS 
-        ^FO20,520^A0N,38,38^FDCUIT: ${datosEditables.cuit}^FS
-        ^FO20,570^A0N,38,38^FDDomicilio: ${datosEditables.domicilio}^FS
-        ^FO20,620^A0N,38,38^FDCiudad: ${datosEditables.ciudad}, ${datosEditables.provincia}^FS
-        ^FO20,670^A0N,38,38^FDTeléfono: ${datosEditables.telefono}^FS
-        ^FO20,720^A0N,38,38^FDTransporte: ${datosEditables.transporte}^FS
-        ^FO20,770^A0N,38,38^FDSeguro: ${datosEditables.seguro}^FS
-        ^FO20,820^A0N,38,38^FDEntrega a ${datosEditables.condicionDeEntrega}^FS
-        ^FO20,870^A0N,38,38^FDPago en ${datosEditables.condicionDePago}^FS
+        ^FO70,400^A0N,55,55^FB760,1,0,C^FD${datosEditables.nombre}^FS 
+        ^FO75,520^A0N,38,38^FDCUIT: ${datosEditables.cuit}^FS
+        ^FO75,570^A0N,38,38^FDDomicilio: ${datosEditables.domicilio}^FS
+        ^FO75,620^A0N,38,38^FDCiudad: ${datosEditables.ciudad}, ${datosEditables.provincia}^FS
+        ^FO75,670^A0N,38,38^FDTeléfono: ${datosEditables.telefono}^FS
+        ^FO75,720^A0N,38,38^FDTransporte: ${datosEditables.transporte}^FS
+        ^FO75,770^A0N,38,38^FDSeguro: ${datosEditables.seguro}^FS
+        ^FO75,820^A0N,38,38^FDEntrega a ${datosEditables.condicionDeEntrega}^FS
+        ^FO75,870^A0N,38,38^FDPago en ${datosEditables.condicionDePago}^FS
 
         // Espacio aumentado antes de la línea divisoria (20 dots extra)
-        ^FO20,970^A0N,38,38^--------------------------^FS  
+        ^FO75,970^A0N,38,38^--------------------------^FS  
 
         // Espacio aumentado después de la línea (30 dots en lugar de 20)
-        ^FO20,1070^A0N,38,38^FDRte: Femex S.A.^FS
-        ^FO20,1120^A0N,38,38^FDCUIT: 30-71130830-6^FS
-        ^FO20,1170^A0N,38,38^FDDomicilio: Duarte Quirós 4105^FS
-        ^FO20,1220^A0N,38,38^FDProvincia: Córdoba^FS
-        ^FO20,1270^A0N,38,38^FDCiudad: Córdoba^FS
-        ^FO20,1320^A0N,38,38^FDTeléfono: 351 8509718^FS
+        ^FO75,1070^A0N,38,38^FDRte: Femex S.A.^FS
+        ^FO75,1120^A0N,38,38^FDCUIT: 30-71130830-6^FS
+        ^FO75,1170^A0N,38,38^FDDomicilio: Duarte Quirós 4105^FS
+        ^FO75,1220^A0N,38,38^FDProvincia: Córdoba^FS
+        ^FO75,1270^A0N,38,38^FDCiudad: Córdoba^FS
+        ^FO75,1320^A0N,38,38^FDTeléfono: 351 8509718^FS
         ^FO120,1400^A0N,75,75^FB560,1,0,C^FDBulto ${i} de ${cantidadBultos}^FS  // Centrado y con más espacio
         ^XZ
       `;
@@ -468,7 +468,7 @@ export const ImprimirEtiqueta = () => {
                   name="seguro"
                   value={datosEditables?.seguro || ""}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 bg-green-200 rounded-lg"
                 />
               </div>
               <div>
@@ -509,15 +509,15 @@ export const ImprimirEtiqueta = () => {
                 onChange={(e) => setCantidadBultos(Number(e.target.value))}
               />
             </div>
-            <div>
+            {/*<div>
               <button
                 type="button"
                 onClick={() => setPaginaHorizontal(!paginaHorizontal)}
                 className="w-full py-2 px-4 bg-gray-600 text-white font-semibold rounded-lg"
               >
-                En construcción
+                {'En construcción'}
               </button>
-            </div>
+            </div>*/}
           </div>
           <div className="mt-4 flex space-x-4">
             <button
