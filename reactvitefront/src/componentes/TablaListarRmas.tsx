@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ListarOp } from './utilidades/ListarOp';
 
+// Definición de la interfaz Rma para tipar los datos
 interface Rma {
   idRma: string;
   modelo: string;
@@ -16,25 +17,32 @@ interface Rma {
   nEgreso: string;
 }
 
+// Props que recibe el componente TablaListarRmas
 interface TablaRmasProps {
   rmas: Rma[];
   handleActualizar: (rma: Rma) => void;
   handleEliminar: (id: string | undefined) => void;
 }
 
+// Definición del endpoint según si está en producción o desarrollo
 let url = 'https://rma-back.vercel.app/listarOp';
 if (window.location.hostname === 'localhost') {
   url = 'http://localhost:8080/listarOp';
 }
 
+// Componente principal
 export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualizar, handleEliminar }) => {
+  // Estado para mantener los datos editables
   const [editableRmas, setEditableRmas] = useState<Rma[]>(rmas);
+  // Controla si el selector de OP (ListarOp) está visible y en qué fila
   const [showOpSelector, setShowOpSelector] = useState<number | null>(null);
 
+  // Efecto que actualiza el estado interno si cambian los props
   useEffect(() => {
     setEditableRmas(rmas);
   }, [rmas]);
 
+  // Maneja los cambios en los campos de entrada
   const handleChange = (index: number, field: keyof Rma, value: string | number | undefined) => {
     const updatedRmas = [...editableRmas];
     updatedRmas[index] = { ...updatedRmas[index], [field]: value };
@@ -49,15 +57,15 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
     setShowOpSelector(null); // Oculta el selector
   };
 
-  // Render condicional del campo OP
+  // Renderiza el campo OP, mostrando ListarOp si el campo está enfocado
   const renderOpField = (rma: Rma, index: number) => {
     if (showOpSelector === index) {
       return (
         <div className="absolute z-10 -mt-5 bg-white shadow-lg text-left">
           <ListarOp          
-            endpoint={`${url}`} // Endpoint existente
+            endpoint={`${url}`} // Endpoint para obtener lista de OPs
             onSeleccionado={(ops) => {
-              handleOpChange(index, ops[0].nombre); // Envía solo el nombre como string
+              handleOpChange(index, ops[0].nombre); //  Asigna solo el nombre de la OP seleccionada
             }}
             campos={['nombre']}
             value={rma.opLote}
@@ -77,16 +85,20 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
       </div>
     );
   };
+
+  // Llama a la función pasada por props para actualizar un RMA
   const handleSave = (rma: Rma) => {
     handleActualizar(rma);
 
   };
 
+  // Llama a la función pasada por props para eliminar un RMA
   const handleDelete = (rma: Rma) => {
     handleEliminar(rma.idRma);
 
   };
 
+  // Render del componente
   return (
     <div>
       <table className="w-full m-4 table-auto">
@@ -108,7 +120,8 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
         <tbody>
           {editableRmas.length > 0 ? (
             editableRmas.map((rma, index) => (
-              <tr key={rma.idRma || index}>
+               // Condición para pintar la fila con fondo rojo si seEntrega o nEgreso están vacíos
+              <tr key={rma.idRma || index} className={(rma.seEntrega.trim() && rma.nEgreso.trim()) === '' ? 'bg-red-200 ' : ''}>
                 <td className="border py-1 text-sm text-center">
                   <input
                     type="text"
@@ -185,6 +198,7 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
                     onChange={(e) => handleChange(index, 'nEgreso', e.target.value)}
                   />
                 </td>
+                {/* Celda Acciones: Botones de actualizar y eliminar */}
                 <td className="border py-2 text-sm text-center flex items-center justify-center space-x-2">
                   <button
                     className="bg-yellow-500 text-white px-2 py-1 text-sm rounded"
@@ -202,6 +216,7 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
               </tr>
             ))
           ) : (
+            // Si no hay datos para mostrar
             <tr>
               <td colSpan={12} className="text-center py-4">
                 No hay datos disponibles.
