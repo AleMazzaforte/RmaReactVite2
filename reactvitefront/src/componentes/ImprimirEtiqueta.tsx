@@ -137,12 +137,12 @@ export const ImprimirEtiqueta = () => {
         // BLOQUE SUPERIOR (VACÍO - RESERVADO)
         // ==============================================
         //^FO0,0^GB800,350,1^FS   // Área reducida a 350 dots (4.4cm)
-        //^FO20,150^A0N,30,30^FB760,1,0,C^F^FS
+        //
 
         // ==============================================
         // SEPARADOR ENTRE BLOQUES (MEJORADO)
         // ==============================================
-        //^FO0,350^GB800,3,3^FS   // Línea divisoria más visible
+        //   // Línea divisoria más visible
 
         // ==============================================
         // BLOQUE INFERIOR (DATOS PRINCIPALES)
@@ -154,8 +154,8 @@ export const ImprimirEtiqueta = () => {
         ^FO75,670^A0N,38,38^FDTeléfono: ${datosEditables.telefono}^FS
         ^FO75,720^A0N,38,38^FDTransporte: ${datosEditables.transporte}^FS
         ^FO75,770^A0N,38,38^FDSeguro: ${datosEditables.seguro}^FS
-        ^FO75,820^A0N,38,38^FDEntrega a ${datosEditables.condicionDeEntrega}^FS
-        ^FO75,870^A0N,38,38^FDPago en ${datosEditables.condicionDePago}^FS
+        ^FO75,820^A0N,38,38^FD${datosEditables.condicionDeEntrega}^FS
+        ^FO75,870^A0N,38,38^FD${datosEditables.condicionDePago}^FS
 
         // Espacio aumentado antes de la línea divisoria (20 dots extra)
         ^FO75,970^A0N,38,38^--------------------------^FS  
