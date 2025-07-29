@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ListarOp } from './utilidades/ListarOp';
+import Urls from './utilidades/Urls';
 
 // Definición de la interfaz Rma para tipar los datos
 interface Rma {
@@ -25,10 +26,7 @@ interface TablaRmasProps {
 }
 
 // Definición del endpoint según si está en producción o desarrollo
-let url = 'https://rma-back.vercel.app/listarOp';
-if (window.location.hostname === 'localhost') {
-  url = 'http://localhost:8080/listarOp';
-}
+const url = Urls.rma.listarOp;
 
 // Componente principal
 export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualizar, handleEliminar }) => {

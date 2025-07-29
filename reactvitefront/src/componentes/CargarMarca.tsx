@@ -3,11 +3,9 @@ import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader"; // Importar el componente Loader
 import { Contenedor } from "./utilidades/Contenedor";
 
-let urlMarca = "https://rma-back.vercel.app/cargarMarca";
+import Urls from "./utilidades/Urls";
+const urlMarca = Urls.marcas.cargar;
 
-if (window.location.hostname === "localhost") {
-  urlMarca = "http://localhost:8080/cargarMarca";
-}
 
 export const CargarMarca: React.FC = () => {
   const [loading, setLoading] = useState(false);

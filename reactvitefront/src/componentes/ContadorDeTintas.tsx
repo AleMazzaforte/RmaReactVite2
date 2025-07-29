@@ -6,6 +6,8 @@ import { GetInventarioStock } from "./utilidades/GetInventarioStock";
 import { GuardarInventario } from "./utilidades/GuardarInventario";
 import * as XLSX from "xlsx";
 import Swal from "sweetalert2";
+import Urls from './utilidades/Urls';
+
 
 type ResultadoItem = {
   nombre: string;
@@ -25,14 +27,10 @@ interface ProductoConteo {
   conteoFisico: number | null;
 }
 
-let urlPrepararInventario = "https://rma-back.vercel.app/prepararInventario";
+let urlPrepararInventario = Urls.inventario.preparar;
 
-let urlGuardarInventario = "https://rma-back.vercel.app/guardarInventario";
-if (window.location.hostname === "localhost") {
-  urlPrepararInventario = "http://localhost:8080/prepararInventario";
+let urlGuardarInventario = Urls.inventario.guardar;
 
-  urlGuardarInventario = "http://localhost:8080/guardarInventario";
-}
 
 export const ContadorDeTintas: React.FC = () => {
   const [resultados, setResultados] = useState<ResultadosPorCategoria[]>([]);

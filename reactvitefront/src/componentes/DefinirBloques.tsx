@@ -1,5 +1,6 @@
 // DefinirBloques.tsx
 import React, { useState, useEffect } from 'react';
+import Urls from './utilidades/Urls';
 
 interface ProductoBloque {
   id: number;
@@ -7,12 +8,9 @@ interface ProductoBloque {
   idBloque: string | null;
 }
 
-let urlPrepararInventario = 'https://rma-back.vercel.app/prepararInventario';
-let urlActualizarBloques = 'https://rma-back.vercel.app/actualizarBloques';
-if (window.location.hostname === 'localhost') {
-  urlPrepararInventario = 'http://localhost:8080/prepararInventario';
-  urlActualizarBloques = 'http://localhost:8080/actualizarBloques';
-}
+let urlPrepararInventario = Urls.inventario.preparar;
+let urlActualizarBloques = Urls.inventario.actualizar;
+
 
 export const DefinirBloques: React.FC = () => {
   const [productos, setProductos] = useState<ProductoBloque[]>([]);

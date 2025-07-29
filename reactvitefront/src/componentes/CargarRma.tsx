@@ -7,6 +7,8 @@ import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader";
 import FechaInput from "./utilidades/FechaInput";
 import { Contenedor } from "./utilidades/Contenedor";
+import Urls from "./utilidades/Urls";
+
 
 interface Cliente {
   id: string;
@@ -51,20 +53,13 @@ export const CargarRma: React.FC = () => {
   const [listarProductosKey, setListarProductosKey] = useState(0);
   const [opLoteSeleccionado, setOpLoteSeleccionado] = useState<Op | null>(null);
 
-  let urlClientes = "https://rma-back.vercel.app/buscarCliente";
-  let urlProductos = "https://rma-back.vercel.app/listarProductos";
-  let urlMarcas = "https://rma-back.vercel.app/listarMarcas";
-  let urlAgregarRma = "https://rma-back.vercel.app/agregarRma";
-  let urlOp = "https://rma-back.vercel.app/listarOp";
-  let urlNumeroRemito = "https://rma-back.vercel.app/getUltimoNIngreso";
-  if (window.location.hostname === "localhost") {
-    urlClientes = "http://localhost:8080/buscarCliente";
-    urlProductos = "http://localhost:8080/listarProductos";
-    urlMarcas = "http://localhost:8080/listarMarcas";
-    urlAgregarRma = "http://localhost:8080/agregarRma";
-    urlOp = "http://localhost:8080/listarOp";
-    urlNumeroRemito = "http://localhost:8080/getUltimoNIngreso";
-  }
+  const urlClientes = Urls.clientes.buscar;
+  const urlProductos = Urls.productos.listar;
+  const urlMarcas = Urls.marcas.listar;
+  const urlAgregarRma = Urls.rma.agregar;
+  const urlOp = Urls.rma.listarOp;
+  const urlNumeroRemito = Urls.remito.getUltimoNumero;
+
 
   const handleClienteSeleccionado = async (cliente: Cliente) => {
     setClienteSeleccionado(cliente);

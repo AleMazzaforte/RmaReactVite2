@@ -4,6 +4,7 @@ import { ListarProductos } from "./utilidades/ListarProductos";
 import Loader from "./utilidades/Loader";
 import Swal from "sweetalert2";
 import { Contenedor } from "./utilidades/Contenedor";
+import Urls from "./utilidades/Urls";
 
 interface OpProducto {
   id: number;
@@ -40,21 +41,15 @@ export const ActualizarImpo = () => {
   const [eliminando, setEliminando] = useState<number | null>(null);
 
   // URLs
-  let urlActualizarSelectivoOp = "https://rma-back.vercel.app/actualizarOp";
-  let urlListarOp = "https://rma-back.vercel.app/listarOp";
-  let urlProductos = "https://rma-back.vercel.app/listarproductos";
-  let urlOpProductos = "https://rma-back.vercel.app/listarOpProductos";
-  let urlGetSku = "https://rma-back.vercel.app/getSku";
-  let urlEliminarProductoOp = "https://rma-back.vercel.app/eliminarProductoOp";
 
-  if (window.location.hostname === "localhost") {
-    urlProductos = "http://localhost:8080/listarproductos";
-    urlOpProductos = "http://localhost:8080/listarOpProductos";
-    urlActualizarSelectivoOp = "http://localhost:8080/actualizarOp";
-    urlListarOp = "http://localhost:8080/listarOp";
-    urlGetSku = "http://localhost:8080/getSku";
-    urlEliminarProductoOp = "http://localhost:8080/eliminarProductoOp";
-  }
+
+  const urlActualizarSelectivoOp = Urls.rma.actualizarOp;
+  const urlListarOp = Urls.rma.listarOp;
+  const urlProductos = Urls.productos.listar;
+  const urlOpProductos = Urls.rma.listarOpProductos;
+  const urlGetSku = Urls.productos.getSku;
+  const urlEliminarProductoOp = Urls.productos.eliminarDeOp;
+
 
   const formatearFecha = (fechaISO?: string) => {
     if (!fechaISO) return "Sin fecha";
@@ -302,11 +297,10 @@ export const ActualizarImpo = () => {
                                 handleEliminarProducto(item.idOpProducto!)
                               }
                               disabled={eliminando === item.idOpProducto}
-                              className={`px-3 py-0.5 rounded text-sm ${
-                                eliminando === item.idOpProducto
+                              className={`px-3 py-0.5 rounded text-sm ${eliminando === item.idOpProducto
                                   ? "bg-gray-400 text-white cursor-wait"
                                   : "bg-red-600 text-white hover:bg-red-700"
-                              }`}
+                                }`}
                             >
                               {eliminando === item.idOpProducto
                                 ? "Eliminando..."

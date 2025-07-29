@@ -1,27 +1,66 @@
-// Urls de cargar rma
+// src/utilidades/Urls.ts
 
-let urlClientes = 'https://rma-back.vercel.app/buscarCliente';
-let urlProductos = 'https://rma-back.vercel.app/listarProductos';
-let urlMarcas = 'https://rma-back.vercel.app/listarMarcas';
-let urlAgregarRma = 'https://rma-back.vercel.app/agregarRma';
-let urlOp = 'https://rma-back.vercel.app/listarOp';
-let urlActualizarCantidadPorBulto = 'https://rma-back.vercel.app/actualizarCantidadPorBulto';
+const isLocalhost = window.location.hostname === "localhost";
+const base = isLocalhost ? "http://localhost:8080" : "https://rma-back.vercel.app";
 
-if (window.location.hostname === 'localhost') {
-  urlClientes = 'http://localhost:8080/buscarCliente';
-  urlProductos = 'http://localhost:8080/listarProductos';
-  urlMarcas = 'http://localhost:8080/listarMarcas';
-  urlAgregarRma = 'http://localhost:8080/agregarRma';
-  urlOp = 'http://localhost:8080/listarOp';
-  urlActualizarCantidadPorBulto = 'http://localhost:8080/actualizarCantidadPorBulto';
-}
+const Urls = {
+  clientes: {
+    cargar: `${base}/cargarCliente`,
+    listar: `${base}/listarCliente`,
+    actualizar: `${base}/actualizarCliente`,
+    buscar: `${base}/buscarCliente`,
+  },
+  transportes: {
+    actualizar: `${base}/actualizarTransporte`,
+    eliminar: `${base}/eliminarTransporte`,
+    buscar: `${base}/buscarTransporte`,
+  },
+  productos: {
+    cargar: `${base}/cargarProducto`,
+    listar: `${base}/listarproductos`,
+    listarMarcas: `${base}/listarMarcas`,
+    actualizarCantidadPorBulto: `${base}/actualizarCantidadPorBulto`,
+    getSku: `${base}/getSku`,
+    eliminarDeOp: `${base}/eliminarProductoOp`,
+    actualizar: `${base}/actualizarProducto`,
+    eliminar: `${base}/eliminarProducto`,
+  },
+  rma: {
+    agregar: `${base}/agregarRma`,
+    listarOp: `${base}/listarOp`,
+    actualizarOp: `${base}/actualizarOp`,
+    listarOpProductos: `${base}/listarOpProductos`,
+    buscar: `${base}/buscarRMA`,
+    eliminar: `${base}/eliminarRma`,
+    actualizarProducto: `${base}/actualizarProductoRma`,
+    getPorCliente: `${base}/getRmaCliente`,
+  },
+  remito: {
+    getUltimoNumero: `${base}/getUltimoNIngreso`,
+  },
+  marcas: {
+    cargar: `${base}/cargarMarca`,
+    actualizar: `${base}/actualizarMarca`,
+    eliminar: `${base}/eliminarMarca`,
+    listar: `${base}/listarMarcas`,
+  },
+  operaciones: {
+    guardar: `${base}/guardarOp`,
+    guardarProductos: `${base}/guardarOpProductos`,
+  },
+  inventario: {
+  preparar: `${base}/prepararInventario`,
+  guardar: `${base}/guardarInventario`,
+  actualizar: `${base}/actualizarBloques`,
+  actualizarProducto: `${base}/actualizarProductoInventario`
+  },
+  devolucion: {
+    agregar: `${base}/agregarDevolucion`,
+  },
+  estadisticas: {
+    estadisticas: `${base}/api/Estadisticas/rma`
+  },
 
-//++++++++++++++++++++++++++++++++++++++++
-// Urls de numero de remito
-let url = 'https://rma-back.vercel.app/getUltimoNIngreso';
-if (window.location.hostname === 'localhost') {
-  url = 'http://localhost:8080/getUltimoNIngreso';
-}
+};
 
-//++++++++++++++++++++++++++++++++++++++++
-
+export default Urls;

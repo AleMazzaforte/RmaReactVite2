@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Loader from './utilidades/Loader';
 import { sweetAlert } from './utilidades/SweetAlertWrapper';
+import Urls from './utilidades/Urls';
 
 interface EstadisticaRMA {
   producto_id: number;
@@ -18,7 +19,7 @@ export const Estadisticas: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [filtro, setFiltro] = useState('');
 
-  const urlEstadisticas = window.location.hostname === 'localhost' 
+  const urlEstadisticas =Urls.estadisticas.estadisticas 
     ? 'http://localhost:8080/api/estadisticas/rma' 
     : 'https://rma-back.vercel.app/api/estadisticas/rma';
 

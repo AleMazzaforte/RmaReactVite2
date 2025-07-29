@@ -2,29 +2,30 @@ import React, { useState, useRef } from 'react';
 import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
 import { Contenedor } from './utilidades/Contenedor';
+import Urls from './utilidades/Urls';
+
+;  // o el que corresponda para cargar transporte
+
 
 export const CargarTransporte: React.FC = () => {
   const [loading, setLoading] = useState(false);  // Estado para el loader
   const formRef = useRef<HTMLFormElement>(null);
   
-  let urlcargarTransporte = 'https://rma-back.vercel.app/cargarTransporte';
   
-  if (window.location.hostname === 'localhost') {
-    urlcargarTransporte = 'http://localhost:8080/cargarTransporte';
-  }
+  const urlCargarTransporte = Urls.transportes.actualizar
 
   const enviarFormulario = async () => {
     if (formRef.current) {
       const formData = new FormData(formRef.current);
       const data = {
         nombre: formData.get("nombre") as string,
-        direccionLocal: formData.get("direccionLocal")?.toString || null,
-        telefono: formData.get("telefono")?.toString || null,
+        direccionLocal: formData.get("direccionLocal")?.toString() || null,
+        telefono: formData.get("telefono")?.toString() || null,
       };
 
       try {
         setLoading(true);
-        const response = await fetch(urlcargarTransporte, {
+        const response = await fetch(urlCargarTransporte, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -97,7 +98,7 @@ export const CargarTransporte: React.FC = () => {
         
         <div>
           <label htmlFor="direccionLocal" className="block text-sm font-medium text-gray-700 mb-1">Dirección local:</label>
-          <input type="text" id="direccionLOcal" name="direccionLocal"  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
+          <input type="text" id="direccionLocal" name="direccionLocal"  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" />
         </div>
 
         <div>

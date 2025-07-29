@@ -7,6 +7,7 @@ import { GuardarInventario } from "./utilidades/GuardarInventario";
 import { InputWithCalculator } from "./utilidades/InputWithCalculator";
 import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader";
+import Urls from './utilidades/Urls';
 
 interface Producto {
   id: number;
@@ -24,16 +25,9 @@ interface ProductoConteo {
   conteoFisico: number | null;
 }
 
-let urlPrepararInventario = "https://rma-back.vercel.app/prepararInventario";
-let urlActualizarInventario =
-  "https://rmareactvite2.onrender.com/actualizarProductoInventario";
-let urlGuardarInventario = "https://rma-back.vercel.app/guardarInventario";
-if (window.location.hostname === "localhost") {
-  urlPrepararInventario = "http://localhost:8080/prepararInventario";
-  urlActualizarInventario =
-    "http://localhost:8080/actualizarProductoInventario";
-  urlGuardarInventario = "http://localhost:8080/guardarInventario";
-}
+let urlPrepararInventario = Urls.inventario.preparar;
+let urlActualizarInventario = Urls.inventario.actualizarProducto;
+let urlGuardarInventario = Urls.inventario.guardar;
 
 export const Inventario: React.FC = () => {
   const [stockManager] = useState(() => new StockManager());

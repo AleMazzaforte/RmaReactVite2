@@ -1,6 +1,8 @@
 import React, { useState, FormEvent, ChangeEvent } from 'react';
 import Swal from 'sweetalert2';
 import { Contenedor } from './utilidades/Contenedor';
+import Urls from './utilidades/Urls';
+
 
 export const CargarUsuario: React.FC = () => {
   const [username, setUsername] = useState<string>('');
@@ -10,10 +12,8 @@ export const CargarUsuario: React.FC = () => {
   const enviarFormulario = async () => {
     const formData = { username, password };
 
-    let urlCargarUsuario = 'https://rma-back.vercel.app/cargarUsuario'; // URL de producción 
-    if (window.location.hostname === 'localhost') { 
-      urlCargarUsuario = 'http://localhost:8080/cargarUsuario'; // URL de desarrollo 
-    } 
+    const urlCargarUsuario = Urls.clientes.cargar; // O una clave separada si querés algo más específico
+
     try { 
       const response = await fetch(urlCargarUsuario, { 
         method: 'POST', 

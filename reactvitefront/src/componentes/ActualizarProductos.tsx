@@ -4,6 +4,7 @@ import Loader from "./utilidades/Loader"; // Importar el componente Loader
 import { ListarMarcas } from "./utilidades/ListarMarcas"; // Importar el componente ListarMarcas
 import { ListarProductos } from "./utilidades/ListarProductos"; // Importar el componente ListarProductos
 import { Contenedor } from "./utilidades/Contenedor";
+import Urls from "./utilidades/Urls";
 
 export const ActualizarProductos: React.FC = () => {
   const [loading, setLoading] = useState(false); // Estado para el loader
@@ -11,17 +12,13 @@ export const ActualizarProductos: React.FC = () => {
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<any>(null); // Estado para la marca seleccionada
   const [productoSeleccionado, setProductoSeleccionado] = useState<any>(null); // Estado para el producto seleccionado
 
-  let urlProductos = "https://rma-back.vercel.app/listarProductos";
-  let urlListarMarcas = "https://rma-back.vercel.app/listarMarcas";
-  let urlActualizarProducto = "https://rma-back.vercel.app/actualizarProducto";
-  let urlEliminarProducto = "https://rma-back.vercel.app/eliminarProducto";
 
-  if (window.location.hostname === "localhost") {
-    urlProductos = "http://localhost:8080/listarProductos";
-    urlListarMarcas = "http://localhost:8080/listarMarcas";
-    urlActualizarProducto = "http://localhost:8080/actualizarProducto";
-    urlEliminarProducto = "http://localhost:8080/eliminarProducto";
-  }
+
+  const urlProductos = Urls.productos.listar;
+  const urlListarMarcas = Urls.marcas.listar;
+  const urlActualizarProducto = Urls.productos.actualizar;
+  const urlEliminarProducto = Urls.productos.eliminar; // Lo vas a completar con el SKU
+
 
   const handleProductoSeleccionado = (producto: any) => {
     if (formRef.current) {

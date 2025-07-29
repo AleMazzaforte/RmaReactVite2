@@ -4,11 +4,7 @@ import { TablaListarRmas } from "./TablaListarRmas";
 import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import { FlechasNavigator } from "./utilidades/FlechasNavigator";
 import { Contenedor } from "./utilidades/Contenedor";
-
-let url = "https://rma-back.vercel.app";
-if (window.location.hostname === "localhost") {
-  url = "http://localhost:8080";
-}
+import Urls from "./utilidades/Urls"; // ✅ IMPORTANTE
 
 interface Cliente {
   id: string;
@@ -54,7 +50,7 @@ export const ProductosPorCliente = (): JSX.Element => {
   const buscarRmas = async (clienteId: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${url}/getRmaCliente/${clienteId}`);
+      const response = await fetch(`${Urls.rma.getPorCliente}/${clienteId}`);
       const data = await response.json();
 
       if (data.length > 0) {
@@ -66,7 +62,7 @@ export const ProductosPorCliente = (): JSX.Element => {
           text: "Este cliente no tiene RMA asociado.",
           confirmButtonText: "Aceptar",
         }).then(() => {
-          cambiarCliente(); // Restablecer el formulario al aceptar la alerta
+          cambiarCliente();
         });
       }
     } catch (error) {
@@ -84,17 +80,15 @@ export const ProductosPorCliente = (): JSX.Element => {
   };
 
   const handleActualizar = async (rmaActualizada: Rma) => {
-    // Actualizar el estado local
     setRmas(
       rmas.map((rma) =>
         rma.idRma === rmaActualizada.idRma ? rmaActualizada : rma
       )
     );
 
-    // Enviar la actualización al backend
     try {
       const response = await fetch(
-        `${url}/actualizarProductoRma/${rmaActualizada.idRma}`,
+        `${Urls.rma.actualizarProducto}/${rmaActualizada.idRma}`,
         {
           method: "POST",
           headers: {
@@ -119,69 +113,63 @@ export const ProductosPorCliente = (): JSX.Element => {
           icon: "warning",
           confirmButtonColor: "#3085d6",
         });
-        console.error(
-          "Error al actualizar el RMA en el backend:",
-          response.statusText
-        );
       }
     } catch (error) {
-      console.error("Error al enviar la solicitud de actualización:", error);
+      console.error("Error al actualizar el RMA:", error);
     }
   };
 
   const handleEliminar = async (idRma: string | undefined) => {
-    if (idRma) {
-      // Mostrar confirmación antes de eliminar
-      const result = await Swal.fire({
-        title: "¿Estás seguro?",
-        text: "¡Esta acción no se puede deshacer!",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#d33",
-        cancelButtonColor: "#3085d6",
-        confirmButtonText: "Sí, eliminar",
-      });
-
-      if (result.isConfirmed) {
-        try {
-          const response = await fetch(`${url}/eliminarRma/${idRma}`, {
-            method: "DELETE",
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-            Swal.fire({
-              title: "¡Eliminado!",
-              text: data.message,
-              icon: "success",
-              confirmButtonColor: "#3085d6",
-            });
-
-            // Eliminar de la lista local
-            setRmas(rmas.filter((rma) => rma.idRma !== idRma));
-          } else {
-            Swal.fire({
-              title: "Error",
-              text: data.message,
-              icon: "error",
-              confirmButtonColor: "#d33",
-            });
-          }
-        } catch (error) {
-          console.error("Error al eliminar RMA:", error);
-          Swal.fire({
-            title: "Error",
-            text: "Hubo un problema al eliminar el RMA.",
-            icon: "error",
-            confirmButtonColor: "#d33",
-          });
-        }
-      }
-    } else {
-      Swal.fire({
+    if (!idRma) {
+      return Swal.fire({
         title: "Error",
         text: "El id no existe.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
+    }
+
+    const result = await Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡Esta acción no se puede deshacer!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, eliminar",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const response = await fetch(`${Urls.rma.eliminar}/${idRma}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Swal.fire({
+          title: "¡Eliminado!",
+          text: data.message,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
+
+        setRmas(rmas.filter((rma) => rma.idRma !== idRma));
+      } else {
+        Swal.fire({
+          title: "Error",
+          text: data.message,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
+      }
+    } catch (error) {
+      console.error("Error al eliminar RMA:", error);
+      Swal.fire({
+        title: "Error",
+        text: "Hubo un problema al eliminar el RMA.",
         icon: "error",
         confirmButtonColor: "#d33",
       });
@@ -205,7 +193,7 @@ export const ProductosPorCliente = (): JSX.Element => {
                   Cliente:
                 </label>
                 <BusquedaClientes
-                  endpoint={`${url}/buscarCliente`}
+                  endpoint={Urls.clientes.buscar}
                   onClienteSeleccionado={handleClienteSeleccionado}
                   campos={["nombre"]}
                 />

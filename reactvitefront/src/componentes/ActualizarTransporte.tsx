@@ -3,6 +3,7 @@ import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader";
 import { BusquedaTransportes } from "./utilidades/BusquedaTransportes";
 import { Contenedor } from "./utilidades/Contenedor";
+import Urls from "./utilidades/Urls";
 
 export const ActualizarTransporte: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -15,16 +16,11 @@ export const ActualizarTransporte: React.FC = () => {
     telefono: "",
   });
 
-  let urlActualizarTransporte =
-    "https://rma-back.vercel.app/actualizarTransporte";
-  let urlEliminarTransporte = "https://rma-back.vercel.app/eliminarTransporte";
-  let urlBuscarTransporte = "https://rma-back.vercel.app/buscarTransporte";
 
-  if (window.location.hostname === "localhost") {
-    urlActualizarTransporte = "http://localhost:8080/actualizarTransporte";
-    urlEliminarTransporte = "http://localhost:8080/eliminarTransporte";
-    urlBuscarTransporte = "http://localhost:8080/buscarTransporte";
-  }
+
+  const urlActualizarTransporte = Urls.transportes.actualizar;
+  const urlEliminarTransporte = Urls.transportes.eliminar;
+  const urlBuscarTransporte = Urls.transportes.buscar;
 
   useEffect(() => {
     if (transporteSeleccionado) {

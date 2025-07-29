@@ -5,12 +5,11 @@ import { ListarProductos } from "./utilidades/ListarProductos";
 import Swal from "sweetalert2";
 import { Contenedor } from "./utilidades/Contenedor";
 
-let guardarOp = "https://rma-back.vercel.app/guardarOp ";
-let urlProductos = "https://rma-back.vercel.app/listarProductos ";
-if (window.location.hostname === "localhost") {
-  guardarOp = "http://localhost:8080/guardarOp";
-  urlProductos = "http://localhost:8080/listarProductos";
-}
+import Urls from "./utilidades/Urls";
+
+const urlProductos = Urls.productos.listar;
+const guardarOp = Urls.operaciones.guardar;
+
 
 interface Op {
   op: string;

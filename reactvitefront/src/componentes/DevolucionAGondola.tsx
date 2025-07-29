@@ -6,6 +6,7 @@ import { Contenedor } from "./utilidades/Contenedor";
 import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader";
 import FechaInput from "./utilidades/FechaInput";
+import Urls from './utilidades/Urls';
 
 interface Cliente {
   id: string;
@@ -40,17 +41,12 @@ export const DevolucionAGondola: React.FC = () => {
   const [otroMotivo, setOtroMotivo] = useState(false);
 
   // Endpoints (temporal)
-  let urlClientes = "https://rma-back.vercel.app/buscarCliente";
-  let urlProductos = "https://rma-back.vercel.app/listarProductos";
-  let urlMarcas = "https://rma-back.vercel.app/listarMarcas";
-  let urlAgregarDevolucion = "https://rma-back.vercel.app/agregarDevolucion"; // Nuevo endpoint temporal
+  let urlClientes = Urls.clientes.buscar;
+  let urlProductos = Urls.productos.listar;
+  let urlMarcas = Urls.marcas.listar;
+  let urlAgregarDevolucion = Urls.devolucion.agregar; // Nuevo endpoint temporal
 
-  if (window.location.hostname === "localhost") {
-    urlClientes = "http://localhost:8080/buscarCliente";
-    urlProductos = "http://localhost:8080/listarProductos";
-    urlMarcas = "http://localhost:8080/listarMarcas";
-    urlAgregarDevolucion = "http://localhost:8080/agregarDevolucion"; // Nuevo endpoint temporal
-  }
+  
 
   const handleMotivoChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const motivoSeleccionado = event.target.value;

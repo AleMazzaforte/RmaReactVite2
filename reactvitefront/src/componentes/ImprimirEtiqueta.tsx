@@ -4,6 +4,7 @@ import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import Loader from "./utilidades/Loader";
 import { jsPDF } from "jspdf";
 import { Contenedor } from "./utilidades/Contenedor";
+import Urls from './utilidades/Urls';
 
 interface Cliente {
   id: string;
@@ -30,15 +31,8 @@ export const ImprimirEtiqueta = () => {
   const [datosEditables, setDatosEditables] = useState<Cliente | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  let urlListarClientes = "https://rma-back.vercel.app/listarCliente";
-  let urlListartransporte = "https://rma-back.vercel.app/buscarTransporte";
-  let urlBuscarRMA = "https://rma-back.vercel.app/buscarRMA";
-
-  if (window.location.hostname === "localhost") {
-    urlListarClientes = "http://localhost:8080/listarCliente";
-    urlListartransporte = "http://localhost:8080/buscarTransporte";
-    urlBuscarRMA = "http://localhost:8080/buscarRMA";
-  }
+  let urlListarClientes = Urls.clientes.listar;
+  let urlBuscarRMA = Urls.rma.buscar;  
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
