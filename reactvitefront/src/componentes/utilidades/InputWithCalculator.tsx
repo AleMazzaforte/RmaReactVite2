@@ -8,8 +8,13 @@ interface InputWithLongTouchCalculatorProps {
   onFocus?: () => void;
   cantidadPorBulto: number;
   idProducto: number; 
+  productosReposicion?: productosReposicion[];
+  sku: string;
 }
-
+interface productosReposicion {
+  sku: string;
+  cantidad: number;
+}
 let urlActualizarCantidadPorBulto = 'https://rma-back.vercel.app/actualizarCantidadPorBulto';
 
 if (window.location.hostname === 'localhost') {
@@ -21,7 +26,9 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
   onChange,
   onFocus,
   cantidadPorBulto,
-  idProducto
+  idProducto,
+  productosReposicion = [],
+  sku
 }) => {
   const [showCalculator, setShowCalculator] = useState(false);
   const longPressTimer = useRef<number | null>(null);
@@ -144,6 +151,8 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
               cantidadPorBulto={cantidadPorBulto}
               idProducto={Number(idProducto)}
               onUpdateCantidadPorBulto={handleUpdateCantidadPorBulto}
+              productosReposicion={productosReposicion}
+              sku={sku}             
             />
           </div>
         </div>

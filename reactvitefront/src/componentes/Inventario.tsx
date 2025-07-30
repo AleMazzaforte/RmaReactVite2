@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StockManager } from "./utilidades/StockManager";
 import * as XLSX from "xlsx";
 import { FiltrosInventario } from "./utilidades/FiltrosInventario";
@@ -36,6 +36,7 @@ let urlPrepararInventario = Urls.inventario.preparar;
 let urlActualizarInventario = Urls.inventario.actualizarProducto;
 let urlGuardarInventario = Urls.inventario.guardar;
 let urlGuardarReposicion = Urls.reposicion.guardar;
+let urlObtenerReposicion = Urls.reposicion.obtener;
 
 export const Inventario: React.FC = () => {
   const [stockManager] = useState(() => new StockManager());
@@ -55,6 +56,34 @@ export const Inventario: React.FC = () => {
   const [skuSeleccionadoReposicion, setSkuSeleccionadoReposicion] = useState("");
   const [coincidenciasReposicionEncontradas, setCoincidenciasReposicionEncontradas] = useState<Producto[]>([]);
 
+  // En el componente Inventario, añade esto cerca de las otras URLs
+
+// useEffect de carga de reposiciones
+useEffect(() => {
+  const cargarReposiciones = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(urlObtenerReposicion);
+      if (!response.ok) throw new Error("Error al obtener reposiciones");
+      
+      const data = await response.json();
+      // Filtramos solo reposiciones con cantidad > 0
+      const reposicionesActivas = data.filter((item: ProductoReposicion) => item.cantidad > 0);
+      setProductosReposicion(reposicionesActivas);
+    } catch (error) {
+      console.error("Error al cargar reposiciones:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudieron cargar las reposiciones'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  cargarReposiciones();
+}, []);
 
 
   const { productos, setProductos, setLoading, bloques, loading, error } =
@@ -120,20 +149,26 @@ export const Inventario: React.FC = () => {
     setMostrarModalCoincidencias(false);
 
     setTimeout(() => {
-      const elemento = document.getElementById(`sku-${skuSeleccionado}`);
-      if (elemento) {
-        elemento.scrollIntoView({ behavior: "smooth", block: "center" });
-        elemento.parentElement?.classList.add("bg-yellow-100");
-        setTimeout(() => {
-          elemento.parentElement?.classList.remove("bg-yellow-100");
-        }, 2000);
-      }
-    }, 100);
-  };
+  const elemento = document.getElementById(`sku-${skuSeleccionado}`);
+  if (elemento) {
+    elemento.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    // Agrega fondo amarillo claro manualmente
+    const parent = elemento.parentElement;
+    if (parent) {
+      parent.style.backgroundColor = "#fef9c3"; // equivalente a bg-yellow-100
+
+      setTimeout(() => {
+        parent.style.backgroundColor = ""; // remueve el fondo
+      }, 2000);
+    }
+  }
+}, 100);
+  }
 
   const activarModoReposicion = () => {
     setModoReposicion(true);
-    setProductosReposicion([]);
+
   };
 
   const volverAModoNormal = () => {
@@ -217,7 +252,7 @@ export const Inventario: React.FC = () => {
       return;
     }
     setLoading(true);
-    
+
     try {
       const response = await fetch(urlGuardarReposicion, {
         method: "POST",
@@ -239,7 +274,7 @@ export const Inventario: React.FC = () => {
 
       // Limpiar después de guardar
       setProductosReposicion([]);
-     
+
     } catch (error) {
       console.error("Error al guardar reposición:", error);
       Swal.fire({
@@ -774,63 +809,63 @@ export const Inventario: React.FC = () => {
               </div>
             )}
 
-{/* Lista de productos agregados */}
-<div style={{ marginBottom: '1rem' }}>
-  <h3 style={{ fontSize: '1rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-    Productos en reposición ({productosReposicion.length})
-  </h3>
-  
-  {productosReposicion.length > 0 ? (
-    <div style={{ 
-      border: '1px solid #e5e7eb',
-      borderRadius: '0.375rem',
-      overflow: 'hidden'
-    }}>
-      {productosReposicion.map((producto, index) => (
-        <div 
-          key={index}
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '0.75rem',
-            borderBottom: index < productosReposicion.length - 1 ? '1px solid #e5e7eb' : 'none',
-            backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb'
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: '500' }}>{producto.sku}</div>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              Cantidad: {producto.cantidad}
+            {/* Lista de productos agregados */}
+            <div style={{ marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                Productos en reposición ({productosReposicion.length})
+              </h3>
+
+              {productosReposicion.length > 0 ? (
+                <div style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.375rem',
+                  overflow: 'hidden'
+                }}>
+                  {productosReposicion.map((producto, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.75rem',
+                        borderBottom: index < productosReposicion.length - 1 ? '1px solid #e5e7eb' : 'none',
+                        backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: '500' }}>{producto.sku}</div>
+                        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                          Cantidad: {producto.cantidad}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => eliminarDeReposicion(producto.sku)}
+                        style={{
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{
+                  padding: '1rem',
+                  textAlign: 'center',
+                  color: '#6b7280',
+                  border: '1px dashed #d1d5db',
+                  borderRadius: '0.375rem'
+                }}>
+                  No hay productos agregados
+                </div>
+              )}
             </div>
-          </div>
-          <button
-            onClick={() => eliminarDeReposicion(producto.sku)}
-            style={{
-              backgroundColor: '#ef4444',
-              color: 'white',
-              padding: '0.25rem 0.5rem',
-              borderRadius: '0.25rem',
-              fontSize: '0.75rem'
-            }}
-          >
-            Eliminar
-          </button>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <div style={{
-      padding: '1rem',
-      textAlign: 'center',
-      color: '#6b7280',
-      border: '1px dashed #d1d5db',
-      borderRadius: '0.375rem'
-    }}>
-      No hay productos agregados
-    </div>
-  )}
-</div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button
@@ -1027,6 +1062,8 @@ export const Inventario: React.FC = () => {
                             onChange={(value) => handleConteoChange(producto.id, value?.toString() ?? "")}
                             cantidadPorBulto={producto.cantidadPorBulto}
                             idProducto={producto.id}
+                            productosReposicion={productosReposicion}  
+                            sku={producto.sku}  
                             onFocus={() => handleFocus({ target: document.createElement("input") } as React.FocusEvent<HTMLInputElement>)}
                           />
                         </td>

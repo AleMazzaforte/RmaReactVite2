@@ -90,6 +90,7 @@ router.put('/actualizarProductoInventario', inventarioController.putActualizarPr
 router.put('/guardarInventario', inventarioController.putGuardarInventario);
 router.put('/actualizarCantidadPorBulto', inventarioController.putactualizarCantidadPorBulto);
 //Inventario reposicion
-router.post('/guardarReposicion', inventarioController.postGuardarReposicion)
+router.post('/guardarReposicion', inventarioController.postGuardarReposicion);
+router.get('/obtenerReposiciones', inventarioController.getObtenerReposiciones);
 
 export default router;

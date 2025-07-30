@@ -282,61 +282,119 @@ export const inventarioController = {
   postGuardarReposicion: async (req, res) => {
     let connection;
     try {
-        const { productos } = req.body;
-        
-        if (!Array.isArray(productos)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Se esperaba un array de productos' 
-            });
-        }
+      const { productos } = req.body;
 
-        connection = await conn.getConnection();
-        await connection.beginTransaction();
-
-        // Para cada producto en la reposición
-        for (const producto of productos) {
-            // Primero verificamos si el SKU ya existe en la tabla
-            const [existing] = await connection.query(
-                `SELECT id FROM reposicion WHERE sku = ?`,
-                [producto.sku]
-            );
-
-            if (existing && existing.length > 0) {
-                // Si existe, actualizamos la cantidad
-                await connection.query(
-                    `UPDATE reposicion SET cantidad = ? WHERE sku = ?`,
-                    [producto.cantidad, producto.sku]
-                );
-            } else {
-                // Si no existe, insertamos nuevo registro
-                await connection.query(
-                    `INSERT INTO reposicion (sku, cantidad) VALUES (?, ?)`,
-                    [producto.sku, producto.cantidad]
-                );
-            }
-        }
-
-        await connection.commit();
-        
-        res.status(200).json({ 
-            success: true, 
-            message: `Reposición guardada correctamente`,
-            productosCount: productos.length
+      if (!Array.isArray(productos)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Se esperaba un array de productos'
         });
-        
+      }
+
+      connection = await conn.getConnection();
+      await connection.beginTransaction();
+
+      // Para cada producto en la reposición
+      for (const producto of productos) {
+        // Primero verificamos si el SKU ya existe en la tabla
+        const [existing] = await connection.query(
+          `SELECT id FROM reposicion WHERE sku = ?`,
+          [producto.sku]
+        );
+
+        if (existing && existing.length > 0) {
+          // Si existe, actualizamos la cantidad
+          await connection.query(
+            `UPDATE reposicion SET cantidad = ? WHERE sku = ?`,
+            [producto.cantidad, producto.sku]
+          );
+        } else {
+          // Si no existe, insertamos nuevo registro
+          await connection.query(
+            `INSERT INTO reposicion (sku, cantidad) VALUES (?, ?)`,
+            [producto.sku, producto.cantidad]
+          );
+        }
+      }
+
+      await connection.commit();
+
+      res.status(200).json({
+        success: true,
+        message: `Reposición guardada correctamente`,
+        productosCount: productos.length
+      });
+
     } catch (error) {
-        if (connection) await connection.rollback();
-        console.error('Error al guardar reposición:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error al guardar la reposición',
-            error: error.message 
-        });
+      if (connection) await connection.rollback();
+      console.error('Error al guardar reposición:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al guardar la reposición',
+        error: error.message
+      });
     } finally {
-        if (connection) connection.release();
+      if (connection) connection.release();
     }
-}
+  },
+
+  getObtenerReposiciones: async (req, res) => {
+    let connection;
+    try {
+      connection = await conn.getConnection();
+
+      // Obtener solo reposiciones con cantidad > 0
+      const [reposiciones] = await connection.query(`
+        SELECT sku, cantidad 
+        FROM reposicion 
+        WHERE cantidad > 0
+      `);
+
+      res.status(200).json(reposiciones);
+
+    } catch (error) {
+      console.error('Error al obtener reposiciones:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener las reposiciones',
+        error: error.message
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  },
+
+  // REPOSICIÓN - Limpiar reposiciones (opcional)
+  deleteLimpiarReposiciones: async (req, res) => {
+    let connection;
+    try {
+      connection = await conn.getConnection();
+      await connection.beginTransaction();
+
+      const [result] = await connection.query(`
+        UPDATE reposicion SET cantidad = 0
+      `);
+
+      await connection.commit();
+
+      res.status(200).json({
+        success: true,
+        message: `Todas las reposiciones fueron limpiadas`,
+        registrosAfectados: result.affectedRows
+      });
+
+    } catch (error) {
+      if (connection) await connection.rollback();
+      console.error('Error al limpiar reposiciones:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al limpiar las reposiciones',
+        error: error.message
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
 };
 
 export default inventarioController;

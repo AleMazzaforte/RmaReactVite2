@@ -62,6 +62,7 @@ const Urls = {
   },
   reposicion: {
     guardar: `${base}/guardarReposicion`,
+    obtener: `${base}/obtenerReposiciones`,
   }
 
 };
