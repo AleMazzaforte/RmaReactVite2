@@ -3,6 +3,7 @@ import { conn } from "../bd/bd.js";
 export const inventarioController = {
   getPrepararInventario: async (req, res) => {
     let connection;
+   
     try {
       connection = await conn.getConnection();
 
