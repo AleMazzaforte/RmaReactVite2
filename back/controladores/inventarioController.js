@@ -29,9 +29,9 @@ export const inventarioController = {
         cantSistemaBlow: item.cantSistemaBlow || 0, // Solo para cantidades
         conteoFisico: item.conteoFisico, // Puede ser NULL
         fechaConteo: item.fechaConteo,
-        cantidadPorBulto: item.cantidadPorBulto || 0,       
+        cantidadPorBulto: item.cantidadPorBulto || 0,
       }));
-      
+
       res.status(200).json(datosParaFront);
     } catch (error) {
       console.error("Error al obtener bloques de conteo:", error);
@@ -88,7 +88,6 @@ export const inventarioController = {
     }
   },
 
-  // En tu inventarioController.js
   putActualizarBloques: async (req, res) => {
     let connection;
     try {
@@ -122,73 +121,73 @@ export const inventarioController = {
   putActualizarProductoInventario: async (req, res) => {
     let connection;
     try {
-        const { productos, tipoArchivo, accion } = req.body;
-        
-        // Validaciones básicas
-        if (!['Femex', 'Blow'].includes(tipoArchivo)) {
-            return res.status(400).json({ error: "Tipo de archivo no válido" });
-        }
+      const { productos, tipoArchivo, accion } = req.body;
 
-        connection = await conn.getConnection();
-        await connection.beginTransaction();
+      // Validaciones básicas
+      if (!['Femex', 'Blow'].includes(tipoArchivo)) {
+        return res.status(400).json({ error: "Tipo de archivo no válido" });
+      }
 
-        let updatedCount = 0;
-        const fechaActual = new Date();
+      connection = await conn.getConnection();
+      await connection.beginTransaction();
 
-        if (accion === 'borrar') {
-            // Lógica para borrado masivo
-            const [result] = await connection.query(
-                `UPDATE productos SET 
+      let updatedCount = 0;
+      const fechaActual = new Date();
+
+      if (accion === 'borrar') {
+        // Lógica para borrado masivo
+        const [result] = await connection.query(
+          `UPDATE productos SET 
                     ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = 0,
                     fechaConteo = ?
                 `,
-                [fechaActual]
-            );
-            updatedCount = result.affectedRows;
-        } else {
-            // Lógica normal de actualización por SKU
-            if (!Array.isArray(productos)) {
-                return res.status(400).json({ error: "Se esperaba un array de productos" });
-            }
+          [fechaActual]
+        );
+        updatedCount = result.affectedRows;
+      } else {
+        // Lógica normal de actualización por SKU
+        if (!Array.isArray(productos)) {
+          return res.status(400).json({ error: "Se esperaba un array de productos" });
+        }
 
-            for (const producto of productos) {
-                const [result] = await connection.query(
-                    `UPDATE productos SET 
+        for (const producto of productos) {
+          const [result] = await connection.query(
+            `UPDATE productos SET 
                         ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = ?,
                         fechaConteo = ?
                     WHERE sku = ?`,
-                    [producto.cantidad, fechaActual, producto.sku]
-                );
-                if (result.affectedRows > 0) updatedCount++;
-            }
+            [producto.cantidad, fechaActual, producto.sku]
+          );
+          if (result.affectedRows > 0) updatedCount++;
         }
+      }
 
-        await connection.commit();
-        res.status(200).json({ 
-            success: true, 
-            updatedCount,
-            message: accion === 'borrar' 
-                ? `Todos los valores de ${tipoArchivo} fueron reseteados a 0 (${updatedCount} registros)`
-                : `${updatedCount} productos actualizados correctamente (${tipoArchivo})`
-        });
+      await connection.commit();
+      res.status(200).json({
+        success: true,
+        updatedCount,
+        message: accion === 'borrar'
+          ? `Todos los valores de ${tipoArchivo} fueron reseteados a 0 (${updatedCount} registros)`
+          : `${updatedCount} productos actualizados correctamente (${tipoArchivo})`
+      });
 
     } catch (error) {
-        if (connection) await connection.rollback();
-        console.error("Error al actualizar inventario:", error);
-        res.status(500).json({ 
-            error: "Error al actualizar el inventario",
-            details: error.message 
-        });
+      if (connection) await connection.rollback();
+      console.error("Error al actualizar inventario:", error);
+      res.status(500).json({
+        error: "Error al actualizar el inventario",
+        details: error.message
+      });
     } finally {
-        if (connection) connection.release();
+      if (connection) connection.release();
     }
-},
+  },
 
-putGuardarInventario: async (req, res) => {
+  putGuardarInventario: async (req, res) => {
     let connection;
     try {
       const productosActualizados = req.body;
-      
+
       if (!Array.isArray(productosActualizados)) {
         return res.status(400).json({ error: "Se esperaba un array de productos" });
       }
@@ -216,7 +215,7 @@ putGuardarInventario: async (req, res) => {
       );
 
       await connection.commit();
-      
+
       res.status(200).json({
         success: true,
         updatedCount: result.affectedRows,
@@ -236,47 +235,107 @@ putGuardarInventario: async (req, res) => {
   },
 
   putactualizarCantidadPorBulto: async (req, res) => {
-  let connection;
-  try {
-    const { idProducto, nuevaCantidad } = req.body;
-    
-    if (!idProducto || nuevaCantidad === undefined || nuevaCantidad < 0) {
-      return res.status(400).json({ 
-        error: "Datos inválidos. Se requiere idProducto y nuevaCantidad válida" 
-      });
-    }
+    let connection;
+    try {
+      const { idProducto, nuevaCantidad } = req.body;
 
-    connection = await conn.getConnection();
-    await connection.beginTransaction();
+      if (!idProducto || nuevaCantidad === undefined || nuevaCantidad < 0) {
+        return res.status(400).json({
+          error: "Datos inválidos. Se requiere idProducto y nuevaCantidad válida"
+        });
+      }
 
-    const [result] = await connection.query(
-      `UPDATE productos 
+      connection = await conn.getConnection();
+      await connection.beginTransaction();
+
+      const [result] = await connection.query(
+        `UPDATE productos 
        SET cantidadPorBulto = ?
        WHERE id = ?`,
-      [nuevaCantidad, idProducto]
-    );
+        [nuevaCantidad, idProducto]
+      );
 
-    if (result.affectedRows === 0) {
-      await connection.rollback();
-      return res.status(404).json({ error: "Producto no encontrado" });
+      if (result.affectedRows === 0) {
+        await connection.rollback();
+        return res.status(404).json({ error: "Producto no encontrado" });
+      }
+
+      await connection.commit();
+      res.status(200).json({
+        success: true,
+        message: "Cantidad por bulto actualizada correctamente"
+      });
+
+    } catch (error) {
+      if (connection) await connection.rollback();
+      console.error("Error al actualizar cantidad por bulto:", error);
+      res.status(500).json({
+        error: "Error al actualizar cantidad por bulto",
+        details: error.message
+      });
+    } finally {
+      if (connection) connection.release();
     }
+  },
 
-    await connection.commit();
-    res.status(200).json({ 
-      success: true,
-      message: "Cantidad por bulto actualizada correctamente"
-    });
+  //REPOSICION!!!!+++++++++++++++++++++++++++++++++++++
+  postGuardarReposicion: async (req, res) => {
+    let connection;
+    try {
+        const { productos } = req.body;
+        
+        if (!Array.isArray(productos)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Se esperaba un array de productos' 
+            });
+        }
 
-  } catch (error) {
-    if (connection) await connection.rollback();
-    console.error("Error al actualizar cantidad por bulto:", error);
-    res.status(500).json({ 
-      error: "Error al actualizar cantidad por bulto",
-      details: error.message 
-    });
-  } finally {
-    if (connection) connection.release();
-  }
+        connection = await conn.getConnection();
+        await connection.beginTransaction();
+
+        // Para cada producto en la reposición
+        for (const producto of productos) {
+            // Primero verificamos si el SKU ya existe en la tabla
+            const [existing] = await connection.query(
+                `SELECT id FROM reposicion WHERE sku = ?`,
+                [producto.sku]
+            );
+
+            if (existing && existing.length > 0) {
+                // Si existe, actualizamos la cantidad
+                await connection.query(
+                    `UPDATE reposicion SET cantidad = ? WHERE sku = ?`,
+                    [producto.cantidad, producto.sku]
+                );
+            } else {
+                // Si no existe, insertamos nuevo registro
+                await connection.query(
+                    `INSERT INTO reposicion (sku, cantidad) VALUES (?, ?)`,
+                    [producto.sku, producto.cantidad]
+                );
+            }
+        }
+
+        await connection.commit();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: `Reposición guardada correctamente`,
+            productosCount: productos.length
+        });
+        
+    } catch (error) {
+        if (connection) await connection.rollback();
+        console.error('Error al guardar reposición:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error al guardar la reposición',
+            error: error.message 
+        });
+    } finally {
+        if (connection) connection.release();
+    }
 }
 };
 

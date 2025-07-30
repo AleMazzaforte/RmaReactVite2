@@ -60,6 +60,9 @@ const Urls = {
   estadisticas: {
     estadisticas: `${base}/api/Estadisticas/rma`
   },
+  reposicion: {
+    guardar: `${base}/guardarReposicion`,
+  }
 
 };
 
