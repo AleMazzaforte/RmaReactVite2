@@ -83,16 +83,18 @@ useEffect(() => {
 };
 
   const handleButtonClick = (value: string) => {
-    const updateValue = (current: string) => current === "0" ? value : current + value;
-    
-    if (activeInput === 'display') {
-      setDisplay(updateValue);
-    } else if (activeInput === 'bultos') {
-      setBultos(updateValue);
-    } else {
-      setUnidadesPorBulto(updateValue);
-    }
-  };
+  const updateValue = (current: string) => current === "0" ? value : current + value;
+
+  if (activeInput === 'display') {
+    setDisplay(updateValue(display));
+  } else if (activeInput === 'bultos') {
+    setBultos(updateValue(bultos));
+  } else {
+    const nuevoValor = updateValue(unidadesPorBulto);
+    handleUnidadesPorBultoChange(nuevoValor); // ✅ Esto guarda correctamente
+  }
+};
+
 
   const calculateResult = () => {
   try {
