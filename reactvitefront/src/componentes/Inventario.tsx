@@ -1147,7 +1147,7 @@ export const Inventario: React.FC = () => {
         {/* Tabla de productos */}
         {!modoReposicion && (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ minWidth: "100%", border: "1px solid #d1d5db" }}>
+            <table style={{ fontSize: "2rem", border: "1px solid #d1d5db" }}>
               <thead>
                 <tr style={{ backgroundColor: "#f3f4f6" }}>
                   <th
@@ -1164,6 +1164,7 @@ export const Inventario: React.FC = () => {
                       padding: "0.5rem",
                       border: "1px solid #d1d5db",
                       textAlign: "left",
+                      width: "0.5rem",
                     }}
                   >
                     Bloque
@@ -1173,6 +1174,7 @@ export const Inventario: React.FC = () => {
                       padding: "0.5rem",
                       border: "1px solid #d1d5db",
                       textAlign: "right",
+                      width: "6rem",
                     }}
                   >
                     Stock Sistema
@@ -1182,6 +1184,7 @@ export const Inventario: React.FC = () => {
                       padding: "0.5rem",
                       border: "1px solid #d1d5db",
                       textAlign: "right",
+                      width: "6rem",
                     }}
                   >
                     Conteo
@@ -1191,6 +1194,7 @@ export const Inventario: React.FC = () => {
                       padding: "0.5rem",
                       border: "1px solid #d1d5db",
                       textAlign: "right",
+                      width: "6rem",
                     }}
                   >
                     Diferencia

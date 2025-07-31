@@ -169,7 +169,8 @@ useEffect(() => {
     style={{ 
       backgroundColor: 'rgb(138, 139, 141)',
       padding: '20px',
-      transform: 'scale(1.2)'
+      transform: 'scale(1.2)',
+      borderRadius: '1.3rem',
     }}
   >
     {/* Display principal */}
@@ -196,9 +197,11 @@ useEffect(() => {
 
     {/* Nuevo checkbox y div */}
       
-      
+   <div style={{
+    height: '10.5rem',
+   }}>  
 {/* Checkbox y div de reposición - solo se muestra si hay reposición para este SKU */}
-      {cantidadReposicion > 0 && (
+  
   <div style={{
     display: 'flex',
     alignItems: 'center',
@@ -228,24 +231,20 @@ useEffect(() => {
         border: '1px solid rgb(138, 139, 141)',
         textAlign: 'center',
         fontFamily: 'monospace',
-        fontSize: '0.875rem'
+        fontSize: '1.1rem'
       }}
     >
       Reposición: {cantidadReposicion}
-    </div>
-  </div>
-)}
+    </div>    
+  </div>  
+   
 
-
-
-
-    
     {/* Inputs de bultos y unidades */}
     <div style={{
       marginBottom: '1rem',
       display: 'flex',
       justifyContent: 'space-between',
-      gap: '0.5rem'
+      border: '1px solid rgb(138, 139, 141)',
     }}>
       {camposHabilitados && (
         <div>
@@ -302,7 +301,18 @@ useEffect(() => {
   </div>
   </div>
 )}
-      
+<div id='sku' style={{fontSize: '3rem',
+    color: 'black',
+    fontWeight: 'bold',
+    textAlign: 'right',  
+    margin: '0.5rem 0',  
+    padding: '0.5rem',   
+    marginLeft: 'auto',  
+    width: 'fit-content' 
+    }}>
+   {sku}
+</div>
+      </div>
     </div>
 
     {/* Teclado de la calculadora */}
