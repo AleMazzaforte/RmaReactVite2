@@ -168,17 +168,21 @@ useEffect(() => {
   <div 
     style={{ 
       backgroundColor: 'rgb(138, 139, 141)',
-      padding: '20px',
+      padding: '25px',  // Aumenté el padding general
       transform: 'scale(1.2)',
       borderRadius: '1.3rem',
+      minHeight: '500px',  // Altura mínima garantizada
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between'
     }}
   >
     {/* Display principal */}
     <div 
       style={{
         backgroundColor: '#f3f4f6',
-        padding: '0.25rem 0.5rem 0.25rem 0.25rem',
-        marginBottom: '0.5rem',
+        padding: ' 0.5rem ',
+        marginBottom: '0.75rem',
         marginTop: '0.5rem',
         textAlign: 'right',
         fontSize: '1.875rem',
@@ -198,7 +202,7 @@ useEffect(() => {
     {/* Nuevo checkbox y div */}
       
    <div style={{
-    height: '10.5rem',
+    height: 'auto',
    }}>  
 {/* Checkbox y div de reposición - solo se muestra si hay reposición para este SKU */}
   
@@ -245,6 +249,8 @@ useEffect(() => {
       display: 'flex',
       justifyContent: 'space-between',
       border: '1px solid rgb(138, 139, 141)',
+      alignItems: 'flex-start',
+      minHeight: '140px'
     }}>
       {camposHabilitados && (
         <div>
@@ -258,6 +264,7 @@ useEffect(() => {
     }}>Bultos</label>
     <div 
       style={{
+        fontSize: '1.5rem',
         width: '100%',
         padding: '0.25rem 0.5rem 0.25rem 0.25rem',
         backgroundColor: '#f3f4f6',
@@ -283,7 +290,7 @@ useEffect(() => {
       color: '#374151'
     }}>Unid. x Bulto</label>
     <div 
-      style={{
+      style={{fontSize: '1.5rem',
         width: '100%',
         padding: '0.25rem 0.5rem 0.25rem 0.25rem',
         backgroundColor: '#f3f4f6',
