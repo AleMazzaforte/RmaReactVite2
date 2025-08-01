@@ -7,7 +7,7 @@ interface InputWithLongTouchCalculatorProps {
   onChange: (value: number | null) => void;
   onFocus?: () => void;
   cantidadPorBulto: number;
-  idProducto: number; 
+  idProducto: number;
   productosReposicion?: productosReposicion[];
   sku: string;
 }
@@ -21,8 +21,8 @@ if (window.location.hostname === 'localhost') {
   urlActualizarCantidadPorBulto = 'http://localhost:8080/actualizarCantidadPorBulto';
 }
 
-export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = ({ 
-  value, 
+export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = ({
+  value,
   onChange,
   onFocus,
   cantidadPorBulto,
@@ -95,7 +95,7 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
       }
 
       return await response.json();
-       Swal.fire({
+      Swal.fire({
         title: 'Éxito',
         text: 'Cantidad por bulto actualizada correctamente',
         icon: 'success',
@@ -135,24 +135,32 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
       />
 
       {showCalculator && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div 
+        <div className="fixed inset-0 flex items-center justify-center z-50"
+          style={{
+
+            marginTop: '-10rem',
+
+          }}>
+          <div
             ref={calculatorRef}
             onClick={(e) => e.stopPropagation()}
             className="bg-blue-400 p-4 rounded-lg"
-            style={{width:'420px',
+            style={{
+              width: '420px',
               height: '550px',
-              position: 'fixed'
+              position: 'fixed',
+              paddingTop: '0.1rem',
+
             }}
           >
-            <Calculator 
+            <Calculator
               onClose={handleCalculatorClose}
               initialValue={value?.toString() || ""}
               cantidadPorBulto={cantidadPorBulto}
               idProducto={Number(idProducto)}
               onUpdateCantidadPorBulto={handleUpdateCantidadPorBulto}
               productosReposicion={productosReposicion}
-              sku={sku}             
+              sku={sku}
             />
           </div>
         </div>

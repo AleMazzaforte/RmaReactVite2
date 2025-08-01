@@ -713,6 +713,7 @@ export const Inventario: React.FC = () => {
                     id: c.id,
                     conteoFisico: c.conteoFisico,
                     sku: productos.find((p) => p.id === c.id)?.sku || "",
+                    loading
                   }))}
                   onGuardar={handleGuardar}
                 >
@@ -1173,17 +1174,17 @@ export const Inventario: React.FC = () => {
                     style={{
                       padding: "0.5rem",
                       border: "1px solid #d1d5db",
-                      textAlign: "right",
+                      textAlign: "center",
                       width: "6rem",
                     }}
                   >
-                    Stock Sistema
+                    Stock
                   </th>
                   <th
                     style={{
                       padding: "0.5rem",
                       border: "1px solid #d1d5db",
-                      textAlign: "right",
+                      textAlign: "center",
                       width: "6rem",
                     }}
                   >
@@ -1193,11 +1194,11 @@ export const Inventario: React.FC = () => {
                     style={{
                       padding: "0.5rem",
                       border: "1px solid #d1d5db",
-                      textAlign: "right",
+                      textAlign: "center",
                       width: "6rem",
                     }}
                   >
-                    Diferencia
+                    Dif
                   </th>
                 </tr>
               </thead>
@@ -1212,6 +1213,8 @@ export const Inventario: React.FC = () => {
                           style={{
                             padding: "0.5rem",
                             border: "1px solid #d1d5db",
+                            backgroundColor: "#f3f4f6",
+                            borderBottom: "1px solid #d1d5db"
                           }}
                           id={`sku-${producto.sku}`}
                         >
@@ -1221,6 +1224,8 @@ export const Inventario: React.FC = () => {
                           style={{
                             padding: "0.5rem",
                             border: "1px solid #d1d5db",
+                            
+                            textAlign: "center"
                           }}
                         >
                           {producto.idBloque || "No asignado"}
@@ -1229,7 +1234,7 @@ export const Inventario: React.FC = () => {
                           style={{
                             padding: "0.5rem",
                             border: "1px solid #d1d5db",
-                            textAlign: "right",
+                            
                           }}
                         >
                           {producto.cantSistemaFemex + producto.cantSistemaBlow}
@@ -1238,6 +1243,7 @@ export const Inventario: React.FC = () => {
                           style={{
                             padding: "0.5rem",
                             border: "1px solid #d1d5db",
+                            textAlign: "center"
                           }}
                         >
                           <InputWithCalculator
@@ -1263,7 +1269,7 @@ export const Inventario: React.FC = () => {
                           style={{
                             padding: "0.5rem",
                             border: "1px solid #d1d5db",
-                            textAlign: "right",
+                            textAlign: "center",
                             color:
                               diferencia > 0
                                 ? "#1d4ed8"

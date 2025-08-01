@@ -31,7 +31,6 @@ export const Calculator: React.FC<CalculatorProps> = ({
   const [activeInput, setActiveInput] = useState<'display' | 'bultos' | 'unidades'>('display');
  
   const [camposHabilitados, setCamposHabilitados] = useState(true);
-  //const [usarReposicion, setUsarReposicion] = useState(false);
 const cantidadReposicion = useMemo(() => {
   const repo = productosReposicion.find(p => p.sku === sku);
   return repo ? repo.cantidad : 0;
