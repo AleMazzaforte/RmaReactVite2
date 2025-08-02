@@ -11,13 +11,14 @@ interface GuardarInventarioProps {
     id: number;
     conteoFisico: number | null;
     sku: string;
-    
+    loading?: boolean;
   }[];
-  onGuardar: (productosGuardados: ProductoConteo[]) => void;
+  onGuardar: (productosGuardados: ProductoConteo[]) => Promise<void>;
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
   style?: React.CSSProperties;
+  loading?: boolean;
 }
 
 export const GuardarInventario: React.FC<GuardarInventarioProps> = ({ 
@@ -25,15 +26,24 @@ export const GuardarInventario: React.FC<GuardarInventarioProps> = ({
   onGuardar,
   children,
   disabled = false,
-  style= {}
+  style= {},
+  loading = false,
 }) => {
-  const handleClick = () => {
+  const [isLocalLoading, setIsLocalLoading] = React.useState(false);
+  const handleClick = async () => {
     const productosValidos = productos.filter(p => p.conteoFisico !== null);
-    if (productosValidos.length === 0) {
+    if (productosValidos.length === 0 || isLocalLoading) {
       alert("No hay conteos válidos para guardar");
       return;
     }
-    onGuardar(productosValidos);
+    setIsLocalLoading(true);
+   try {
+      await onGuardar(productosValidos);
+    } catch (error) {
+      console.error("Error al guardar:", error);
+    } finally {
+      setIsLocalLoading(false);
+    }
   };
 
   const baseStyle: React.CSSProperties = {

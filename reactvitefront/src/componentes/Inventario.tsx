@@ -8,6 +8,7 @@ import { InputWithCalculator } from "./utilidades/InputWithCalculator";
 import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader";
 import Urls from "./utilidades/Urls";
+import "../estilos/Inventario.css";
 
 
 interface Producto {
@@ -30,6 +31,11 @@ interface ProductoConteo {
 interface ProductoReposicion {
   sku: string;
   cantidad: number;
+}
+
+interface FilaExcel {
+  SKU: string;
+  __rowNum__?: number; // Opcional, si existe
 }
 
 let urlPrepararInventario = Urls.inventario.preparar;
@@ -70,7 +76,47 @@ export const Inventario: React.FC = () => {
     setCoincidenciasReposicionEncontradas,
   ] = useState<Producto[]>([]);
 
-  // En el componente Inventario, añade esto cerca de las otras URLs
+  const [skusValidos, setSkusValidos] = useState<Set<string>>(new Set());
+
+// Al iniciar el componente o cuando necesites actualizar
+useEffect(() => {
+  const cargarSkusValidos = async () => {
+    try {
+      const response = await fetch(`${Urls.productos.listar}`);
+      if (!response.ok) throw new Error("Error al obtener SKUs válidos");
+      
+      const data: Producto[] = await response.json();
+      const skus = data.map(p => p.sku).filter(Boolean); 
+      setSkusValidos(new Set(skus));     
+    } catch (error) {
+      console.error("Error cargando SKUs válidos:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudieron cargar los SKUs válidos",
+      });
+    }
+  };
+
+  cargarSkusValidos();
+}, []);
+
+// Función para validar SKUs del Excel
+const validarSkus = (skus: string[]): { valido: boolean; skusInvalidos: string[] } => {
+  const skusInvalidos = skus.filter(sku => !skusValidos.has(sku));
+ 
+  if (skusInvalidos.length > 0) {
+      Swal.fire({
+        icon: "error",
+        title: "SKUs inválidos",
+        html: `SKUs no encontrados: <br> ${skusInvalidos.slice(0, 5).join(", ")}${skusInvalidos.length > 5 ? "..." : ""}`,
+      });
+    }
+  return {
+    valido: skusInvalidos.length === 0,
+    skusInvalidos
+  };
+};
 
   // useEffect de carga de reposiciones
   useEffect(() => {
@@ -469,56 +515,76 @@ export const Inventario: React.FC = () => {
     await handleFileUpload(file, empresa);
   };
 
-  const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
-    try {
-      const data = await readExcelFile(file);
-      const skuCantidadMap = extractSkuCantidad(data);
-      const productosParaGuardar = Array.from(skuCantidadMap.entries()).map(
-        ([sku, cantidad]) => ({ sku, cantidad })
-      );
+  // handleFileUpload con validación y tipado completo
+const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
+  setLoading(true);
+  
+  try {
+    const datosExcelParaCargar = await readExcelFile(file);
+    const skuCantidadMap = extractSkuCantidad(datosExcelParaCargar);
+    const productosParaGuardar: ProductoReposicion[] = Array.from(skuCantidadMap.entries()).map(
+      ([sku, cantidad]) => ({ sku, cantidad })
+    );
+    
+    
+    
+    const skusArchivo = productosParaGuardar.map(p => p.sku);
+    const validacion = validarSkus(skusArchivo);
 
-      const response = await fetch(urlActualizarInventario, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productos: productosParaGuardar,
-          tipoArchivo: empresa,
-        }),
-      });
 
-      if (!response.ok) throw new Error("Error en la respuesta del servidor");
 
-      const result = await response.json();
-      const productosActualizados = productos.map((producto) => {
-        if (skuCantidadMap.has(producto.sku)) {
-          const cantidad = skuCantidadMap.get(producto.sku)!;
-          return {
-            ...producto,
-            [empresa === "Femex" ? "cantSistemaFemex" : "cantSistemaBlow"]:
-              cantidad,
-            fechaConteo: new Date().toISOString(),
-          };
-        }
-        return producto;
-      });
-
-      setProductos(productosActualizados);
+    if (!validacion.valido) {
       Swal.fire({
-        icon: "success",
-        title: "Archivo procesado",
-        text: `Archivo de ${empresa} procesado correctamente. ${result.updatedCount} productos actualizados.`,
+        icon: 'error',
+        title: 'SKUs no válidos',
+        html: `Los siguientes SKUs no existen: <br><strong>${validacion.skusInvalidos.join(', ')}</strong>`,
       });
-    } catch (error) {
-      console.error(`Error al procesar archivo de ${empresa}:`, error);
-      Swal.fire({
-        icon: "error",
-        title: "Error al guardar",
-        text: `Error al procesar archivo de ${empresa}`,
-      });
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    // Si pasa validación, proceder con el guardado
+    const response = await fetch(urlActualizarInventario, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productos: productosParaGuardar,
+        tipoArchivo: empresa,
+      }),
+    });
+
+    if (!response.ok) throw new Error("Error en la respuesta del servidor");
+
+    const result = await response.json();
+    
+    // Actualizar estado (ajusta el tipo según tu interfaz ProductoInventario)
+    setProductos((prev: Producto[]) => prev.map((producto) => {
+      if (skuCantidadMap.has(producto.sku)) {
+        const cantidad = skuCantidadMap.get(producto.sku)!;
+        return {
+          ...producto,
+          [empresa === "Femex" ? "cantSistemaFemex" : "cantSistemaBlow"]: cantidad,
+          fechaConteo: new Date().toISOString(),
+        };
+      }
+      return producto;
+    }));
+
+    Swal.fire({
+      icon: "success",
+      title: "Archivo procesado",
+      text: `Archivo de ${empresa} procesado correctamente. ${result.updatedCount} productos actualizados.`,
+    });
+  } catch (error) {
+    console.error(`Error al procesar archivo de ${empresa}:`, error);
+    Swal.fire({
+      icon: "error",
+      title: "Error al guardar",
+      text: `Error al procesar archivo de ${empresa}`,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleBorrarDatos = async (tipoArchivo: "Femex" | "Blow") => {
     const { isConfirmed } = await Swal.fire({
@@ -589,9 +655,9 @@ export const Inventario: React.FC = () => {
     const map = new Map<string, number>();
     data.forEach((row) => {
       const sku =
-        row["SKU"] || row["sku"] || row["Código"] || row["Código depósito"];
-      const cantidad = row["Cantidad"] || row["cantidad"];
-      if (sku && cantidad !== undefined) {
+        row["SKU"]  ;
+      const cantidad = row["Cantidad"];
+      if (sku) {
         map.set(sku.toString(), Number(cantidad));
       }
     });
@@ -613,64 +679,31 @@ export const Inventario: React.FC = () => {
   return (
     <>
       {loading && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 50,
-          }}
+        <div className="loader-container"          
         >
           <Loader />
         </div>
       )}
 
-      <div
-        style={{
-          padding: "1rem",
-          maxWidth: "72rem",
-          marginLeft: "auto",
-          marginRight: "auto",
-          backgroundColor: "white",
-          borderRadius: "0.5rem",
-          boxShadow:
-            "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-        }}
+      <div className="inventario-container"
       >
         <div>
-          <h1
-            style={{
-              display: "inline",
-              fontSize: "1.5rem",
-              fontWeight: "bold",
-              marginBottom: "1.5rem",
-              color: "#1f2937",
-            }}
+          <h1 
+            className="inventario-title"
             id="titulo-inventario"
           >
             Conteo Físico de Inventario
           </h1>
           <button
+            className="reposicion-button"
             onClick={activarModoReposicion}
-            style={{
-              display: "inline",
-              float: "right",
-              backgroundColor: "#6e64f7ff",
-              color: "white",
-              padding: "0.5rem 0.75rem",
-              borderRadius: "0.375rem",
-              marginLeft: "0.5rem",
-              transition: "background-color 0.2s",
-            }}
           >
             Carga de reposición
           </button>
         </div>
 
         {/* Filtros */}
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
+        <div className="filtros-container">
           <FiltrosInventario
             filtro={filtro}
             setFiltro={setFiltro}
@@ -685,29 +718,16 @@ export const Inventario: React.FC = () => {
 
         {/* Acciones */}
         {!modoReposicion && (
-          <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
+          <div className="acciones-container">
             <div
-              style={{
-                backgroundColor: "#f9fafb",
-                padding: "0.75rem",
-                borderRadius: "0.5rem",
-                border: "1px solid #e5e7eb",
-                flex: 1,
-                minHeight: "120px",
-              }}
+              className="acciones-panel"
             >
               <label
-                style={{
-                  display: "block",
-                  fontSize: "0.875rem",
-                  fontWeight: "500",
-                  color: "#374151",
-                  marginBottom: "0.25rem",
-                }}
+               className="acciones-label"
               >
                 Acciones
               </label>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div className="acciones-buttons">
                 <GuardarInventario
                   productos={cambiosPendientes.map((c) => ({
                     id: c.id,
@@ -737,17 +757,7 @@ export const Inventario: React.FC = () => {
                 </GuardarInventario>
                 <button
                   onClick={() => exportarAExcel(productosFiltrados)}
-                  style={{
-                    backgroundColor: "#2563eb",
-                    color: "white",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.375rem",
-                    transition: "background-color 0.2s",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flex: 1,
-                  }}
+                  className="excel-button"
                   title="Exportar a Excel"
                 >
                   <svg

@@ -122,67 +122,78 @@ export const inventarioController = {
   putActualizarProductoInventario: async (req, res) => {
     let connection;
     try {
-      const { productos, tipoArchivo, accion } = req.body;
+        const { productos, tipoArchivo, accion } = req.body;
 
-      // Validaciones básicas
-      if (!['Femex', 'Blow'].includes(tipoArchivo)) {
-        return res.status(400).json({ error: "Tipo de archivo no válido" });
-      }
-
-      connection = await conn.getConnection();
-      await connection.beginTransaction();
-
-      let updatedCount = 0;
-      const fechaActual = new Date();
-
-      if (accion === 'borrar') {
-        // Lógica para borrado masivo
-        const [result] = await connection.query(
-          `UPDATE productos SET 
-                    ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = 0,
-                    fechaConteo = ?
-                `,
-          [fechaActual]
-        );
-        updatedCount = result.affectedRows;
-      } else {
-        // Lógica normal de actualización por SKU
-        if (!Array.isArray(productos)) {
-          return res.status(400).json({ error: "Se esperaba un array de productos" });
+        // Validaciones básicas
+        if (!['Femex', 'Blow'].includes(tipoArchivo)) {
+            return res.status(400).json({ error: "Tipo de archivo no válido" });
         }
 
-        for (const producto of productos) {
-          const [result] = await connection.query(
-            `UPDATE productos SET 
+        connection = await conn.getConnection();
+        let updatedCount = 0;
+        const fechaActual = new Date();
+
+        if (accion === 'borrar') {
+            // Lógica para borrado masivo (igual que antes)
+            await connection.beginTransaction();
+            const [result] = await connection.query(
+                `UPDATE productos SET 
+                ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = 0,
+                fechaConteo = ?`,
+                [fechaActual]
+            );
+            updatedCount = result.affectedRows;
+            await connection.commit();
+        } else {
+            // Validación de entrada
+            if (!Array.isArray(productos)) {
+                return res.status(400).json({ error: "Se esperaba un array de productos" });
+            }
+
+            // Procesar en lotes pero manteniendo el conteo exacto
+            const batchSize = 100; // Tamaño del lote ajustable
+            for (let i = 0; i < productos.length; i += batchSize) {
+                const batch = productos.slice(i, i + batchSize);
+                await connection.beginTransaction();
+
+                // Usar Promise.all para procesar en paralelo (si tu DB lo permite)
+                const updatePromises = batch.map(producto => 
+                    connection.query(
+                        `UPDATE productos SET 
                         ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = ?,
                         fechaConteo = ?
-                    WHERE sku = ?`,
-            [producto.cantidad, fechaActual, producto.sku]
-          );
-          if (result.affectedRows > 0) updatedCount++;
-        }
-      }
+                        WHERE sku = ?`,
+                        [producto.cantidad, fechaActual, producto.sku]
+                    ).then(([result]) => result.affectedRows)
+                );
 
-      await connection.commit();
-      res.status(200).json({
-        success: true,
-        updatedCount,
-        message: accion === 'borrar'
-          ? `Todos los valores de ${tipoArchivo} fueron reseteados a 0 (${updatedCount} registros)`
-          : `${updatedCount} productos actualizados correctamente (${tipoArchivo})`
-      });
+                const batchResults = await Promise.all(updatePromises);
+                updatedCount += batchResults.reduce((sum, affected) => sum + affected, 0);
+                
+                await connection.commit();
+            }
+        }
+
+        // Respuesta igual que antes para mantener compatibilidad con el frontend
+        res.status(200).json({
+            success: true,
+            updatedCount,
+            message: accion === 'borrar'
+                ? `Todos los valores de ${tipoArchivo} fueron reseteados a 0 (${updatedCount} registros)`
+                : `${updatedCount} productos actualizados correctamente (${tipoArchivo})`
+        });
 
     } catch (error) {
-      if (connection) await connection.rollback();
-      console.error("Error al actualizar inventario:", error);
-      res.status(500).json({
-        error: "Error al actualizar el inventario",
-        details: error.message
-      });
+        if (connection) await connection.rollback();
+        console.error("Error al actualizar inventario:", error);
+        res.status(500).json({
+            error: "Error al actualizar el inventario",
+            details: error.message
+        });
     } finally {
-      if (connection) connection.release();
+        if (connection) connection.release();
     }
-  },
+},
 
   putGuardarInventario: async (req, res) => {
     let connection;
