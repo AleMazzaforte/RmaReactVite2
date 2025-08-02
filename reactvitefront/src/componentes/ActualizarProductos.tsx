@@ -4,23 +4,36 @@ import Loader from "./utilidades/Loader"; // Importar el componente Loader
 import { ListarMarcas } from "./utilidades/ListarMarcas"; // Importar el componente ListarMarcas
 import { ListarProductos } from "./utilidades/ListarProductos"; // Importar el componente ListarProductos
 import { Contenedor } from "./utilidades/Contenedor";
+import InputCheckbox from "./utilidades/InputCheckbox"; // Importar el componente InputCheckbox
 import Urls from "./utilidades/Urls";
+
+interface Marca {
+  id: number;
+  nombre: string;
+}
+
+interface Producto {
+  id: number;
+  sku: string;
+  descripcion: string;
+  rubro: string;
+  marca: string | Marca;
+  isActive: boolean | number; // Cambiar a booleano o número según tu base de datos
+}
 
 export const ActualizarProductos: React.FC = () => {
   const [loading, setLoading] = useState(false); // Estado para el loader
   const formRef = useRef<HTMLFormElement>(null);
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<any>(null); // Estado para la marca seleccionada
   const [productoSeleccionado, setProductoSeleccionado] = useState<any>(null); // Estado para el producto seleccionado
-
-
+  const [isActive, setIsActive] = useState(false);
 
   const urlProductos = Urls.productos.listar;
   const urlListarMarcas = Urls.marcas.listar;
   const urlActualizarProducto = Urls.productos.actualizar;
   const urlEliminarProducto = Urls.productos.eliminar; // Lo vas a completar con el SKU
 
-
-  const handleProductoSeleccionado = (producto: any) => {
+  const handleProductoSeleccionado = (producto: Producto) => {
     if (formRef.current) {
       const skuInput = formRef.current.querySelector(
         'input[name="sku"]'
@@ -35,8 +48,17 @@ export const ActualizarProductos: React.FC = () => {
       if (skuInput) skuInput.value = producto.sku;
       if (descripcionInput) descripcionInput.value = producto.descripcion;
       if (rubroInput) rubroInput.value = producto.rubro;
+      const nuevoEstadoActivo = Boolean(Number(producto.isActive));
+    setIsActive(nuevoEstadoActivo);
 
-      setMarcaSeleccionada(producto.marca);
+    console.log('Estado isActive actualizado:', nuevoEstadoActivo);
+      
+
+      if (typeof producto.marca === "string") {
+        setMarcaSeleccionada({ id: 0, nombre: producto.marca });
+      } else {
+        setMarcaSeleccionada(producto.marca);
+      }
       setProductoSeleccionado(producto); // Almacenar el producto completo en el estado
     }
   };
@@ -54,7 +76,9 @@ export const ActualizarProductos: React.FC = () => {
           (formData.get("descripcion") as string) ||
           productoSeleccionado.descripcion,
         rubro: (formData.get("rubro") as string) || productoSeleccionado.rubro,
+        isActive: isActive,
       };
+console.log('Datos a enviar:', data);
 
       try {
         setLoading(true);
@@ -255,11 +279,24 @@ export const ActualizarProductos: React.FC = () => {
             />
           </div>
 
+          <div>
+            <label
+              htmlFor="checkbox"
+              className="block text-sm font-medium text-gray-700 mb-3"
+            >
+              Producto Activo:
+            </label>
+            <InputCheckbox
+  checked={isActive}
+  onChange={(checked) => setIsActive(checked)}
+/>
+          </div>
+
           <div className="flex flex-col space-y-4">
             <button
               type="submit"
               id="botonActualizar"
-              className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
+              className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring "
             >
               {loading ? "Cargando..." : "Actualizar producto"}
             </button>
@@ -273,8 +310,9 @@ export const ActualizarProductos: React.FC = () => {
             </button>
           </div>
         </form>
-        {loading && <Loader />}
+        
       </Contenedor>
+      {loading ? <Loader /> : ""}
     </div>
   );
 };

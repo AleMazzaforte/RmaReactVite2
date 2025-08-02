@@ -18,7 +18,8 @@ export const inventarioController = {
                     NULLIF(conteoFisico, 0) as conteoFisico, 
                     DATE_FORMAT(fechaConteo, '%Y-%m-%d %H:%i:%s') as fechaConteo,
                     cantidadPorBulto                     
-                FROM productos`
+                FROM productos 
+                WHERE isActive = 1`
       );
 
       // Formatear los datos exactamente como los espera el frontend

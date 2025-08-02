@@ -9,6 +9,7 @@ import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader";
 import Urls from "./utilidades/Urls";
 import "../estilos/Inventario.css";
+import { b } from "vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P";
 
 
 interface Producto {
@@ -20,6 +21,7 @@ interface Producto {
   conteoFisico: number | null;
   fechaConteo: string | null;
   cantidadPorBulto: number;
+  isActive?: number | boolean; 
 }
 
 interface ProductoConteo {
@@ -88,6 +90,9 @@ useEffect(() => {
       const data: Producto[] = await response.json();
       const skus = data.map(p => p.sku).filter(Boolean); 
       setSkusValidos(new Set(skus));     
+      
+      
+      
     } catch (error) {
       console.error("Error cargando SKUs válidos:", error);
       Swal.fire({
@@ -663,6 +668,7 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
     });
     return map;
   };
+
 
   const productosFiltrados = productos
     .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))

@@ -19,6 +19,7 @@ interface InventarioLoaderResult {
   error: Error | null;
   setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  isActive?: boolean | Number;
 }
 
 export const GetInventarioStock = (urlPrepararInventario: string): InventarioLoaderResult => {

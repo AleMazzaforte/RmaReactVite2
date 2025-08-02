@@ -17,7 +17,7 @@ const Urls = {
   },
   productos: {
     cargar: `${base}/cargarProducto`,
-    listar: `${base}/listarproductos`,
+    listar: `${base}/listarproductos`,/////////////////////////////////////////
     listarMarcas: `${base}/listarMarcas`,
     actualizarCantidadPorBulto: `${base}/actualizarCantidadPorBulto`,
     getSku: `${base}/getSku`,
