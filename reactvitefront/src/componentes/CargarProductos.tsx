@@ -111,7 +111,6 @@ export const CargarProductos: React.FC = () => {
               name="sku"
               type="text"
               id="sku"
-              required
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
             />
           </div>
@@ -141,7 +140,6 @@ export const CargarProductos: React.FC = () => {
               type="text"
               id="descripcion"
               name="descripcion"
-              required
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
             />
           </div>
@@ -157,7 +155,6 @@ export const CargarProductos: React.FC = () => {
               type="text"
               id="rubro"
               name="rubro"
-              required
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
             />
           </div>

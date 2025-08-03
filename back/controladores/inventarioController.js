@@ -135,47 +135,70 @@ export const inventarioController = {
         const fechaActual = new Date();
 
         if (accion === 'borrar') {
-            // Lógica para borrado masivo (igual que antes)
+            // Borrado masivo: rápido y eficiente
             await connection.beginTransaction();
             const [result] = await connection.query(
                 `UPDATE productos SET 
                 ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = 0,
-                fechaConteo = ?`,
+                fechaConteo = ?
+                WHERE ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} IS NOT NULL`,
                 [fechaActual]
             );
             updatedCount = result.affectedRows;
             await connection.commit();
         } else {
-            // Validación de entrada
-            if (!Array.isArray(productos)) {
-                return res.status(400).json({ error: "Se esperaba un array de productos" });
+            if (!Array.isArray(productos) || productos.length === 0) {
+                return res.status(400).json({ error: "Se esperaba un array no vacío de productos" });
             }
 
-            // Procesar en lotes pero manteniendo el conteo exacto
-            const batchSize = 100; // Tamaño del lote ajustable
+            // Usar una sola columna dependiendo del tipo
+            const columnaCantidad = tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow';
+
+            const batchSize = 100; // Ajusta según rendimiento (100-500)
             for (let i = 0; i < productos.length; i += batchSize) {
                 const batch = productos.slice(i, i + batchSize);
+
+                // Construir condiciones y valores
+                const skus = batch.map(p => p.sku);
+                const cantidades = batch.reduce((acc, p) => {
+                    acc[p.sku] = p.cantidad;
+                    return acc;
+                }, {});
+
+                // Generar condiciones: WHERE sku IN (?, ?, ?)
+                const skuPlaceholders = skus.map(() => '?').join(',');
+
+                // Generar el CASE para asignar cantidades por SKU
+                const caseParts = skus.map(sku => `WHEN ? THEN ?`).join(' ');
+                const caseValues = skus.flatMap(sku => [sku, cantidades[sku]]);
+
+                // Valores para la consulta: [cantidad1, fecha, cantidad2, fecha, ...]
+                const updateValues = [];
+                for (const p of batch) {
+                    updateValues.push(p.cantidad, fechaActual);
+                }
+
                 await connection.beginTransaction();
 
-                // Usar Promise.all para procesar en paralelo (si tu DB lo permite)
-                const updatePromises = batch.map(producto => 
-                    connection.query(
-                        `UPDATE productos SET 
-                        ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = ?,
+                // Opción 1: UPDATE con CASE (más eficiente)
+                const [result] = await connection.query(
+                    `
+                    UPDATE productos 
+                    SET 
+                        ${columnaCantidad} = CASE sku 
+                            ${caseParts}
+                        END,
                         fechaConteo = ?
-                        WHERE sku = ?`,
-                        [producto.cantidad, fechaActual, producto.sku]
-                    ).then(([result]) => result.affectedRows)
+                    WHERE sku IN (${skuPlaceholders})
+                    `,
+                    [...caseValues, fechaActual, ...skus]
                 );
 
-                const batchResults = await Promise.all(updatePromises);
-                updatedCount += batchResults.reduce((sum, affected) => sum + affected, 0);
-                
+                updatedCount += result.affectedRows;
                 await connection.commit();
             }
         }
 
-        // Respuesta igual que antes para mantener compatibilidad con el frontend
         res.status(200).json({
             success: true,
             updatedCount,
@@ -185,7 +208,9 @@ export const inventarioController = {
         });
 
     } catch (error) {
-        if (connection) await connection.rollback();
+        if (connection) {
+            await connection.rollback().catch(console.error);
+        }
         console.error("Error al actualizar inventario:", error);
         res.status(500).json({
             error: "Error al actualizar el inventario",
