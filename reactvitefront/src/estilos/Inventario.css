@@ -78,6 +78,32 @@
   flex: 1;
 }
 
+.input-file {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid rgb(156, 158, 163);
+  border-radius: 0.375rem 0 0 0.375rem;
+  outline: none;
+  width: 500%;
+}
+
+.borrar-datos-button {
+  background-color: #dc2626;
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0 0.375rem 0.375rem 0;
+  transition: background-color 0.2s;
+}
+
+.borrar-conteos-button {
+  background-color: #dc2626;
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  margin-left: 0.5rem;
+  transition: background-color 0.2s;
+}
+
 /* Tabla */
 .productos-table {
   font-size: 2rem;
@@ -101,6 +127,25 @@
   text-align: center;
 }
 
+.td-sku {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  background-color: #f3f4f6;
+  border-bottom: 1px solid #d1d5d;
+}
+
+.td-body {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  text-align: center;
+}
+
+.text-center-td1 {
+  padding: 1rem;
+  text-align: center;
+  color: #6b7280;
+}
+
 .productos-table .stock-column,
 .productos-table .conteo-column,
 .productos-table .diferencia-column {
@@ -112,17 +157,40 @@
   background-color: #f3f4f6;
   border-bottom: 1px solid #d1d5db;
 }
-
-.diferencia-positiva {
-  color: #1d4ed8;
+.td-diferencia {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  text-align: center;
+  width: 6rem;
 }
 
-.diferencia-negativa {
-  color: #dc2626;
+.td-diferencia.positivo {
+  color: #1d4ed8; /* Color cuando diferencia > 0 */
 }
 
-.diferencia-neutral {
-  color: #4b5563;
+.td-diferencia.negativo {
+  color: #dc2626; /* Color cuando diferencia < 0 */
+}
+
+.producto-reposicion-lista {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+}
+
+.producto-reposicion-lista:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Fondo para filas pares (blanco) */
+.producto-reposicion-lista.fila-par {
+  background-color: white;
+}
+
+/* Fondo para filas impares (gris más oscuro) */
+.producto-reposicion-lista.fila-impar {
+  background-color: #f3f4f6; /* Gris más oscuro que el original #f9fafb */
 }
 
 /* Resumen */
@@ -149,7 +217,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: fixed;
   bottom: 0.25rem;
   right: 0.25rem;
@@ -157,6 +226,17 @@
 }
 
 /* Modales */
+.radio-label {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+.modal-coincidencias-list {
+  max-height: 15rem;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -188,6 +268,22 @@
   margin-top: 1rem;
 }
 
+.eliminar-reposicion-button {
+  background-color: #ef4444;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.no-productos {
+  padding: 1rem;
+  text-align: center;
+  color: #6b7280;
+  border: 1px dashed #d1d5db;
+  border-radius: 0.375rem;
+}
+
 .cancel-button {
   background-color: #6b7280;
   color: white;
@@ -195,7 +291,7 @@
   border-radius: 0.375rem;
 }
 
-.accept-button {
+.btn-aceptar {
   background-color: #3b82f6;
   color: white;
   padding: 0.5rem 1rem;
@@ -213,9 +309,9 @@
 }
 
 .reposicion-input {
-    padding: "0.5rem";
-    border: "1px solid black";
-    borderRadius: "0.375rem 0 0 0.375rem";
-    flex: 1;
-    background: 'black';
+  padding: "0.5rem";
+  border: "1px solid black";
+  borderradius: "0.375rem 0 0 0.375rem";
+  flex: 1;
+  background: "black";
 }

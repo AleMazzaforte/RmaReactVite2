@@ -117,15 +117,24 @@ const listarOp = {
             }
             // Obtener el id del producto correspondiente al sku
             const [productoInfo] = await connection.query(
-                "SELECT id FROM productos WHERE sku = ?",
+                "SELECT id, isActive FROM productos WHERE sku = ?",
                 [sku]
             );
   
             if (productoInfo.length === 0) {
                 throw new Error(`No se encontró el producto con SKU: ${sku}`);
             }
-  
+
             const idSku = productoInfo[0].id;
+
+            if (productoInfo[0].isActive === 0) {
+              await connection.query(
+                `UPDATE productos SET isActive = 1 WHERE id = ${idSku}`,
+                
+              );
+            }
+  
+            
   
             await connection.query(
                 "INSERT INTO opProductos (idOp, cantidad, idSku) VALUES (?, ?, ?)",

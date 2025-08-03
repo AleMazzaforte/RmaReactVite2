@@ -49,11 +49,7 @@ export const ActualizarProductos: React.FC = () => {
       if (descripcionInput) descripcionInput.value = producto.descripcion;
       if (rubroInput) rubroInput.value = producto.rubro;
       const nuevoEstadoActivo = Boolean(Number(producto.isActive));
-    setIsActive(nuevoEstadoActivo);
-
-    console.log('Estado isActive actualizado:', nuevoEstadoActivo);
-      
-
+      setIsActive(nuevoEstadoActivo);
       if (typeof producto.marca === "string") {
         setMarcaSeleccionada({ id: 0, nombre: producto.marca });
       } else {
@@ -78,7 +74,6 @@ export const ActualizarProductos: React.FC = () => {
         rubro: (formData.get("rubro") as string) || productoSeleccionado.rubro,
         isActive: isActive,
       };
-console.log('Datos a enviar:', data);
 
       try {
         setLoading(true);
@@ -258,7 +253,7 @@ console.log('Datos a enviar:', data);
               type="text"
               id="descripcion"
               name="descripcion"
-              required
+              
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
             />
           </div>
@@ -274,7 +269,7 @@ console.log('Datos a enviar:', data);
               type="text"
               id="rubro"
               name="rubro"
-              required
+              
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
             />
           </div>
@@ -287,9 +282,9 @@ console.log('Datos a enviar:', data);
               Producto Activo:
             </label>
             <InputCheckbox
-  checked={isActive}
-  onChange={(checked) => setIsActive(checked)}
-/>
+              checked={isActive}
+              onChange={(checked) => setIsActive(checked)}
+            />
           </div>
 
           <div className="flex flex-col space-y-4">
@@ -310,7 +305,6 @@ console.log('Datos a enviar:', data);
             </button>
           </div>
         </form>
-        
       </Contenedor>
       {loading ? <Loader /> : ""}
     </div>

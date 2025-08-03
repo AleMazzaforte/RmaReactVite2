@@ -9,8 +9,6 @@ import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader";
 import Urls from "./utilidades/Urls";
 import "../estilos/Inventario.css";
-import { b } from "vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P";
-
 
 interface Producto {
   id: number;
@@ -21,7 +19,7 @@ interface Producto {
   conteoFisico: number | null;
   fechaConteo: string | null;
   cantidadPorBulto: number;
-  isActive?: number | boolean; 
+  isActive?: number | boolean;
 }
 
 interface ProductoConteo {
@@ -33,11 +31,6 @@ interface ProductoConteo {
 interface ProductoReposicion {
   sku: string;
   cantidad: number;
-}
-
-interface FilaExcel {
-  SKU: string;
-  __rowNum__?: number; // Opcional, si existe
 }
 
 let urlPrepararInventario = Urls.inventario.preparar;
@@ -57,7 +50,7 @@ export const Inventario: React.FC = () => {
   const [coincidenciasEncontradas, setCoincidenciasEncontradas] = useState<
     Producto[]
   >([]);
-  
+
   const [cambiosPendientes, setCambiosPendientes] = useState<
     { id: number; conteoFisico: number | null }[]
   >([]);
@@ -80,48 +73,49 @@ export const Inventario: React.FC = () => {
 
   const [skusValidos, setSkusValidos] = useState<Set<string>>(new Set());
 
-// Al iniciar el componente o cuando necesites actualizar
-useEffect(() => {
-  const cargarSkusValidos = async () => {
-    try {
-      const response = await fetch(`${Urls.productos.listar}`);
-      if (!response.ok) throw new Error("Error al obtener SKUs válidos");
-      
-      const data: Producto[] = await response.json();
-      const skus = data.map(p => p.sku).filter(Boolean); 
-      setSkusValidos(new Set(skus));     
-      
-      
-      
-    } catch (error) {
-      console.error("Error cargando SKUs válidos:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudieron cargar los SKUs válidos",
-      });
-    }
-  };
+  // Al iniciar el componente o cuando necesites actualizar
+  useEffect(() => {
+    const cargarSkusValidos = async () => {
+      try {
+        const response = await fetch(`${Urls.productos.listar}`);
+        if (!response.ok) throw new Error("Error al obtener SKUs válidos");
 
-  cargarSkusValidos();
-}, []);
+        const data: Producto[] = await response.json();
+        const skus = data.map((p) => p.sku).filter(Boolean);
+        setSkusValidos(new Set(skus));
+      } catch (error) {
+        console.error("Error cargando SKUs válidos:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "No se pudieron cargar los SKUs válidos",
+        });
+      }
+    };
 
-// Función para validar SKUs del Excel
-const validarSkus = (skus: string[]): { valido: boolean; skusInvalidos: string[] } => {
-  const skusInvalidos = skus.filter(sku => !skusValidos.has(sku));
- 
-  if (skusInvalidos.length > 0) {
+    cargarSkusValidos();
+  }, []);
+
+  // Función para validar SKUs del Excel
+  const validarSkus = (
+    skus: string[]
+  ): { valido: boolean; skusInvalidos: string[] } => {
+    const skusInvalidos = skus.filter((sku) => !skusValidos.has(sku));
+
+    if (skusInvalidos.length > 0) {
       Swal.fire({
         icon: "error",
         title: "SKUs inválidos",
-        html: `SKUs no encontrados: <br> ${skusInvalidos.slice(0, 5).join(", ")}${skusInvalidos.length > 5 ? "..." : ""}`,
+        html: `SKUs no encontrados: <br> ${skusInvalidos
+          .slice(0, 5)
+          .join(", ")}${skusInvalidos.length > 5 ? "..." : ""}`,
       });
     }
-  return {
-    valido: skusInvalidos.length === 0,
-    skusInvalidos
+    return {
+      valido: skusInvalidos.length === 0,
+      skusInvalidos,
+    };
   };
-};
 
   // useEffect de carga de reposiciones
   useEffect(() => {
@@ -417,7 +411,6 @@ const validarSkus = (skus: string[]): { valido: boolean; skusInvalidos: string[]
     const fecha = new Date().toISOString().split("T")[0];
     let nombreArchivo = `Inventario_${fecha}`;
 
-    
     if (bloqueSeleccionado) nombreArchivo += `_Bloque-${bloqueSeleccionado}`;
     if (filtro) nombreArchivo += `_Filtro-${filtro.substring(0, 10)}`;
 
@@ -521,75 +514,76 @@ const validarSkus = (skus: string[]): { valido: boolean; skusInvalidos: string[]
   };
 
   // handleFileUpload con validación y tipado completo
-const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
-  setLoading(true);
-  
-  try {
-    const datosExcelParaCargar = await readExcelFile(file);
-    const skuCantidadMap = extractSkuCantidad(datosExcelParaCargar);
-    const productosParaGuardar: ProductoReposicion[] = Array.from(skuCantidadMap.entries()).map(
-      ([sku, cantidad]) => ({ sku, cantidad })
-    );
-    
-    
-    
-    const skusArchivo = productosParaGuardar.map(p => p.sku);
-    const validacion = validarSkus(skusArchivo);
+  const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
+    setLoading(true);
 
+    try {
+      const datosExcelParaCargar = await readExcelFile(file);
+      const skuCantidadMap = extractSkuCantidad(datosExcelParaCargar);
+      const productosParaGuardar: ProductoReposicion[] = Array.from(
+        skuCantidadMap.entries()
+      ).map(([sku, cantidad]) => ({ sku, cantidad }));
 
+      const skusArchivo = productosParaGuardar.map((p) => p.sku);
+      const validacion = validarSkus(skusArchivo);
 
-    if (!validacion.valido) {
-      Swal.fire({
-        icon: 'error',
-        title: 'SKUs no válidos',
-        html: `Los siguientes SKUs no existen: <br><strong>${validacion.skusInvalidos.join(', ')}</strong>`,
-      });
-      return;
-    }
-
-    // Si pasa validación, proceder con el guardado
-    const response = await fetch(urlActualizarInventario, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        productos: productosParaGuardar,
-        tipoArchivo: empresa,
-      }),
-    });
-
-    if (!response.ok) throw new Error("Error en la respuesta del servidor");
-
-    const result = await response.json();
-    
-    // Actualizar estado (ajusta el tipo según tu interfaz ProductoInventario)
-    setProductos((prev: Producto[]) => prev.map((producto) => {
-      if (skuCantidadMap.has(producto.sku)) {
-        const cantidad = skuCantidadMap.get(producto.sku)!;
-        return {
-          ...producto,
-          [empresa === "Femex" ? "cantSistemaFemex" : "cantSistemaBlow"]: cantidad,
-          fechaConteo: new Date().toISOString(),
-        };
+      if (!validacion.valido) {
+        Swal.fire({
+          icon: "error",
+          title: "SKUs no válidos",
+          html: `Los siguientes SKUs no existen: <br><strong>${validacion.skusInvalidos.join(
+            ", "
+          )}</strong>`,
+        });
+        return;
       }
-      return producto;
-    }));
 
-    Swal.fire({
-      icon: "success",
-      title: "Archivo procesado",
-      text: `Archivo de ${empresa} procesado correctamente. ${result.updatedCount} productos actualizados.`,
-    });
-  } catch (error) {
-    console.error(`Error al procesar archivo de ${empresa}:`, error);
-    Swal.fire({
-      icon: "error",
-      title: "Error al guardar",
-      text: `Error al procesar archivo de ${empresa}`,
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      // Si pasa validación, proceder con el guardado
+      const response = await fetch(urlActualizarInventario, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productos: productosParaGuardar,
+          tipoArchivo: empresa,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Error en la respuesta del servidor");
+
+      const result = await response.json();
+
+      // Actualizar estado (ajusta el tipo según tu interfaz ProductoInventario)
+      setProductos((prev: Producto[]) =>
+        prev.map((producto) => {
+          if (skuCantidadMap.has(producto.sku)) {
+            const cantidad = skuCantidadMap.get(producto.sku)!;
+            return {
+              ...producto,
+              [empresa === "Femex" ? "cantSistemaFemex" : "cantSistemaBlow"]:
+                cantidad,
+              fechaConteo: new Date().toISOString(),
+            };
+          }
+          return producto;
+        })
+      );
+
+      Swal.fire({
+        icon: "success",
+        title: "Archivo procesado",
+        text: `Archivo de ${empresa} procesado correctamente. ${result.updatedCount} productos actualizados.`,
+      });
+    } catch (error) {
+      console.error(`Error al procesar archivo de ${empresa}:`, error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al guardar",
+        text: `Error al procesar archivo de ${empresa}`,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBorrarDatos = async (tipoArchivo: "Femex" | "Blow") => {
     const { isConfirmed } = await Swal.fire({
@@ -659,8 +653,7 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
   const extractSkuCantidad = (data: any[]): Map<string, number> => {
     const map = new Map<string, number>();
     data.forEach((row) => {
-      const sku =
-        row["SKU"]  ;
+      const sku = row["SKU"];
       const cantidad = row["Cantidad"];
       if (sku) {
         map.set(sku.toString(), Number(cantidad));
@@ -668,7 +661,6 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
     });
     return map;
   };
-
 
   const productosFiltrados = productos
     .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))
@@ -685,25 +677,17 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
   return (
     <>
       {loading && (
-        <div className="loader-container"          
-        >
+        <div className="loader-container">
           <Loader />
         </div>
       )}
 
-      <div className="inventario-container"
-      >
+      <div className="inventario-container">
         <div>
-          <h1 
-            className="inventario-title"
-            id="titulo-inventario"
-          >
+          <h1 className="inventario-title" id="titulo-inventario">
             Conteo Físico de Inventario
           </h1>
-          <button
-            className="reposicion-button"
-            onClick={activarModoReposicion}
-          >
+          <button className="reposicion-button" onClick={activarModoReposicion}>
             Carga de reposición
           </button>
         </div>
@@ -725,21 +709,15 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
         {/* Acciones */}
         {!modoReposicion && (
           <div className="acciones-container">
-            <div
-              className="acciones-panel"
-            >
-              <label
-               className="acciones-label"
-              >
-                Acciones
-              </label>
+            <div className="acciones-panel">
+              <label className="acciones-label">Acciones</label>
               <div className="acciones-buttons">
                 <GuardarInventario
                   productos={cambiosPendientes.map((c) => ({
                     id: c.id,
                     conteoFisico: c.conteoFisico,
                     sku: productos.find((p) => p.id === c.id)?.sku || "",
-                    loading
+                    loading,
                   }))}
                   onGuardar={handleGuardar}
                 >
@@ -794,7 +772,7 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
           <div
             style={{
               marginBottom: "1.5rem",
-              backgroundColor: "#f9fafb",
+              backgroundColor: "#f3f4f6",
               padding: "1rem",
               borderRadius: "0.5rem",
               border: "1px solid #e5e7eb",
@@ -932,18 +910,10 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                 >
                   {productosReposicion.map((producto, index) => (
                     <div
+                      className={`producto-reposicion-lista ${
+                        index % 2 === 0 ? "fila-par" : "fila-impar"
+                      }`}
                       key={index}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "0.75rem",
-                        borderBottom:
-                          index < productosReposicion.length - 1
-                            ? "1px solid #e5e7eb"
-                            : "none",
-                        backgroundColor: index % 2 === 0 ? "white" : "#f9fafb",
-                      }}
                     >
                       <div>
                         <div style={{ fontWeight: "500" }}>{producto.sku}</div>
@@ -952,14 +922,8 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                         </div>
                       </div>
                       <button
+                        className="eliminar-reposicion-button"
                         onClick={() => eliminarDeReposicion(producto.sku)}
-                        style={{
-                          backgroundColor: "#ef4444",
-                          color: "white",
-                          padding: "0.25rem 0.5rem",
-                          borderRadius: "0.25rem",
-                          fontSize: "0.75rem",
-                        }}
                       >
                         Eliminar
                       </button>
@@ -967,36 +931,12 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                   ))}
                 </div>
               ) : (
-                <div
-                  style={{
-                    padding: "1rem",
-                    textAlign: "center",
-                    color: "#6b7280",
-                    border: "1px dashed #d1d5db",
-                    borderRadius: "0.375rem",
-                  }}
-                >
-                  No hay productos agregados
-                </div>
+                <div className="no-productos">No hay productos agregados</div>
               )}
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "0.5rem",
-              }}
-            >
-              <button
-                onClick={volverAModoNormal}
-                style={{
-                  backgroundColor: "#6b7280",
-                  color: "white",
-                  padding: "0.5rem 1rem",
-                  borderRadius: "0.375rem",
-                }}
-              >
+            <div className="modal-buttons">
+              <button onClick={volverAModoNormal} className="cancel-button">
                 Cerrar
               </button>
               <button
@@ -1018,51 +958,20 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
         {!modoReposicion && (
           <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
             {/* Cargar Excel Femex */}
-            <div
-              style={{
-                backgroundColor: "#f9fafb",
-                padding: "0.75rem",
-                borderRadius: "0.5rem",
-                border: "1px solid #e5e7eb",
-                flex: 1,
-              }}
-            >
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.875rem",
-                  fontWeight: "500",
-                  color: "#374151",
-                  marginBottom: "0.25rem",
-                }}
-              >
-                Cargar Excel Femex
-              </label>
+            <div className="acciones-panel">
+              <label className="acciones-label">Cargar Excel Femex</label>
               <div style={{ display: "flex" }}>
                 <input
+                  className="input-file"
                   type="file"
                   accept=".xlsx, .xls"
                   onChange={(e) =>
                     e.target.files?.[0] && handleFileInputChange(e, "Femex")
                   }
-                  style={{
-                    flex: 1,
-                    padding: "0.5rem",
-                    border: "1px solid rgb(156, 158, 163)",
-                    borderRadius: "0.375rem 0 0 0.375rem",
-                    outline: "none",
-                    width: "40%",
-                  }}
                 />
                 <button
                   onClick={() => handleBorrarDatos("Femex")}
-                  style={{
-                    backgroundColor: "#dc2626",
-                    color: "white",
-                    padding: "0.5rem 0.75rem",
-                    borderRadius: "0 0.375rem 0.375rem 0",
-                    transition: "background-color 0.2s",
-                  }}
+                  className="borrar-datos-button"
                   title="Borrar todos los datos de Femex"
                 >
                   <svg
@@ -1104,29 +1013,16 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
               </label>
               <div style={{ display: "flex" }}>
                 <input
+                  className="input-file"
                   type="file"
                   accept=".xlsx, .xls"
                   onChange={(e) =>
                     e.target.files?.[0] && handleFileInputChange(e, "Blow")
                   }
-                  style={{
-                    flex: 1,
-                    padding: "0.5rem",
-                    border: "1px solid rgb(156, 158, 163)",
-                    borderRadius: "0.375rem 0 0 0.375rem",
-                    outline: "none",
-                    width: "500%",
-                  }}
                 />
                 <button
+                  className="borrar-datos-button"
                   onClick={() => handleBorrarDatos("Blow")}
-                  style={{
-                    backgroundColor: "#dc2626",
-                    color: "white",
-                    padding: "0.5rem 0.75rem",
-                    borderRadius: "0 0.375rem 0.375rem 0",
-                    transition: "background-color 0.2s",
-                  }}
                   title="Borrar todos los datos de Blow"
                 >
                   <svg
@@ -1144,14 +1040,7 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                 </button>
                 <button
                   onClick={handleBorrarConteos}
-                  style={{
-                    backgroundColor: "#dc2626",
-                    color: "white",
-                    padding: "0.5rem 0.75rem",
-                    borderRadius: "0.375rem",
-                    marginLeft: "0.5rem",
-                    transition: "background-color 0.2s",
-                  }}
+                  className="borrar-conteos-button"
                   title="Resetear todos los conteos físicos"
                 >
                   Borrar Conteos
@@ -1176,46 +1065,10 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                   >
                     SKU
                   </th>
-                  <th
-                    style={{
-                      padding: "0.5rem",
-                      border: "1px solid #d1d5db",
-                      textAlign: "left",
-                      width: "0.5rem",
-                    }}
-                  >
-                    Bloque
-                  </th>
-                  <th
-                    style={{
-                      padding: "0.5rem",
-                      border: "1px solid #d1d5db",
-                      textAlign: "center",
-                      width: "6rem",
-                    }}
-                  >
-                    Stock
-                  </th>
-                  <th
-                    style={{
-                      padding: "0.5rem",
-                      border: "1px solid #d1d5db",
-                      textAlign: "center",
-                      width: "6rem",
-                    }}
-                  >
-                    Conteo
-                  </th>
-                  <th
-                    style={{
-                      padding: "0.5rem",
-                      border: "1px solid #d1d5db",
-                      textAlign: "center",
-                      width: "6rem",
-                    }}
-                  >
-                    Dif
-                  </th>
+                  <th className="td-diferencia">Bloque</th>
+                  <th className="td-diferencia">Stock</th>
+                  <th className="td-diferencia">Conteo</th>
+                  <th className="td-diferencia">Dif</th>
                 </tr>
               </thead>
               <tbody>
@@ -1225,43 +1078,16 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
 
                     return (
                       <tr key={producto.id}>
-                        <td
-                          style={{
-                            padding: "0.5rem",
-                            border: "1px solid #d1d5db",
-                            backgroundColor: "#f3f4f6",
-                            borderBottom: "1px solid #d1d5db"
-                          }}
-                          id={`sku-${producto.sku}`}
-                        >
+                        <td className="td-sku" id={`sku-${producto.sku}`}>
                           {producto.sku}
                         </td>
-                        <td
-                          style={{
-                            padding: "0.5rem",
-                            border: "1px solid #d1d5db",
-                            
-                            textAlign: "center"
-                          }}
-                        >
+                        <td className="td-body">
                           {producto.idBloque || "No asignado"}
                         </td>
-                        <td
-                          style={{
-                            padding: "0.5rem",
-                            border: "1px solid #d1d5db",
-                            
-                          }}
-                        >
+                        <td className="td-body">
                           {producto.cantSistemaFemex + producto.cantSistemaBlow}
                         </td>
-                        <td
-                          style={{
-                            padding: "0.5rem",
-                            border: "1px solid #d1d5db",
-                            textAlign: "center"
-                          }}
-                        >
+                        <td className="td-body">
                           <InputWithCalculator
                             value={producto.conteoFisico}
                             onChange={(value) =>
@@ -1282,17 +1108,13 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                           />
                         </td>
                         <td
-                          style={{
-                            padding: "0.5rem",
-                            border: "1px solid #d1d5db",
-                            textAlign: "center",
-                            color:
-                              diferencia > 0
-                                ? "#1d4ed8"
-                                : diferencia < 0
-                                ? "#dc2626"
-                                : "#4b5563",
-                          }}
+                          className={`td-diferencia ${
+                            diferencia > 0
+                              ? "positivo"
+                              : diferencia < 0
+                              ? "negativo"
+                              : ""
+                          }`}
                         >
                           {diferencia !== 0
                             ? diferencia > 0
@@ -1305,14 +1127,7 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                   })
                 ) : (
                   <tr>
-                    <td
-                      colSpan={5}
-                      style={{
-                        padding: "1rem",
-                        textAlign: "center",
-                        color: "#6b7280",
-                      }}
-                    >
+                    <td colSpan={5} className="text-center-td1">
                       No se encontraron productos con los filtros aplicados
                     </td>
                   </tr>
@@ -1325,22 +1140,7 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
         {/* Botón flotante y resumen */}
         <div>
           <button
-            style={{
-              backgroundColor: "#10b981",
-              color: "white",
-              padding: "0.5rem 1rem",
-              borderRadius: "0.375rem",
-              transition: "background-color 0.2s",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow:
-                "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-              position: "fixed",
-              bottom: "0.25rem",
-              right: "0.25rem",
-              zIndex: 50,
-            }}
+            className="float-button"
             onClick={() =>
               document.getElementById("titulo-inventario")?.scrollIntoView()
             }
@@ -1349,15 +1149,7 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
           </button>
         </div>
 
-        <div
-          style={{
-            marginTop: "1rem",
-            padding: "0.75rem",
-            backgroundColor: "#f9fafb",
-            borderRadius: "0.5rem",
-            fontSize: "0.875rem",
-          }}
-        >
+        <div className="resumen-container">
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Productos totales: {productos.length}</span>
             <span>Filtrados: {productosFiltrados.length}</span>
@@ -1365,60 +1157,19 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
               Con conteo:{" "}
               {productos.filter((p) => p.conteoFisico !== null).length}
             </span>
-            
           </div>
         </div>
 
         {mostrarModalCoincidencias && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 50,
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: "white",
-                padding: "1.5rem",
-                borderRadius: "0.5rem",
-                maxWidth: "32rem",
-                width: "100%",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: "1.125rem",
-                  fontWeight: "bold",
-                  marginBottom: "1rem",
-                }}
-              >
-                Seleccione el SKU deseado
-              </h3>
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h3 className="modal-title">Seleccione el SKU deseado</h3>
               <p style={{ marginBottom: "1rem" }}>
                 No se encontró el SKU exacto. Coincidencias aproximadas:
               </p>
-              <div
-                style={{
-                  maxHeight: "15rem",
-                  overflowY: "auto",
-                  marginBottom: "1rem",
-                }}
-              >
+              <div className="modal-coincidencias-list">
                 {coincidenciasEncontradas.slice(0, 10).map((producto) => (
-                  <label
-                    key={producto.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "0.5rem",
-                      cursor: "pointer",
-                    }}
-                  >
+                  <label key={producto.id} className="radio-label">
                     <input
                       type="radio"
                       name="skuSeleccionado"
@@ -1431,33 +1182,14 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                   </label>
                 ))}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "0.5rem",
-                }}
-              >
+              <div className="modal-buttons">
                 <button
                   onClick={() => setMostrarModalCoincidencias(false)}
-                  style={{
-                    backgroundColor: "#6b7280",
-                    color: "white",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.375rem",
-                  }}
+                  className="cancel-button"
                 >
                   Cancelar
                 </button>
-                <button
-                  onClick={confirmarSeleccion}
-                  style={{
-                    backgroundColor: "#3b82f6",
-                    color: "white",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.375rem",
-                  }}
-                >
+                <button className="btn-aceptar" onClick={confirmarSeleccion}>
                   Aceptar
                 </button>
               </div>
@@ -1466,56 +1198,17 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
         )}
 
         {mostrarModalCoincidenciasReposicion && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 50,
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: "white",
-                padding: "1.5rem",
-                borderRadius: "0.5rem",
-                maxWidth: "32rem",
-                width: "100%",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: "1.125rem",
-                  fontWeight: "bold",
-                  marginBottom: "1rem",
-                }}
-              >
-                Seleccione el SKU deseado
-              </h3>
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h3 className="modal-title">Seleccione el SKU deseado</h3>
               <p style={{ marginBottom: "1rem" }}>Coincidencias encontradas:</p>
-              <div
-                style={{
-                  maxHeight: "15rem",
-                  overflowY: "auto",
-                  marginBottom: "1rem",
-                }}
-              >
+              <div className="modal-coincidencias-list">
                 {coincidenciasReposicionEncontradas
                   .slice(0, 10)
                   .map((producto) => (
-                    <label
-                      key={producto.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        padding: "0.5rem",
-                        cursor: "pointer",
-                      }}
-                    >
+                    <label className="radio-label" key={producto.id}>
                       <input
+                        className="radio-input"
                         type="radio"
                         name="skuSeleccionadoReposicion"
                         value={producto.sku}
@@ -1529,32 +1222,16 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                     </label>
                   ))}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "0.5rem",
-                }}
-              >
+              <div className="modal-buttons">
                 <button
                   onClick={() => setMostrarModalCoincidenciasReposicion(false)}
-                  style={{
-                    backgroundColor: "#6b7280",
-                    color: "white",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.375rem",
-                  }}
+                  className="cancel-button"
                 >
                   Cancelar
                 </button>
                 <button
+                  className="btn-aceptar"
                   onClick={confirmarSeleccionReposicion}
-                  style={{
-                    backgroundColor: "#3b82f6",
-                    color: "white",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.375rem",
-                  }}
                 >
                   Aceptar
                 </button>

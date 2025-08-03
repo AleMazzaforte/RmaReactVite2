@@ -108,68 +108,63 @@ export const ImprimirEtiqueta = () => {
     if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
       throw new Error("Datos incompletos o cantidad de bultos inválida");
     }
+const zplCodes: string[] = [];
 
-    const zplCodes = [];
+  // === Generación automática de renglones desde 520, cada 50 ===
+  const renglones: Record<string, number> = {};
+  let y = 520; // Empezamos aquí
+  for (let i = 1; i <= 20; i++) {
+    renglones[`renglon${i}`] = y;
+    y += 50;
+  }
+  // Esto genera: renglon1=520, renglon2=570, ..., renglon17=1320, etc.
 
-    if (datosEditables.telefono === null) datosEditables.telefono = "";
-    if (datosEditables.transporte === null) datosEditables.transporte = "";
-    if (datosEditables.seguro === null) datosEditables.seguro = "";
-    if (datosEditables.condicionDeEntrega === null) datosEditables.condicionDeEntrega = "";
-    if (datosEditables.condicionDePago === null) datosEditables.condicionDePago = "";
-    if (datosEditables.domicilio === null) datosEditables.domicilio = "";
-    if (datosEditables.cuit === null) datosEditables.cuit = "";
+  // === Generar una etiqueta por cada bulto ===
+  for (let i = 1; i <= cantidadBultos; i++) {
+    const zpl = `
+^XA
+^PW800
+^LL1520
+^CI28
+^LH0,20
 
-    for (let i = 1; i <= cantidadBultos; i++) {
-      let zpl = `
-        ^XA
-        ^PW800                  // Ancho: 800 dots (10 cm)
-        ^LL1520                 // Longitud total: 19 cm (1520 dots)
-        ^CI28                   // Soporte para caracteres especiales
-        ^LH0,20                 // Origen de coordenadas
+// ==============================================
+// BLOQUE SUPERIOR (RESERVADO) - NADA AQUÍ
+// ==============================================
 
-        // ==============================================
-        // BLOQUE SUPERIOR (VACÍO - RESERVADO)
-        // ==============================================
-        //^FO0,0^GB800,350,1^FS   // Área reducida a 350 dots (4.4cm)
-        //
+// --- DATOS DEL DESTINATARIO ---
+^FO70,400^A0N,55,55^FB760,1,0,C^FD${datosEditables.nombre}^FS 
+^FO75,${renglones.renglon1}^A0N,38,38^FDCUIT: ${datosEditables.cuit}^FS
+^FO75,${renglones.renglon2}^A0N,38,38^FDDomicilio: ${datosEditables.domicilio}^FS
+^FO75,${renglones.renglon3}^A0N,38,38^FDProvincia: ${datosEditables.provincia}^FS
+^FO75,${renglones.renglon4}^A0N,38,38^FDCiudad: ${datosEditables.ciudad}^FS
+^FO75,${renglones.renglon5}^A0N,38,38^FDTeléfono: ${datosEditables.telefono}^FS
+^FO75,${renglones.renglon6}^A0N,38,38^FDTransporte: ${datosEditables.transporte}^FS
+^FO75,${renglones.renglon7}^A0N,38,38^FDSeguro: ${datosEditables.seguro}^FS
+^FO75,${renglones.renglon8}^A0N,38,38^FD${datosEditables.condicionDeEntrega}^FS
+^FO75,${renglones.renglon9}^A0N,38,38^FD${datosEditables.condicionDePago}^FS
 
-        // ==============================================
-        // SEPARADOR ENTRE BLOQUES (MEJORADO)
-        // ==============================================
-        //   // Línea divisoria más visible
 
-        // ==============================================
-        // BLOQUE INFERIOR (DATOS PRINCIPALES)
-        // ==============================================
-        ^FO70,400^A0N,55,55^FB760,1,0,C^FD${datosEditables.nombre}^FS 
-        ^FO75,520^A0N,38,38^FDCUIT: ${datosEditables.cuit}^FS
-        ^FO75,570^A0N,38,38^FDDomicilio: ${datosEditables.domicilio}^FS
-        ^FO75,620^A0N,38,38^FDCiudad: ${datosEditables.ciudad}, ${datosEditables.provincia}^FS
-        ^FO75,670^A0N,38,38^FDTeléfono: ${datosEditables.telefono}^FS
-        ^FO75,720^A0N,38,38^FDTransporte: ${datosEditables.transporte}^FS
-        ^FO75,770^A0N,38,38^FDSeguro: ${datosEditables.seguro}^FS
-        ^FO75,820^A0N,38,38^FD${datosEditables.condicionDeEntrega}^FS
-        ^FO75,870^A0N,38,38^FD${datosEditables.condicionDePago}^FS
+// Aquí no imprimimos nada, solo dejamos espacio visual en el diseño
 
-        // Espacio aumentado antes de la línea divisoria (20 dots extra)
-        ^FO75,970^A0N,38,38^--------------------------^FS  
+// --- DATOS DEL REMITENTE ---
+^FO75,${renglones.renglon12}^A0N,38,38^FDRte: Femex S.A.^FS
+^FO75,${renglones.renglon13}^A0N,38,38^FDCUIT: 30-71130830-6^FS
+^FO75,${renglones.renglon14}^A0N,38,38^FDDomicilio: Duarte Quirós 4105^FS
+^FO75,${renglones.renglon15}^A0N,38,38^FDProvincia: Córdoba^FS
+^FO75,${renglones.renglon16}^A0N,38,38^FDCiudad: Córdoba^FS
+^FO75,${renglones.renglon17}^A0N,38,38^FDTeléfono: 351 8509718^FS
 
-        // Espacio aumentado después de la línea (30 dots en lugar de 20)
-        ^FO75,1070^A0N,38,38^FDRte: Femex S.A.^FS
-        ^FO75,1120^A0N,38,38^FDCUIT: 30-71130830-6^FS
-        ^FO75,1170^A0N,38,38^FDDomicilio: Duarte Quirós 4105^FS
-        ^FO75,1220^A0N,38,38^FDProvincia: Córdoba^FS
-        ^FO75,1270^A0N,38,38^FDCiudad: Córdoba^FS
-        ^FO75,1320^A0N,38,38^FDTeléfono: 351 8509718^FS
-        ^FO120,1400^A0N,75,75^FB560,1,0,C^FDBulto ${i} de ${cantidadBultos}^FS  // Centrado y con más espacio
-        ^XZ
-      `;
-      zplCodes.push(zpl);
-    }
+// --- BULTO (centrado abajo) ---
+^FO120,${renglones.renglon18}^A0N,75,75^FB560,1,0,C^FDBulto ${i} de ${cantidadBultos}^FS
 
-    return zplCodes.join("\n");
-  };
+^XZ`.trim();
 
+    zplCodes.push(zpl);
+  }
+
+  return zplCodes.join('\n\n');
+  }
   const generarPDF = () => {
     try {
       if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
@@ -247,7 +242,9 @@ export const ImprimirEtiqueta = () => {
         y += 8;
         doc.text(`Domicilio: ${datosEditables.domicilio}`, marginLeft, y);
         y += 8;
-        doc.text(`Ciudad: ${datosEditables.ciudad}, ${datosEditables.provincia}`, marginLeft, y);
+        doc.text(`Provincia: ${datosEditables.provincia}`, marginLeft, y);
+        y += 8;
+        doc.text(`Ciudad: ${datosEditables.ciudad}`, marginLeft, y);
         y += 8;
         doc.text(`Teléfono: ${datosEditables.telefono}`, marginLeft, y);
         y += 8;
