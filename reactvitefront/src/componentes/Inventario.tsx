@@ -117,34 +117,34 @@ export const Inventario: React.FC = () => {
     };
   };
 
-  // useEffect de carga de reposiciones
-  useEffect(() => {
-    const cargarReposiciones = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(urlObtenerReposicion);
-        if (!response.ok) throw new Error("Error al obtener reposiciones");
+  // Función reutilizable para cargar reposiciones
+const cargarReposiciones = async () => {
+  setLoading(true);
+  try {
+    const response = await fetch(urlObtenerReposicion);
+    if (!response.ok) throw new Error("Error al obtener reposiciones");
+    const data = await response.json();
+    // Filtramos solo reposiciones con cantidad > 0
+    const reposicionesActivas = data.filter(
+      (item: ProductoReposicion) => item.cantidad > 0
+    );
+    setProductosReposicion(reposicionesActivas);
+  } catch (error) {
+    console.error("Error al cargar reposiciones:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "No se pudieron cargar las reposiciones",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-        const data = await response.json();
-        // Filtramos solo reposiciones con cantidad > 0
-        const reposicionesActivas = data.filter(
-          (item: ProductoReposicion) => item.cantidad > 0
-        );
-        setProductosReposicion(reposicionesActivas);
-      } catch (error) {
-        console.error("Error al cargar reposiciones:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "No se pudieron cargar las reposiciones",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    cargarReposiciones();
-  }, []);
+// Cargar al montar el componente
+useEffect(() => {
+  cargarReposiciones();
+}, []);
 
   const { productos, setProductos, setLoading, bloques, loading, error } =
     GetInventarioStock(urlPrepararInventario);
@@ -352,9 +352,11 @@ export const Inventario: React.FC = () => {
         title: "Reposición guardada",
         text: `Se guardaron ${productosReposicion.length} productos correctamente`,
       });
+console.log(result);
 
       // Limpiar después de guardar
       setProductosReposicion([]);
+      cargarReposiciones();
     } catch (error) {
       console.error("Error al guardar reposición:", error);
       Swal.fire({

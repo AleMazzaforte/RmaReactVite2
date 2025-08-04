@@ -319,6 +319,8 @@ export const inventarioController = {
   //REPOSICION!!!!+++++++++++++++++++++++++++++++++++++
   postGuardarReposicion: async (req, res) => {
     let connection;
+    console.log( 'guarddar', req.body);
+    
     try {
       const { productos } = req.body;
 
@@ -404,6 +406,8 @@ export const inventarioController = {
 
   // REPOSICIÓN - Limpiar reposiciones (opcional)
   deleteLimpiarReposiciones: async (req, res) => {
+    console.log('eliminar', req.body);
+    
     let connection;
     try {
       connection = await conn.getConnection();

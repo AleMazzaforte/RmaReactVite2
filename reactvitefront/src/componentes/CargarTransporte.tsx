@@ -12,7 +12,7 @@ export const CargarTransporte: React.FC = () => {
   const formRef = useRef<HTMLFormElement>(null);
   
   
-  const urlCargarTransporte = Urls.transportes.actualizar
+  const urlCargarTransporte = Urls.transportes.cargar
 
   const enviarFormulario = async () => {
     if (formRef.current) {
@@ -86,6 +86,7 @@ export const CargarTransporte: React.FC = () => {
 
   return (
     <div>
+      {loading && <Loader /> }
         <Contenedor>
         <h2 className="text-2xl font-semibold text-gray-700 text-center mb-8">Cargar Transporte</h2>
       <form id="formTransporte" className="space-y-6" onSubmit={handleFormSubmit} ref={formRef}>
@@ -108,7 +109,7 @@ export const CargarTransporte: React.FC = () => {
 
         <div>
           <button type="submit" id="botonCargar" className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300">
-            {loading ? <Loader /> : 'Cargar transporte'}
+            {loading ? 'Cargando...': 'Cargar transporte'}
           </button>
         </div>
       </form>

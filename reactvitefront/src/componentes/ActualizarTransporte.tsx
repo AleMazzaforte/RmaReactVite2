@@ -174,7 +174,7 @@ export const ActualizarTransporte: React.FC = () => {
           className="space-y-6"
           onSubmit={handleFormSubmit}
           ref={formRef}
-        >
+        >{loading && <Loader />}
           <div>
             <label
               htmlFor="nombre"
@@ -243,8 +243,9 @@ export const ActualizarTransporte: React.FC = () => {
             </button>
           </div>
         </form>
-        {loading && <Loader />}
+
       </Contenedor>
+
     </div>
   );
 };

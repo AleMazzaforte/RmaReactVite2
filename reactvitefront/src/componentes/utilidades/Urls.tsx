@@ -14,6 +14,7 @@ const Urls = {
     actualizar: `${base}/actualizarTransporte`,
     eliminar: `${base}/eliminarTransporte`,
     buscar: `${base}/buscarTransporte`,
+    cargar: `${base}/cargarTransporte`,
   },
   productos: {
     cargar: `${base}/cargarProducto`,
