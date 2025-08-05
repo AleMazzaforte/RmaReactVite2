@@ -3,7 +3,7 @@ import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import { ListarProductos } from "./utilidades/ListarProductos";
 import { ListarMarcas } from "./utilidades/ListarMarcas";
 import { ListarOp } from "./utilidades/ListarOp";
-import Swal from "sweetalert2";
+import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 import Loader from "./utilidades/Loader";
 import FechaInput from "./utilidades/FechaInput";
 import { Contenedor } from "./utilidades/Contenedor";
@@ -123,7 +123,8 @@ export const CargarRma: React.FC = () => {
       const skuInput = document.getElementById("skuInput") as HTMLInputElement;
       console.log(skuInput);
       skuInput.focus();
-      Swal.fire({
+      // Mostrar alerta si el campo SKU está vacío
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe seleccionar un producto",
@@ -139,7 +140,8 @@ export const CargarRma: React.FC = () => {
 
     if (!cantidad || cantidad === "0") {
       cantidadInput.focus();
-      Swal.fire({
+      // Mostrar alerta si la cantidad es cero o no está definida
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe ingresar una cantidad válida.",
@@ -152,7 +154,8 @@ export const CargarRma: React.FC = () => {
     if (!marcaSeleccionada) {
       const marcaInput = document.getElementById("marca") as HTMLInputElement;
       marcaInput.focus();
-      Swal.fire({
+      // Mostrar alerta si la marca no está seleccionada
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe seleccionar una marca",
@@ -163,11 +166,13 @@ export const CargarRma: React.FC = () => {
     if (!opLoteSeleccionado) {
       const opLoteInput = document.getElementById("opLote") as HTMLInputElement;
       opLoteInput.focus();
-      Swal.fire({
+      // Mostrar alerta si la OP/Lote no está seleccionada
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
-        text: "Debe seleccionar una OP",
+        text: "Debe seleccionar una OP/Lote",
       });
+      
       opLoteInput.focus();
       return;
     }
@@ -231,7 +236,8 @@ export const CargarRma: React.FC = () => {
     e.preventDefault();
 
     if (!clienteSeleccionado) {
-      Swal.fire({
+      // Mostrar alerta si no se ha seleccionado un cliente
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe seleccionar un cliente",
@@ -240,7 +246,8 @@ export const CargarRma: React.FC = () => {
     }
 
     if (productosAgregados.length === 0) {
-      Swal.fire({
+      // Mostrar alerta si no se han agregado productos
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe agregar al menos un producto",
@@ -276,17 +283,16 @@ export const CargarRma: React.FC = () => {
       });
 
       if (response.ok) {
-        Swal.fire({
+        sweetAlert.fire({
           icon: "success",
-          title: "RMA agregado",
-          text: "El RMA se ha agregado correctamente",
-          confirmButtonText: "Aceptar",
+          title: "Éxito",
+          text: "RMA agregado exitosamente",
         }).then(() => {
           limpiarInputs();
           setProductosAgregados([]);
         });
       } else {
-        Swal.fire({
+        sweetAlert.fire({
           icon: "error",
           title: "Error",
           text: "Hubo un problema al agregar el RMA",
@@ -294,10 +300,11 @@ export const CargarRma: React.FC = () => {
       }
     } catch (error) {
       console.error("Error al enviar el formulario:", error);
-      Swal.fire({
+      // Mostrar alerta de error en la conexión
+      sweetAlert.fire({
         icon: "error",
-        title: "Error",
-        text: "Hubo un problema al enviar el formulario",
+        title: "Error de conexión",
+        text: "Por favor, inténtelo de nuevo más tarde",
       });
     } finally {
       setLoading(false);

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Swal from "sweetalert2";
+import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 import { TablaListarRmas } from "./TablaListarRmas";
 import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import { FlechasNavigator } from "./utilidades/FlechasNavigator";
@@ -56,10 +56,11 @@ export const ProductosPorCliente = (): JSX.Element => {
       if (data.length > 0) {
         setRmas(data);
       } else {
-        Swal.fire({
-          icon: "warning",
+        // Si no hay RMA asociados al cliente, mostrar alerta
+        sweetAlert.fire({
           title: "Sin RMA",
           text: "Este cliente no tiene RMA asociado.",
+          icon: "warning",
           confirmButtonText: "Aceptar",
         }).then(() => {
           cambiarCliente();
@@ -100,18 +101,20 @@ export const ProductosPorCliente = (): JSX.Element => {
 
       if (response.ok) {
         const updatedRma = await response.json();
-        Swal.fire({
-          title: "¡Actualización exitosa!",
-          text: updatedRma.message,
+        // Mostrar alerta de éxito
+        sweetAlert.fire({
+          title: "Éxito",
+          text:updatedRma.message,
           icon: "success",
           confirmButtonColor: "#3085d6",
         });
       } else {
-        Swal.fire({
-          title: "Atención",
-          text: response.statusText,
-          icon: "warning",
-          confirmButtonColor: "#3085d6",
+        // Si hay un error en la respuesta
+        sweetAlert.fire({
+          title: "Error",
+          text: response.statusText || "Hubo un problema al actualizar el RMA",
+          icon: "error",
+          confirmButtonColor: "#d33",
         });
       }
     } catch (error) {
@@ -121,23 +124,24 @@ export const ProductosPorCliente = (): JSX.Element => {
 
   const handleEliminar = async (idRma: string | undefined) => {
     if (!idRma) {
-      return Swal.fire({
+      return sweetAlert.fire({
         title: "Error",
-        text: "El id no existe.",
+        text: "El ID del RMA no es válido.",
         icon: "error",
         confirmButtonColor: "#d33",
       });
     }
 
-    const result = await Swal.fire({
-      title: "¿Estás seguro?",
-      text: "¡Esta acción no se puede deshacer!",
+    const result = await sweetAlert.fire({
+      title: "Estas seguro?",
+      text: "Esta acción no se puede deshacer.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
       confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
     });
+    
+    
 
     if (!result.isConfirmed) return;
 
@@ -149,8 +153,9 @@ export const ProductosPorCliente = (): JSX.Element => {
       const data = await response.json();
 
       if (response.ok) {
-        Swal.fire({
-          title: "¡Eliminado!",
+        // Si la respuesta es exitosa
+        sweetAlert.fire({
+          title: "Éxito",
           text: data.message,
           icon: "success",
           confirmButtonColor: "#3085d6",
@@ -158,18 +163,21 @@ export const ProductosPorCliente = (): JSX.Element => {
 
         setRmas(rmas.filter((rma) => rma.idRma !== idRma));
       } else {
-        Swal.fire({
+        // Si hay un error en la respuesta
+        console.error("Error al eliminar RMA:", data);
+        sweetAlert.fire({
           title: "Error",
-          text: data.message,
+          text: data.message || "Hubo un problema al eliminar el RMA.",
           icon: "error",
           confirmButtonColor: "#d33",
         });
       }
     } catch (error) {
       console.error("Error al eliminar RMA:", error);
-      Swal.fire({
-        title: "Error",
-        text: "Hubo un problema al eliminar el RMA.",
+      // Mostrar alerta de error en la conexión
+      sweetAlert.fire({
+        title: "Error de conexión",
+        text: "Por favor, inténtelo de nuevo más tarde",
         icon: "error",
         confirmButtonColor: "#d33",
       });

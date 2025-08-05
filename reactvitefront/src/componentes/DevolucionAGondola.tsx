@@ -3,7 +3,7 @@ import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import { ListarProductos } from "./utilidades/ListarProductos";
 import { ListarMarcas } from "./utilidades/ListarMarcas";
 import { Contenedor } from "./utilidades/Contenedor";
-import Swal from "sweetalert2";
+import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 import Loader from "./utilidades/Loader";
 import FechaInput from "./utilidades/FechaInput";
 import Urls from './utilidades/Urls';
@@ -86,7 +86,7 @@ export const DevolucionAGondola: React.FC = () => {
     if (!productoSeleccionado) {
       const skuInput = document.getElementById("skuInput") as HTMLInputElement;
       skuInput.focus();
-      Swal.fire({
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe seleccionar un producto",
@@ -102,7 +102,7 @@ export const DevolucionAGondola: React.FC = () => {
 
     if (!cantidad || cantidad === "0") {
       cantidadInput.focus();
-      Swal.fire({
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe ingresar una cantidad válida.",
@@ -114,7 +114,7 @@ export const DevolucionAGondola: React.FC = () => {
     if (!marcaSeleccionada) {
       const marcaInput = document.getElementById("marca") as HTMLInputElement;
       marcaInput.focus();
-      Swal.fire({
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe seleccionar una marca",
@@ -130,7 +130,7 @@ export const DevolucionAGondola: React.FC = () => {
 
     // Validar que se haya seleccionado un motivo
     if (!motivo) {
-      Swal.fire({
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe seleccionar un motivo",
@@ -147,7 +147,7 @@ export const DevolucionAGondola: React.FC = () => {
     // Validar que se haya ingresado el número de venta de Meli si es necesario
     if (devMeliSeleccionado && !ventaMeli) {
       numVentaMeliInput.focus();
-      Swal.fire({
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe ingresar el número de venta de Meli",
@@ -167,7 +167,7 @@ export const DevolucionAGondola: React.FC = () => {
       // Validar que se haya ingresado un motivo manual
       if (!motivoFinal) {
         otroMotivoInput.focus();
-        Swal.fire({
+        sweetAlert.fire({
           icon: "warning",
           title: "Campo vacío",
           text: "Debe ingresar un motivo",
@@ -177,7 +177,7 @@ export const DevolucionAGondola: React.FC = () => {
 
       // Validar que el motivo no supere los 100 caracteres
       if (motivoFinal.length > 100) {
-        Swal.fire({
+        sweetAlert.fire({
           icon: "warning",
           title: "Motivo demasiado largo",
           text: "El motivo no puede superar los 100 caracteres.",
@@ -239,7 +239,7 @@ export const DevolucionAGondola: React.FC = () => {
     e.preventDefault();
 
     if (!clienteSeleccionado) {
-      Swal.fire({
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe seleccionar un cliente",
@@ -248,7 +248,7 @@ export const DevolucionAGondola: React.FC = () => {
     }
 
     if (productosAgregados.length === 0) {
-      Swal.fire({
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe agregar al menos un producto",
@@ -280,17 +280,19 @@ export const DevolucionAGondola: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        Swal.fire({
+        // Si la respuesta es exitosa
+        sweetAlert.fire({
           icon: "success",
-          title: "Devolución guardada",
-          text: "La devolución se ha guardado correctamente",
-          confirmButtonText: "Aceptar",
+          title: "Éxito",
+          text: "Devolución guardada exitosamente",
         }).then(() => {
           limpiarInputs();
           setProductosAgregados([]);
         });
       } else {
-        Swal.fire({
+        // Si hay un error en la respuesta
+        console.error("Error al guardar la devolución:", data);
+        sweetAlert.fire({
           icon: "error",
           title: "Error",
           text: data.message || "Hubo un problema al guardar la devolución",
@@ -298,10 +300,11 @@ export const DevolucionAGondola: React.FC = () => {
       }
     } catch (error) {
       console.error("Error al enviar el formulario:", error);
-      Swal.fire({
+      // Mostrar alerta de error en la conexión
+      sweetAlert.fire({
         icon: "error",
-        title: "Error",
-        text: "Hubo un problema al enviar el formulario",
+        title: "Error de conexión",
+        text: "Por favor, inténtelo de nuevo más tarde",
       });
     } finally {
       setLoading(false);

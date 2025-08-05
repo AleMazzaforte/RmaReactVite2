@@ -5,7 +5,7 @@ import { FieldSetTintasConfig } from "./utilidades/FieldSetTintasConfig";
 import { GetInventarioStock } from "./utilidades/GetInventarioStock";
 import { GuardarInventario } from "./utilidades/GuardarInventario";
 import * as XLSX from "xlsx";
-import Swal from "sweetalert2";
+import {sweetAlert} from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
 import Urls from './utilidades/Urls';
 
 
@@ -82,9 +82,10 @@ export const ContadorDeTintas: React.FC = () => {
 
   const descargarExcel = () => {
     if (resultados.length === 0) {
-      Swal.fire({
-        title: "No hay datos",
-        text: "No hay resultados para exportar",
+      // Si no hay resultados, mostrar alerta
+      sweetAlert.fire({
+        title: "No hay resultados",
+        text: "Por favor, complete el formulario antes de exportar",
         icon: "warning",
         confirmButtonText: "OK",
       });
@@ -120,7 +121,7 @@ export const ContadorDeTintas: React.FC = () => {
       if (!response.ok) throw new Error("Error al guardar");
 
       const result = await response.json();
-      Swal.fire({
+       sweetAlert.fire({
         title: "Éxito",
         text: `${result.updatedCount} productos actualizados`,
         icon: "success",
@@ -129,7 +130,7 @@ export const ContadorDeTintas: React.FC = () => {
       setCambiosPendientes([]);
     } catch (error) {
       console.error("Error:", error);
-      Swal.fire({
+       sweetAlert.fire({
         title: "Error",
         text: "Error al guardar cambios",
         icon: "error",

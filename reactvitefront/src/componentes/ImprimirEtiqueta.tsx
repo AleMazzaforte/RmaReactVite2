@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import Swal from "sweetalert2";
+import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import Loader from "./utilidades/Loader";
 import { jsPDF } from "jspdf";
@@ -37,10 +37,11 @@ export const ImprimirEtiqueta = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!clienteSeleccionado || clienteSeleccionado.id === undefined) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Por favor, seleccione un cliente válido antes de generar la etiqueta.",
+      // Mostrar alerta si no se ha seleccionado un cliente
+      sweetAlert.fire({
+        icon: "warning",
+        title: "Cliente no seleccionado",
+        text: "Por favor, seleccione un cliente antes de continuar.",
       });
       return;
     }
@@ -59,16 +60,18 @@ export const ImprimirEtiqueta = () => {
         );
 
         if (rmaPendiente) {
-          Swal.fire({
-            icon: "warning",
+          // Si hay RMA pendiente, mostrar alerta y permitir editar datos
+          sweetAlert.fire({
+            icon: "info",
             title: "RMA Pendiente",
-            text: `El cliente "${clienteSeleccionado.nombre}" tiene RMA pendiente de entrega.`,
+            text: `El cliente "${clienteSeleccionado.nombre}" tiene RMA pendiente.`,
           });
         } else {
-          Swal.fire({
+          // Si no hay RMA pendiente, mostrar alerta y permitir editar datos
+          sweetAlert.fire({
             icon: "success",
-            title: "Generar etiqueta",
-            text: `No hay RMA pendiente para el cliente "${clienteSeleccionado.nombre}".`,
+            title: "No hay RMA Pendiente",
+            text: `El cliente "${clienteSeleccionado.nombre}" no tiene RMA pendiente.`,
           });
         }
 
@@ -76,18 +79,21 @@ export const ImprimirEtiqueta = () => {
         setMostrarInput(true);
         setMostrarDatosEditable(true);
       } else {
-        Swal.fire({
+        // Si hay un error en la respuesta
+        console.error("Error al buscar RMA:", data);
+        sweetAlert.fire({
           icon: "error",
           title: "Error",
-          text: data.error || "Hubo un problema al buscar en la tabla RMA.",
+          text: data.error || "Hubo un problema al buscar RMA.",
         });
       }
     } catch (error) {
       console.error("Error al buscar en la tabla RMA:", error);
-      Swal.fire({
+      // Mostrar alerta de error en la conexión
+      sweetAlert.fire({
         icon: "error",
-        title: "Error",
-        text: "Hubo un problema al buscar en la tabla RMA.",
+        title: "Error de conexión",
+        text: "Por favor, inténtelo de nuevo más tarde",
       });
     } finally {
       setLoading(false);
@@ -171,10 +177,10 @@ const zplCodes: string[] = [];
   const generarPDF = () => {
     try {
       if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
-        Swal.fire({
+        sweetAlert.fire({
           icon: "error",
-          title: "Error",
-          text: "Verifique los datos del cliente y la cantidad de bultos.",
+          title: "Datos incompletos",
+          text: "Por favor, complete todos los campos antes de generar el PDF.",
         });
         return;
       }
@@ -297,17 +303,19 @@ const zplCodes: string[] = [];
         URL.revokeObjectURL(pdfUrl);
       }, 1000);
 
-      Swal.fire({
+      // Mostrar alerta de éxito
+      sweetAlert.fire({
         icon: "success",
         title: "PDF generado",
         text: `Se abrió el PDF con ${cantidadBultos} etiquetas en una nueva pestaña.`,
       });
     } catch (error) {
       console.error("Error al generar PDF:", error);
-      Swal.fire({
+      // Mostrar alerta de error
+      sweetAlert.fire({
         icon: "error",
         title: "Error",
-        text: "No se pudo generar el PDF. Intente nuevamente.",
+        text: "No se pudo generar el PDF. Verifique los datos.",
       });
     }
   };
@@ -329,7 +337,9 @@ const zplCodes: string[] = [];
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      Swal.fire({
+      console.error("Error al generar el archivo ZPL:", error);
+      // Mostrar alerta de error
+      sweetAlert.fire({
         icon: "error",
         title: "Error",
         text: "No se pudo generar el archivo ZPL. Verifique los datos.",

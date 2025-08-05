@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
-import Swal from 'sweetalert2';
+import {sweetAlert}  from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
 import { useAuth } from '../rutas/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
@@ -39,7 +39,8 @@ export function LoginContainer() {
     e.preventDefault();
 
     if (localStorage.getItem('token')) {
-      Swal.fire({
+      // Si ya hay un token, mostrar alerta y no permitir iniciar sesión
+      sweetAlert.fire({
         title: 'Error',
         text: 'Ya has iniciado sesión',
         icon: 'error',
@@ -68,9 +69,10 @@ export function LoginContainer() {
       if (response.ok) {
         localStorage.setItem('token', data.token);
         login();
-        Swal.fire({
-          title: '¡Bienvenido!',
-          text: `Hola, ${formData.nombre}. ¡Te has logueado exitosamente!`,
+        // Mostrar alerta de éxito y redirigir al usuario
+        sweetAlert.fire({
+          title: 'Éxito',
+          text: 'Has iniciado sesión correctamente',
           icon: 'success',
           timer: 2000,
           showConfirmButton: false,
@@ -85,7 +87,9 @@ export function LoginContainer() {
         } else if (data.error === 'Contraseña incorrecta') {
           errorMessage = 'Contraseña incorrecta';
         }
-        Swal.fire({
+        // Mostrar alerta de error
+        console.error(errorMessage);
+        sweetAlert.fire({
           title: 'Error',
           text: errorMessage,
           icon: 'error',
@@ -95,9 +99,10 @@ export function LoginContainer() {
       }
     } catch (error) {
       console.error(error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Ocurrió un error en la solicitud de login',
+      // Mostrar alerta de error en la conexión
+      sweetAlert.fire({
+        title: 'Error de conexión',
+        text: 'Por favor, inténtelo de nuevo más tarde',
         icon: 'error',
         timer: 2000,
         showConfirmButton: false,

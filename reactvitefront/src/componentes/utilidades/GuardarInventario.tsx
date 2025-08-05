@@ -1,4 +1,6 @@
 import React from 'react';
+import { sweetAlert } from './SweetAlertWrapper';
+
 
 interface ProductoConteo {
   id: number;
@@ -11,7 +13,7 @@ interface GuardarInventarioProps {
     id: number;
     conteoFisico: number | null;
     sku: string;
-    loading?: boolean;
+    
   }[];
   onGuardar: (productosGuardados: ProductoConteo[]) => Promise<void>;
   children: React.ReactNode;
@@ -27,13 +29,16 @@ export const GuardarInventario: React.FC<GuardarInventarioProps> = ({
   children,
   disabled = false,
   style= {},
-  loading = false,
+  
 }) => {
   const [isLocalLoading, setIsLocalLoading] = React.useState(false);
   const handleClick = async () => {
     const productosValidos = productos.filter(p => p.conteoFisico !== null);
     if (productosValidos.length === 0 || isLocalLoading) {
-      alert("No hay conteos válidos para guardar");
+      sweetAlert.error(
+        'No hay productos para guardar',
+        'Por favor, asegúrate de que al menos un producto tenga un conteo físico registrado.'
+      );
       return;
     }
     setIsLocalLoading(true);

@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
-import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';  // Importar el componente Loader
 import { BusquedaTransportes } from './utilidades/BusquedaTransportes';
 import { Contenedor } from './utilidades/Contenedor';
 import Urls from "./utilidades/Urls";
+import { sweetAlert } from './utilidades/SweetAlertWrapper';
 
 export const CargarClientes: React.FC = () => {
   const [loading, setLoading] = useState(false);  // Estado para el loader
@@ -47,30 +47,32 @@ export const CargarClientes: React.FC = () => {
         const result = await response.json();
 
         if (response.ok) {
-          Swal.fire({
-            icon: "success",
-            title: "Cliente agregado",
-            text: `El cliente ${nombre} se ha agregado correctamente`,
-          }).then(() => {
+          // Si la respuesta es exitosa
+          sweetAlert.success(
+            'Cliente agregado',
+            `El cliente ${nombre} se ha agregado correctamente`
+          ).then(() => {
             if (formRef.current) {
               formRef.current.reset();
               setTransporteSeleccionado(null); // Limpiamos el transporte seleccionado
             }
           });
+        
         } else {
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: result.error || "Hubo un problema al agregar el cliente",
-          });
+          // Si hay un error en la respuesta
+          console.error("Error al agregar el cliente:", result);
+          sweetAlert.error(
+            'Error al agregar el cliente',
+            result.error || 'Hubo un problema al agregar el cliente'
+          );
         }
       } catch (error) {
         console.error("Error al enviar el formulario:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "Hubo un problema al enviar el formulario",
-        });
+        // Si hay un error en la conexión o en la solicitud
+        sweetAlert.error(
+          'Error al enviar el formulario',
+          'Hubo un problema al enviar el formulario. Por favor, inténtelo de nuevo más tarde.'
+        );
       } finally {
         setLoading(false);
       }
@@ -82,9 +84,8 @@ export const CargarClientes: React.FC = () => {
     const formData = new FormData(e.currentTarget);
     const nombre = formData.get("cliente") as string;
     const cuit = formData.get("cuit") as string;
-
-    Swal.fire({
-      title: `¿Quiere guardar a ${nombre} como cliente?`,
+    sweetAlert.fire({
+      title: `¿Quiere guardar a ${nombre} como cliente?`, 
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Sí, guardar",

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
 import { ListarMarcas } from './utilidades/ListarMarcas';  // Importar el componente ListarMarcas
 import { Contenedor } from './utilidades/Contenedor'; // Importar el componente Contenedor
 import Urls from "./utilidades/Urls";
+import { sweetAlert } from './utilidades/SweetAlertWrapper';
 
 interface Marca {
     id: string;
@@ -37,11 +37,12 @@ export const ActualizarMarca: React.FC = () => {
 
         // Validar que el nombre de la marca no esté vacío
         if (!nombreMarca.trim()) {
-            Swal.fire({
+            sweetAlert.fire({
                 icon: 'warning',
                 title: 'Campo vacío',
                 text: 'Por favor, ingrese el nombre de la marca',
             });
+          
             return;
         }
 
@@ -58,7 +59,7 @@ export const ActualizarMarca: React.FC = () => {
 
             if (response.ok) {
                 // Si la respuesta es exitosa
-                Swal.fire({
+                sweetAlert.fire({
                     icon: 'success',
                     title: '¡Marca actualizada exitosamente!',
                 });
@@ -70,7 +71,7 @@ export const ActualizarMarca: React.FC = () => {
             } else {
                 // Si hay un error en la respuesta
                 const errorMessage = data.message || 'Error al actualizar la marca';
-                Swal.fire({
+                sweetAlert.fire({
                     icon: 'error',
                     title: 'Error',
                     text: errorMessage,
@@ -79,11 +80,12 @@ export const ActualizarMarca: React.FC = () => {
         } catch (error) {
             // Si hay un error en la conexión o en la solicitud
             console.error('Error al actualizar la marca', error);
-            Swal.fire({
+            sweetAlert.fire({
                 icon: 'error',
                 title: 'Error de conexión',
                 text: 'Por favor, inténtelo de nuevo más tarde',
             });
+
         } finally {
             setLoading(false); // Desactivar estado de carga
         }
@@ -94,10 +96,10 @@ export const ActualizarMarca: React.FC = () => {
         if (!marcaSeleccionada) return;
 
         // Confirmar con el usuario antes de eliminar
-        const confirmacion = await Swal.fire({
+        const confirmacion = await sweetAlert.fire({
+            title: 'Confirmar eliminación',         
+            text: `¿Estás seguro de que deseas eliminar la marca "${marcaSeleccionada.nombre}"? Esta acción no se puede deshacer.`,
             icon: 'warning',
-            title: '¿Estás seguro?',
-            text: `¿Deseas eliminar la marca "${marcaSeleccionada.nombre}"?`,
             showCancelButton: true,
             confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar',
@@ -119,7 +121,7 @@ export const ActualizarMarca: React.FC = () => {
 
             if (response.ok) {
                 // Si la respuesta es exitosa
-                Swal.fire({
+                sweetAlert.fire({
                     icon: 'success',
                     title: '¡Marca eliminada exitosamente!',
                 });
@@ -131,7 +133,7 @@ export const ActualizarMarca: React.FC = () => {
             } else {
                 // Si hay un error en la respuesta
                 const errorMessage = data.message || 'Error al eliminar la marca';
-                Swal.fire({
+                sweetAlert.fire({
                     icon: 'error',
                     title: 'Error',
                     text: errorMessage,
@@ -140,7 +142,7 @@ export const ActualizarMarca: React.FC = () => {
         } catch (error) {
             // Si hay un error en la conexión o en la solicitud
             console.error('Error al eliminar la marca', error);
-            Swal.fire({
+            sweetAlert.fire({
                 icon: 'error',
                 title: 'Error de conexión',
                 text: 'Por favor, inténtelo de nuevo más tarde',

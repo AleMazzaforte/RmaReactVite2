@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Swal from 'sweetalert2';
 import Loader from './utilidades/Loader';
 import { BusquedaClientes } from './utilidades/BusquedaClientes';
 import { BusquedaTransportes } from './utilidades/BusquedaTransportes';
 import { Contenedor } from './utilidades/Contenedor';
 import Urls from "./utilidades/Urls";
+import { sweetAlert } from './utilidades/SweetAlertWrapper';
 
 interface Cliente {
   id: string;
@@ -85,7 +85,7 @@ export const ActualizarClientes: React.FC = () => {
         });
 
         if (response.ok) {
-          Swal.fire({
+          sweetAlert.fire({
             icon: 'success',
             title: mensajeExito,
             text: `El cliente ${nombre} se ha actualizado correctamente`,
@@ -96,18 +96,19 @@ export const ActualizarClientes: React.FC = () => {
             }
           });
         } else {
-          Swal.fire({
+          sweetAlert.fire({
             icon: 'error',
             title: mensajeError,
             text: `Hubo un problema al actualizar el cliente ${nombre}`,
           });
+          console.error('Error al actualizar el cliente:', response.statusText);
         }
       } catch (error) {
         console.error('Error al enviar el formulario:', error);
-        Swal.fire({
+        sweetAlert.fire({
           icon: 'error',
           title: mensajeError,
-          text: 'Hubo un problema al enviar el formulario',
+          text: `Hubo un problema al enviar el formulario para el cliente ${nombre}`,
         });
       } finally {
         setLoading(false);
@@ -121,7 +122,7 @@ export const ActualizarClientes: React.FC = () => {
       const url = `${urlActualizarCliente}/${clienteSeleccionado.id}`;
       enviarFormulario(clienteSeleccionado.nombre, url, 'Cliente actualizado', 'Error al actualizar el cliente');
     } else {
-      Swal.fire({
+      sweetAlert.fire({
         icon: 'warning',
         title: 'No se seleccionó ningún cliente',
         text: 'Seleccione un cliente para actualizar.',

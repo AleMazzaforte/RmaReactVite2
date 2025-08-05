@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calculator } from './Calculator';
-import Swal from 'sweetalert2';
+import { sweetAlert } from './SweetAlertWrapper';
 
 interface InputWithLongTouchCalculatorProps {
   value: number | null;
@@ -95,16 +95,17 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
       }
 
       return await response.json();
-      Swal.fire({
+      sweetAlert.fire({
         title: 'Éxito',
         text: 'Cantidad por bulto actualizada correctamente',
         icon: 'success',
       });
+     
 
     } catch (error) {
       console.error('Error:', error);
       throw error;
-      Swal.fire({
+      sweetAlert.fire({
         title: 'Error',
         text: 'No se pudo actualizar la cantidad por bulto',
         icon: 'error',

@@ -1,11 +1,11 @@
 import React, { useState, useRef } from "react";
-import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader"; // Importar el componente Loader
 import { ListarMarcas } from "./utilidades/ListarMarcas"; // Importar el componente ListarMarcas
 import { ListarProductos } from "./utilidades/ListarProductos"; // Importar el componente ListarProductos
 import { Contenedor } from "./utilidades/Contenedor";
 import InputCheckbox from "./utilidades/InputCheckbox"; // Importar el componente InputCheckbox
 import Urls from "./utilidades/Urls";
+import { sweetAlert } from "./utilidades/SweetAlertWrapper"; // Importar SweetAlertWrapper
 
 interface Marca {
   id: number;
@@ -88,30 +88,30 @@ export const ActualizarProductos: React.FC = () => {
         const result = await response.json();
 
         if (response.ok) {
-          Swal.fire({
-            icon: "success",
-            title: "Producto actualizado",
-            text: `El producto con SKU "${data.sku}" se ha actualizado correctamente`,
-          }).then(() => {
+          // Si la respuesta es exitosa
+          sweetAlert.success(
+            "¡Producto actualizado exitosamente!",
+            `El producto con SKU "${data.sku}" se ha actualizado correctamente`
+          ).then(() => {
             if (formRef.current) {
               formRef.current.reset();
               setProductoSeleccionado(null); // Reiniciar el producto seleccionado
             }
           });
         } else {
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: result.error || "Hubo un problema al actualizar el producto",
-          });
+          // Si hay un error en la respuesta
+          const errorMessage = result.message || "Error al actualizar el producto";
+          sweetAlert.error(
+            "Error al actualizar el producto",
+            errorMessage
+          );
         }
       } catch (error) {
         console.error("Error al enviar el formulario:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "Hubo un problema al enviar el formulario",
-        });
+        sweetAlert.error(
+          "Error al enviar el formulario",
+          "Hubo un problema al enviar el formulario. Por favor, inténtelo de nuevo más tarde."
+        );
       } finally {
         setLoading(false);
       }
@@ -135,29 +135,29 @@ export const ActualizarProductos: React.FC = () => {
         const result = await response.json();
 
         if (response.ok) {
-          Swal.fire({
-            icon: "success",
-            title: "Producto eliminado",
-            text: `El producto con SKU "${productoSeleccionado.sku}" se ha eliminado correctamente`,
-          });
+          // Si la respuesta es exitosa
+          sweetAlert.success(
+            "¡Producto eliminado exitosamente!",
+            `El producto con SKU "${productoSeleccionado.sku}" se ha eliminado correctamente`
+          );
           if (formRef.current) {
             formRef.current.reset();
             setProductoSeleccionado(null); // Reiniciar el producto seleccionado
           }
         } else {
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: result.error || "Hubo un problema al eliminar el producto",
-          });
+          // Si hay un error en la respuesta
+          console.error("Error al eliminar el producto:", result);
+          sweetAlert.error(
+            "Error al eliminar el producto",
+            result.error || "Hubo un problema al eliminar el producto"
+          );
         }
       } catch (error) {
         console.error("Error al eliminar el producto:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "Hubo un problema al eliminar el producto",
-        });
+        sweetAlert.error(
+          "Error al eliminar el producto",
+          "Hubo un problema al eliminar el producto. Por favor, inténtelo de nuevo más tarde."
+        );
       } finally {
         setLoading(false);
       }
@@ -166,32 +166,39 @@ export const ActualizarProductos: React.FC = () => {
 
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    Swal.fire({
-      title: `¿Quiere actualizar el producto con SKU "${productoSeleccionado?.sku}"?`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Sí, actualizar",
-      cancelButtonText: "Cancelar",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        actualizarProducto();
-      }
-    });
+    if (productoSeleccionado) {
+      // Confirmación antes de actualizar
+      sweetAlert.fire({
+        title: `¿Quiere actualizar el producto con SKU "${productoSeleccionado.sku}"?`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Sí, actualizar",
+        cancelButtonText: "Cancelar",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          actualizarProducto();
+        }
+      });
+    }
+    
   };
 
   const handleEliminarProducto = () => {
-    Swal.fire({
-      title: `¿Quiere eliminar el producto con SKU "${productoSeleccionado?.sku}"?`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        eliminarProducto();
-      }
-    });
+    if (productoSeleccionado) {
+      // Confirmación antes de eliminar
+      sweetAlert.fire({
+        title: `¿Quiere eliminar el producto con SKU "${productoSeleccionado.sku}"?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          eliminarProducto();
+        }
+      });
+    }
+    
   };
 
   // Función para manejar el keydown y evitar el envío del formulario al presionar Enter

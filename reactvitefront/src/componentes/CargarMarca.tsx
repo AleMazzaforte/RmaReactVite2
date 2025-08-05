@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import Swal from "sweetalert2";
+import React, { useState } from "react";
 import Loader from "./utilidades/Loader"; // Importar el componente Loader
 import { Contenedor } from "./utilidades/Contenedor";
+import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 
 import Urls from "./utilidades/Urls";
 const urlMarca = Urls.marcas.cargar;
@@ -23,7 +23,8 @@ export const CargarMarca: React.FC = () => {
 
     // Validar datos
     if (nombreMarca === "") {
-      Swal.fire({
+      // Mostrar alerta si el campo está vacío
+      sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Por favor, ingrese la marca",
@@ -50,26 +51,27 @@ export const CargarMarca: React.FC = () => {
 
       if (response.ok) {
         // Si la respuesta es exitosa
-        Swal.fire({
+        sweetAlert.fire({
           icon: "success",
-          title: "¡Marca cargada exitosamente!",
+          title: "Éxito",
+          text: "Marca cargada exitosamente",
         });
       } else {
         // Si hay un error en la respuesta
         const errorMessage = data.message || "Error al cargar la marca";
-        Swal.fire({
+        sweetAlert.fire({
           icon: "error",
           title: "Error",
           text: errorMessage,
-        });
+        }); 
       }
     } catch (error) {
       // Si hay un error en la conexión o en la solicitud
-      console.error("Error al cargar la marca", error);
-      Swal.fire({
+      console.error("Error al cargar la marca", error); 
+      sweetAlert.fire({
         icon: "error",
-        title: "Error de conexión",
-        text: "Por favor, inténtelo de nuevo más tarde",
+        title: "Error",
+        text: "No se pudo conectar con el servidor. Por favor, inténtelo de nuevo más tarde.",
       });
     } finally {
       setLoading(false); // Desactivar estado de carga

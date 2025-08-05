@@ -2,9 +2,9 @@ import { useState, useRef } from "react";
 import { ListarOp } from "./utilidades/ListarOp";
 import { ListarProductos } from "./utilidades/ListarProductos";
 import Loader from "./utilidades/Loader";
-import Swal from "sweetalert2";
 import { Contenedor } from "./utilidades/Contenedor";
 import Urls from "./utilidades/Urls";
+import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 
 interface OpProducto {
   id: number;
@@ -99,7 +99,11 @@ export const ActualizarImpo = () => {
       setProductos(productosData);
     } catch (error) {
       console.error("Error cargando datos:", error);
-      Swal.fire("Error", "No se pudieron cargar los datos de la OP", "error");
+      sweetAlert.fire({
+        icon: "error",
+        title: "Error al cargar datos",
+        text: "No se pudieron cargar los productos de la operación seleccionada.",
+      });
     } finally {
       setLoading(false);
     }
@@ -140,10 +144,18 @@ export const ActualizarImpo = () => {
         prev.filter((item) => item.idOpProducto !== idOpProducto)
       );
 
-      //Swal.fire('Éxito', 'Producto eliminado correctamente', 'success');
+      sweetAlert.fire({
+        icon: "success",  
+        title: "Producto eliminado",
+        text: "El producto se ha eliminado correctamente de la operación.",
+      });
     } catch (error) {
       console.error("Error eliminando producto:", error);
-      Swal.fire("Error", "No se pudo eliminar el producto", "error");
+     sweetAlert.fire({
+        icon: "error",
+        title: "Error al eliminar producto",
+        text: "No se pudo eliminar el producto de la operación.",
+      });
     } finally {
       setEliminando(null);
     }
@@ -151,13 +163,23 @@ export const ActualizarImpo = () => {
 
   const handleAgregarProducto = () => {
     if (!nuevoProducto) {
-      Swal.fire("Error", "Debes seleccionar un producto", "error");
+      sweetAlert.fire({
+        icon: "error",
+        title: "Error",
+        text: "Debes seleccionar un producto para agregar.",
+      });
+     
       return;
     }
 
     // Verificar si el producto ya está en la lista
-    if (productosOp.some((p) => p.id === nuevoProducto.id)) {
-      Swal.fire("Error", "Este producto ya está en la lista", "error");
+    if (productosOp.some((p) => p.id === nuevoProducto.id)) { 
+      sweetAlert.fire({
+        icon: "error",
+        title: "Error",
+        text: "Este producto ya está en la lista.",
+      });
+     
       return;
     }
 
@@ -183,7 +205,12 @@ export const ActualizarImpo = () => {
       const productosModificados = productosOp.filter((p) => p.modificado);
 
       if (productosModificados.length === 0) {
-        Swal.fire("Info", "No hay cambios para guardar", "info");
+        sweetAlert.fire({
+          icon: "info",
+          title: "No hay cambios",
+          text: "No se han realizado cambios en los productos.",
+        });
+      
         return;
       }
 
@@ -197,11 +224,21 @@ export const ActualizarImpo = () => {
       };
 
       if (payload.productos.length === 0) {
-        Swal.fire("Error", "No hay productos para actualizar", "error");
+        sweetAlert.fire({
+          icon: "error",
+          title: "Error",
+          text: "No hay productos para actualizar.",
+        });
+      
         return;
       }
       if (payload.productos.some((p) => p.cantidad <= 0)) {
-        Swal.fire("Error", "Ingrese la cantidad", "error");
+        sweetAlert.fire({
+          icon: "error",
+          title: "Error",
+          text: "Todos los productos deben tener una cantidad mayor a cero.",
+        });
+    
         return;
       }
       const response = await fetch(`${urlActualizarSelectivoOp}`, {
@@ -214,11 +251,20 @@ export const ActualizarImpo = () => {
 
       // Recargar datos actualizados
       await handleOpSeleccionada([opSeleccionada]);
-
-      Swal.fire("Éxito", "Cambios guardados correctamente", "success");
+      sweetAlert.fire({
+        icon: "success",
+        title: "Éxito",
+        text: "Los cambios se han guardado correctamente.",
+      });
+      
     } catch (error) {
-      console.error("Error al guardar:", error);
-      Swal.fire("Error", "No se pudieron guardar los cambios", "error");
+      console.error("Error al guardar:", error);  
+      sweetAlert.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudieron guardar los cambios.",
+      });
+      
     }
   };
 

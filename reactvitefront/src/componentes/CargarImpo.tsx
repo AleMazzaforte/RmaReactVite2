@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import Loader from "./utilidades/Loader";
 import FechaInput from "./utilidades/FechaInput";
 import { ListarProductos } from "./utilidades/ListarProductos";
-import Swal from "sweetalert2";
+import {sweetAlert} from "./utilidades/SweetAlertWrapper";
 import { Contenedor } from "./utilidades/Contenedor";
 
 import Urls from "./utilidades/Urls";
@@ -37,18 +37,37 @@ export class OpService {
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
+         sweetAlert.fire({
+            title: 'Error',
+            text: data?.message || 'Hubo un problema al guardar la operación',
+            icon: 'error',
+          });
         throw new Error(
           data?.message ||
           `Error al guardar la operación. Código: ${response.status}`
+         
+
         );
+        sweetAlert.fire({
+          title: 'Error',
+          text: data?.message || 'Hubo un problema al guardar la operación',
+          icon: 'error',
+        });
+
       }
       return {
+
         success: data?.success ?? true,
         message: data?.message ?? "Operación exitosa",
         idOp: data?.idOp,
       };
     } catch (error) {
       console.error("Error en OpService:", error);
+      sweetAlert.fire({
+        title: 'Error',
+        text: error + "",
+        icon: 'error',
+      });
       return { success: false, message: error + "" };
     }
   }
@@ -91,7 +110,7 @@ export const CargarImpo = () => {
 
   const agregarProducto = () => {
     if (!productoSeleccionado) {
-      Swal.fire({
+      sweetAlert.fire({
         icon: "error",
         title: "Error",
         text: "Debe seleccionar un producto válido.",
@@ -104,17 +123,17 @@ export const CargarImpo = () => {
     }
 
     if (!cantidadRef.current || !cantidadRef.current.value) {
-      Swal.fire({
+      sweetAlert.fire({
         icon: "error",
         title: "Error",
-        text: "Debe seleccionar una cantidad válida.",
+        text: "Debe ingresar una cantidad válida.",
       });
       return;
     }
 
     const cantidad = parseInt(cantidadRef.current.value, 10);
     if (isNaN(cantidad) || cantidad <= 0) {
-      Swal.fire({
+      sweetAlert.fire({
         icon: "error",
         title: "Error",
         text: "La cantidad debe ser un número mayor a 0.",
@@ -182,7 +201,7 @@ export const CargarImpo = () => {
 
   const handleCargarOpYProductos = async () => {
     if (!nombre.trim() || !fechaImpo.trim() || productosAgregados.length === 0) {
-      Swal.fire({
+      sweetAlert.fire({
         icon: "error",
         title: "Error",
         text: "Debe completar todos los campos y agregar al menos un producto.",
@@ -205,18 +224,21 @@ export const CargarImpo = () => {
       if (!successProductos) {
         throw new Error(messageProductos);
       }
-
-      Swal.fire({
-        icon: "success",
+      sweetAlert.fire({
         title: "Éxito",
         text: "Operación y productos guardados correctamente",
+        icon: "success",
       });
-
       setNombre("");
       setFechaImpo("");
       setProductosAgregados([]);
     } catch (error) {
-      Swal.fire({ icon: "error", title: "Error", text: error + "" });
+      console.error("Error al cargar OP y productos:", error);
+      sweetAlert.fire({
+        title: "Error",
+        text: error + "",
+        icon: "error",
+      });
     } finally {
       setLoading(false);
     }

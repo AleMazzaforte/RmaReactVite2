@@ -1,5 +1,5 @@
 import React, { useState, FormEvent, ChangeEvent } from 'react';
-import Swal from 'sweetalert2';
+import {sweetAlert} from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
 import { Contenedor } from './utilidades/Contenedor';
 import Urls from './utilidades/Urls';
 
@@ -24,27 +24,31 @@ export const CargarUsuario: React.FC = () => {
       });
 
       if (response.ok) {
-        Swal.fire({
+        // Si la respuesta es exitosa
+        sweetAlert.fire({
           icon: 'success',
-          title: 'Usuario cargado',
-          text: `El usuario ${username} se ha cargado correctamente`,
+          title: 'Éxito',
+          text: 'Usuario cargado exitosamente',
         });
         setUsername('');
         setPassword('');
       } else {
-        Swal.fire({
+        // Si hay un error en la respuesta
+        console.error('Error al cargar el usuario:', response.statusText);
+        sweetAlert.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Hubo un problema al cargar el usuario',
+          text: response.statusText || 'Hubo un problema al cargar el usuario',
         });
       }
     } catch (error) {
       console.error('Error al enviar el formulario:', error);
-      Swal.fire({
+      // Mostrar alerta de error en la conexión
+      sweetAlert.fire({
         icon: 'error',
-        title: 'Error',
-        text: 'Hubo un problema al enviar el formulario',
-      });
+        title: 'Error de conexión',
+        text: 'Por favor, inténtelo de nuevo más tarde',
+      }); 
     } finally {
       setLoading(false);
     }
@@ -52,13 +56,13 @@ export const CargarUsuario: React.FC = () => {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    Swal.fire({
+    sweetAlert.fire({
       title: `¿Quiere guardar a ${username} como usuario?`,
       icon: 'question',
       showCancelButton: true,
+
       confirmButtonText: 'Sí, guardar',
-      cancelButtonText: 'Cancelar'
+      cancelButtonText: 'Cancelar',
     }).then((result) => {
       if (result.isConfirmed) {
         enviarFormulario();

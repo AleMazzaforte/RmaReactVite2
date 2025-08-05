@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import Swal from "sweetalert2";
+import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 import Loader from "./utilidades/Loader"; // Importar el componente Loader
 import { ListarMarcas } from "./utilidades/ListarMarcas"; // Importar el componente ListarMarcas
 import { Contenedor } from "./utilidades/Contenedor"; // Importar el componente Contenedor
@@ -39,10 +39,11 @@ export const CargarProductos: React.FC = () => {
         const result = await response.json();
 
         if (response.ok) {
-          Swal.fire({
+          // Si la respuesta es exitosa
+          sweetAlert.fire({
             icon: "success",
-            title: "Producto agregado",
-            text: `El producto SKU ${data.sku} se ha agregado correctamente`,
+            title: "Éxito",
+            text: "Producto cargado exitosamente",
           }).then(() => {
             if (formRef.current) {
               formRef.current.reset();
@@ -50,18 +51,20 @@ export const CargarProductos: React.FC = () => {
             }
           });
         } else {
-          Swal.fire({
+          // Si hay un error en la respuesta
+          console.error("Error al cargar el producto:", result);
+          sweetAlert.fire({
             icon: "error",
             title: "Error",
-            text: result.message || "Hubo un problema al agregar el producto",
+            text: result.message || "Hubo un problema al cargar el producto",
           });
         }
       } catch (error) {
         console.error("Error al enviar el formulario:", error);
-        Swal.fire({
+        sweetAlert.fire({
           icon: "error",
-          title: "Error",
-          text: "Hubo un problema al enviar el formulario",
+          title: "Error de conexión",
+          text: "Por favor, inténtelo de nuevo más tarde",
         });
       } finally {
         setLoading(false);
@@ -73,8 +76,7 @@ export const CargarProductos: React.FC = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const sku = formData.get("sku") as string;
-
-    Swal.fire({
+    sweetAlert.fire({
       title: `¿Quiere guardar el producto SKU ${sku}?`,
       icon: "question",
       showCancelButton: true,

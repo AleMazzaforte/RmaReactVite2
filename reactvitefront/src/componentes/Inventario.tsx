@@ -5,10 +5,7 @@ import { FiltrosInventario } from "./utilidades/FiltrosInventario";
 import { GetInventarioStock } from "./utilidades/GetInventarioStock";
 import { GuardarInventario } from "./utilidades/GuardarInventario";
 import { InputWithCalculator } from "./utilidades/InputWithCalculator";
-// --- Reemplazamos Swal por nuestro wrapper ---
-// import Swal from "sweetalert2";
-import { sweetAlert } from "./utilidades/SweetAlertWrapper"; // Asegúrate de que la ruta sea correcta
-// --- Fin del cambio ---
+import { sweetAlert } from "./utilidades/SweetAlertWrapper"; 
 import Loader from "./utilidades/Loader";
 import Urls from "./utilidades/Urls";
 import "../estilos/Inventario.css";

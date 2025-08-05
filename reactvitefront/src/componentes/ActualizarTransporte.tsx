@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
-import Swal from "sweetalert2";
 import Loader from "./utilidades/Loader";
 import { BusquedaTransportes } from "./utilidades/BusquedaTransportes";
 import { Contenedor } from "./utilidades/Contenedor";
 import Urls from "./utilidades/Urls";
+import {sweetAlert} from "./utilidades/SweetAlertWrapper";
 
 export const ActualizarTransporte: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -60,25 +60,25 @@ export const ActualizarTransporte: React.FC = () => {
         const result = await response.json();
 
         if (response.ok) {
-          Swal.fire({
-            icon: "success",
-            title: "Transporte actualizado",
-            text: `El transporte "${data.nombre}" se ha actualizado correctamente`,
-          }).then(() => limpiarFormulario());
+          // Si la respuesta es exitosa
+          sweetAlert.success( 
+            "¡Transporte actualizado exitosamente!",
+            `El transporte "${data.nombre}" se ha actualizado correctamente`
+          ).then(() => limpiarFormulario());
         } else {
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text:
-              result.error || "Hubo un problema al actualizar el transporte",
-          });
+          // Si hay un error en la respuesta
+          console.error("Error al actualizar el transporte:", result);
+          sweetAlert.error(
+            "Error al actualizar el transporte",
+            result.error || "Hubo un problema al actualizar el transporte"
+          );
         }
       } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "Hubo un problema al enviar el formulario",
-        });
+        console.error("Error al enviar el formulario:", error);
+        sweetAlert.error(
+          "Error al enviar el formulario",
+          "Hubo un problema al enviar el formulario. Por favor, inténtelo de nuevo más tarde."
+        );
       } finally {
         setLoading(false);
       }
@@ -98,24 +98,25 @@ export const ActualizarTransporte: React.FC = () => {
         const result = await response.json();
 
         if (response.ok) {
-          Swal.fire({
-            icon: "success",
-            title: "Transporte eliminado",
-            text: `El transporte "${transporteSeleccionado.nombre}" se ha eliminado correctamente`,
-          }).then(() => limpiarFormulario());
+          // Si la respuesta es exitosa
+          sweetAlert.success(
+            "¡Transporte eliminado exitosamente!",
+            "El transporte se ha eliminado correctamente",
+          ).then(() => limpiarFormulario());
         } else {
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: result.error || "Hubo un problema al eliminar el transporte",
-          });
+          // Si hay un error en la respuesta
+          console.error("Error al eliminar el transporte:", result);
+          sweetAlert.error(
+            "Error al eliminar el transporte",
+            result.error || "Hubo un problema al eliminar el transporte"
+          );
         }
       } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "Hubo un problema al eliminar el transporte",
-        });
+        console.error("Error al eliminar el transporte:", error);
+        sweetAlert.error(
+          "Error al eliminar el transporte",
+          "Hubo un problema al eliminar el transporte. Por favor, inténtelo de nuevo más tarde."
+        );
       } finally {
         setLoading(false);
       }
@@ -133,7 +134,8 @@ export const ActualizarTransporte: React.FC = () => {
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (transporteSeleccionado) {
-      Swal.fire({
+      // Confirmación antes de actualizar
+      sweetAlert.fire({
         title: `¿Quiere actualizar el transporte "${transporteSeleccionado.nombre}"?`,
         icon: "question",
         showCancelButton: true,
@@ -149,7 +151,8 @@ export const ActualizarTransporte: React.FC = () => {
 
   const handleEliminarTransporte = () => {
     if (transporteSeleccionado) {
-      Swal.fire({
+      // Confirmación antes de eliminar
+      sweetAlert.fire({
         title: `¿Quiere eliminar el transporte "${transporteSeleccionado.nombre}"?`,
         icon: "warning",
         showCancelButton: true,
