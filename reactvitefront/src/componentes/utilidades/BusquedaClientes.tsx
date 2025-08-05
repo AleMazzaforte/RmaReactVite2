@@ -69,6 +69,31 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
   // Si no se pasa una referencia al input, se crea una local
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
 
+  const [mensaje, setMensaje] = useState<string>('');
+
+  //Limpia el mensaje de no hay coincidencia
+  useEffect(() => {
+  const handleClickFuera = () => {
+    setMensaje('');
+  };
+
+  const handleKeyUp = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      setMensaje('');
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickFuera);
+  document.addEventListener('keyup', handleKeyUp);
+  // Limpieza del evento al desmontar el componente
+  return () => {
+    document.removeEventListener('mousedown', handleClickFuera);
+    document.removeEventListener('keyup', handleKeyUp);
+  };
+}, []);
+
+
+
   // Sincroniza el estado interno del input con la prop externa `value`
   useEffect(() => {
     setQuery(value);
@@ -96,6 +121,7 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
 
   // Función asincrónica para buscar clientes desde el servidor
   const buscarClientes = React.useCallback(async (value: string) => {
+    setMensaje("");
     try {
       setLoading(true);
       const response = await fetch(`${endpoint}?query=${value}`); // Realiza la petición al servidor
@@ -108,13 +134,22 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
 
       // Filtra los resultados para que coincidan con el nombre buscado (insensible a mayúsculas)
       if (Array.isArray(data)) {
-        const resultadosFiltrados = data.filter((cliente: Cliente) =>
-          cliente?.nombre?.toLowerCase().includes(value.toLowerCase())
-        );
-        setResultados(resultadosFiltrados); // Guarda resultados filtrados
-      } else {
-        setResultados([]); // Si no es un array, limpia resultados
-      }
+  let resultadosFiltrados = data.filter((cliente: Cliente) =>
+    cliente?.nombre?.toLowerCase().includes(value.toLowerCase())
+  );
+
+  if (resultadosFiltrados.length === 0) {
+    setMensaje('No hay coincidencia');
+  } else {
+    setMensaje('');
+  }
+
+  setResultados(resultadosFiltrados);
+} else {
+  setResultados([]);
+  setMensaje('No hay coincidencia');
+}
+
     } catch (error) {
       console.error('Error buscando clientes:', error);
       Swal.fire({
@@ -189,7 +224,7 @@ export const BusquedaClientes: React.FC<BusquedaClientesProps> = ({
         placeholder="Buscar cliente"
         className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
       />
-
+      {mensaje && <div  className="mt-2 bg-white px-4 py-2  border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">{mensaje}</div>}
       {/* Muestra loader mientras carga o los resultados si ya están listos */}
       {loading ? <Loader /> : (
         <FlechasNavigator

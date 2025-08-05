@@ -36,11 +36,11 @@ export const ImprimirEtiqueta = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!clienteSeleccionado) {
+    if (!clienteSeleccionado || clienteSeleccionado.id === undefined) {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Por favor, seleccione un cliente antes de generar la etiqueta.",
+        text: "Por favor, seleccione un cliente válido antes de generar la etiqueta.",
       });
       return;
     }
@@ -118,6 +118,8 @@ const zplCodes: string[] = [];
     y += 50;
   }
   // Esto genera: renglon1=520, renglon2=570, ..., renglon17=1320, etc.
+  if (datosEditables.telefono === null) datosEditables.telefono = '';
+  if (datosEditables.domicilio === null) datosEditables.domicilio = '';
 
   // === Generar una etiqueta por cada bulto ===
   for (let i = 1; i <= cantidadBultos; i++) {
@@ -135,14 +137,15 @@ const zplCodes: string[] = [];
 // --- DATOS DEL DESTINATARIO ---
 ^FO70,400^A0N,55,55^FB760,1,0,C^FD${datosEditables.nombre}^FS 
 ^FO75,${renglones.renglon1}^A0N,38,38^FDCUIT: ${datosEditables.cuit}^FS
-^FO75,${renglones.renglon2}^A0N,38,38^FDDomicilio: ${datosEditables.domicilio}^FS
-^FO75,${renglones.renglon3}^A0N,38,38^FDProvincia: ${datosEditables.provincia}^FS
-^FO75,${renglones.renglon4}^A0N,38,38^FDCiudad: ${datosEditables.ciudad}^FS
-^FO75,${renglones.renglon5}^A0N,38,38^FDTeléfono: ${datosEditables.telefono}^FS
-^FO75,${renglones.renglon6}^A0N,38,38^FDTransporte: ${datosEditables.transporte}^FS
-^FO75,${renglones.renglon7}^A0N,38,38^FDSeguro: ${datosEditables.seguro}^FS
-^FO75,${renglones.renglon8}^A0N,38,38^FD${datosEditables.condicionDeEntrega}^FS
-^FO75,${renglones.renglon9}^A0N,38,38^FD${datosEditables.condicionDePago}^FS
+^FO75,${renglones.renglon2}^A0N,38,38^FDProvincia: ${datosEditables.provincia}^FS
+^FO75,${renglones.renglon3}^A0N,38,38^FDCiudad: ${datosEditables.ciudad}^FS
+^FO75,${renglones.renglon4}^A0N,38,38^FDDomicilio: ${datosEditables.domicilio}^FS
+^FO75,${renglones.renglon5}^A0N,38,38^FD^FS
+^FO75,${renglones.renglon6}^A0N,38,38^FDTeléfono: ${datosEditables.telefono}^FS
+^FO75,${renglones.renglon7}^A0N,38,38^FDTransporte: ${datosEditables.transporte}^FS
+^FO75,${renglones.renglon8}^A0N,38,38^FDSeguro: ${datosEditables.seguro}^FS
+^FO75,${renglones.renglon9}^A0N,38,38^FD${datosEditables.condicionDeEntrega}^FS
+^FO75,${renglones.renglon10}^A0N,38,38^FD${datosEditables.condicionDePago}^FS
 
 
 // Aquí no imprimimos nada, solo dejamos espacio visual en el diseño
@@ -156,7 +159,7 @@ const zplCodes: string[] = [];
 ^FO75,${renglones.renglon17}^A0N,38,38^FDTeléfono: 351 8509718^FS
 
 // --- BULTO (centrado abajo) ---
-^FO120,${renglones.renglon18}^A0N,75,75^FB560,1,0,C^FDBulto ${i} de ${cantidadBultos}^FS
+^FO120,${renglones.renglon19}^A0N,75,75^FB560,1,0,C^FDBulto ${i} de ${cantidadBultos}^FS
 
 ^XZ`.trim();
 

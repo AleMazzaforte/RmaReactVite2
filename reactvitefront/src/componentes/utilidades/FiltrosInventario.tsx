@@ -111,9 +111,9 @@ export const FiltrosInventario: React.FC<FiltrosInventarioProps> = ({
               color: 'white',
               padding: '0.5rem 1rem',
               borderRadius: '0 0.375rem 0.375rem 0',
-              border: 'none',
-              transition: 'background-color 0.2s',
               
+              transition: 'background-color 0.2s',
+              outline: '2px solid #2563eb'
             }}
           >
             <svg

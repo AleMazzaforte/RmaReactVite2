@@ -92,5 +92,6 @@ router.put('/actualizarCantidadPorBulto', inventarioController.putactualizarCant
 //Inventario reposicion
 router.post('/guardarReposicion', inventarioController.postGuardarReposicion);
 router.get('/obtenerReposiciones', inventarioController.getObtenerReposiciones);
+router.post('/limpiarReposiciones', inventarioController.postLimpiarReposiciones);
 
 export default router;

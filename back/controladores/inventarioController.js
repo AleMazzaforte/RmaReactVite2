@@ -3,7 +3,7 @@ import { conn } from "../bd/bd.js";
 export const inventarioController = {
   getPrepararInventario: async (req, res) => {
     let connection;
-   
+
     try {
       connection = await conn.getConnection();
 
@@ -123,66 +123,66 @@ export const inventarioController = {
   putActualizarProductoInventario: async (req, res) => {
     let connection;
     try {
-        const { productos, tipoArchivo, accion } = req.body;
+      const { productos, tipoArchivo, accion } = req.body;
 
-        // Validaciones básicas
-        if (!['Femex', 'Blow'].includes(tipoArchivo)) {
-            return res.status(400).json({ error: "Tipo de archivo no válido" });
-        }
+      // Validaciones básicas
+      if (!['Femex', 'Blow'].includes(tipoArchivo)) {
+        return res.status(400).json({ error: "Tipo de archivo no válido" });
+      }
 
-        connection = await conn.getConnection();
-        let updatedCount = 0;
-        const fechaActual = new Date();
+      connection = await conn.getConnection();
+      let updatedCount = 0;
+      const fechaActual = new Date();
 
-        if (accion === 'borrar') {
-            // Borrado masivo: rápido y eficiente
-            await connection.beginTransaction();
-            const [result] = await connection.query(
-                `UPDATE productos SET 
+      if (accion === 'borrar') {
+        // Borrado masivo: rápido y eficiente
+        await connection.beginTransaction();
+        const [result] = await connection.query(
+          `UPDATE productos SET 
                 ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = 0,
                 fechaConteo = ?
                 WHERE ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} IS NOT NULL`,
-                [fechaActual]
-            );
-            updatedCount = result.affectedRows;
-            await connection.commit();
-        } else {
-            if (!Array.isArray(productos) || productos.length === 0) {
-                return res.status(400).json({ error: "Se esperaba un array no vacío de productos" });
-            }
+          [fechaActual]
+        );
+        updatedCount = result.affectedRows;
+        await connection.commit();
+      } else {
+        if (!Array.isArray(productos) || productos.length === 0) {
+          return res.status(400).json({ error: "Se esperaba un array no vacío de productos" });
+        }
 
-            // Usar una sola columna dependiendo del tipo
-            const columnaCantidad = tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow';
+        // Usar una sola columna dependiendo del tipo
+        const columnaCantidad = tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow';
 
-            const batchSize = 100; // Ajusta según rendimiento (100-500)
-            for (let i = 0; i < productos.length; i += batchSize) {
-                const batch = productos.slice(i, i + batchSize);
+        const batchSize = 100; // Ajusta según rendimiento (100-500)
+        for (let i = 0; i < productos.length; i += batchSize) {
+          const batch = productos.slice(i, i + batchSize);
 
-                // Construir condiciones y valores
-                const skus = batch.map(p => p.sku);
-                const cantidades = batch.reduce((acc, p) => {
-                    acc[p.sku] = p.cantidad;
-                    return acc;
-                }, {});
+          // Construir condiciones y valores
+          const skus = batch.map(p => p.sku);
+          const cantidades = batch.reduce((acc, p) => {
+            acc[p.sku] = p.cantidad;
+            return acc;
+          }, {});
 
-                // Generar condiciones: WHERE sku IN (?, ?, ?)
-                const skuPlaceholders = skus.map(() => '?').join(',');
+          // Generar condiciones: WHERE sku IN (?, ?, ?)
+          const skuPlaceholders = skus.map(() => '?').join(',');
 
-                // Generar el CASE para asignar cantidades por SKU
-                const caseParts = skus.map(sku => `WHEN ? THEN ?`).join(' ');
-                const caseValues = skus.flatMap(sku => [sku, cantidades[sku]]);
+          // Generar el CASE para asignar cantidades por SKU
+          const caseParts = skus.map(sku => `WHEN ? THEN ?`).join(' ');
+          const caseValues = skus.flatMap(sku => [sku, cantidades[sku]]);
 
-                // Valores para la consulta: [cantidad1, fecha, cantidad2, fecha, ...]
-                const updateValues = [];
-                for (const p of batch) {
-                    updateValues.push(p.cantidad, fechaActual);
-                }
+          // Valores para la consulta: [cantidad1, fecha, cantidad2, fecha, ...]
+          const updateValues = [];
+          for (const p of batch) {
+            updateValues.push(p.cantidad, fechaActual);
+          }
 
-                await connection.beginTransaction();
+          await connection.beginTransaction();
 
-                // Opción 1: UPDATE con CASE (más eficiente)
-                const [result] = await connection.query(
-                    `
+          // Opción 1: UPDATE con CASE (más eficiente)
+          const [result] = await connection.query(
+            `
                     UPDATE productos 
                     SET 
                         ${columnaCantidad} = CASE sku 
@@ -191,35 +191,35 @@ export const inventarioController = {
                         fechaConteo = ?
                     WHERE sku IN (${skuPlaceholders})
                     `,
-                    [...caseValues, fechaActual, ...skus]
-                );
+            [...caseValues, fechaActual, ...skus]
+          );
 
-                updatedCount += result.affectedRows;
-                await connection.commit();
-            }
+          updatedCount += result.affectedRows;
+          await connection.commit();
         }
+      }
 
-        res.status(200).json({
-            success: true,
-            updatedCount,
-            message: accion === 'borrar'
-                ? `Todos los valores de ${tipoArchivo} fueron reseteados a 0 (${updatedCount} registros)`
-                : `${updatedCount} productos actualizados correctamente (${tipoArchivo})`
-        });
+      res.status(200).json({
+        success: true,
+        updatedCount,
+        message: accion === 'borrar'
+          ? `Todos los valores de ${tipoArchivo} fueron reseteados a 0 (${updatedCount} registros)`
+          : `${updatedCount} productos actualizados correctamente (${tipoArchivo})`
+      });
 
     } catch (error) {
-        if (connection) {
-            await connection.rollback().catch(console.error);
-        }
-        console.error("Error al actualizar inventario:", error);
-        res.status(500).json({
-            error: "Error al actualizar el inventario",
-            details: error.message
-        });
+      if (connection) {
+        await connection.rollback().catch(console.error);
+      }
+      console.error("Error al actualizar inventario:", error);
+      res.status(500).json({
+        error: "Error al actualizar el inventario",
+        details: error.message
+      });
     } finally {
-        if (connection) connection.release();
+      if (connection) connection.release();
     }
-},
+  },
 
   putGuardarInventario: async (req, res) => {
     let connection;
@@ -319,8 +319,7 @@ export const inventarioController = {
   //REPOSICION!!!!+++++++++++++++++++++++++++++++++++++
   postGuardarReposicion: async (req, res) => {
     let connection;
-    console.log( 'guarddar', req.body);
-    
+
     try {
       const { productos } = req.body;
 
@@ -404,24 +403,37 @@ export const inventarioController = {
     }
   },
 
-  // REPOSICIÓN - Limpiar reposiciones (opcional)
-  deleteLimpiarReposiciones: async (req, res) => {
-    console.log('eliminar', req.body);
-    
+  // REPOSICIÓN - Limpiar reposiciones 
+  postLimpiarReposiciones: async (req, res) => {
+
+    const { sku } = req.body; 
+
     let connection;
     try {
       connection = await conn.getConnection();
       await connection.beginTransaction();
 
-      const [result] = await connection.query(`
-        UPDATE reposicion SET cantidad = 0
-      `);
+      let query = '';
+      let params = [];
+
+      if (sku) {
+        // Si viene SKU, limpiamos solo ese
+        query = 'UPDATE reposicion SET cantidad = 0 WHERE sku = ?';
+        params = [sku];
+      } else {
+        // Si no, limpiamos todos (para uso futuro)
+        query = 'UPDATE reposicion SET cantidad = 0';
+      }
+
+      const [result] = await connection.query(query, params);
 
       await connection.commit();
 
       res.status(200).json({
         success: true,
-        message: `Todas las reposiciones fueron limpiadas`,
+        message: sku
+          ? `Reposición del SKU ${sku} fue limpiada`
+          : `Todas las reposiciones fueron limpiadas`,
         registrosAfectados: result.affectedRows
       });
 

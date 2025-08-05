@@ -59,7 +59,7 @@
 
    public fire(options: SweetAlertOptions): Promise<SweetAlertResult> {
      return this.swal.fire({
-       buttonsStyling: false,
+       buttonsStyling: true,
        ...options
      });
    }
