@@ -59,6 +59,13 @@
 
    public fire(options: SweetAlertOptions): Promise<SweetAlertResult> {
      return this.swal.fire({
+        customClass: {
+          popup: 'animate-swal-shake !border !border-blue-500',
+          title: 'text-lg font-bold',
+          confirmButton: 'bg-blue-500 text-white hover:bg-blue-700',
+          cancelButton: 'bg-gray-300 text-black hover:bg-gray-400',
+          ...options?.customClass
+        },
        buttonsStyling: true,
        ...options
      });
@@ -75,7 +82,7 @@
        title,
        text,
        customClass: {
-         popup: 'animate-swal-shake !border-l-4 !border-red-500',
+         popup: 'animate-swal-shake !border !border-blue-500',
          ...options?.customClass
        },
        ...options
@@ -88,7 +95,7 @@
        title,
        text,
        customClass: {
-         popup: 'animate-swal-shake !border-l-4 !border-red-500',
+         popup: 'animate-swal-shake !border !border-red-500',
          ...options?.customClass
        },
        ...options
@@ -101,7 +108,7 @@
        title,
        text,
        customClass: {
-         popup: 'animate-swal-shake !border-l-4 !border-red-500',
+         popup: 'animate-swal-shake !border !border-red-500',
          ...options?.customClass
        },
        ...options
@@ -112,12 +119,13 @@
     
     
      return this.fire({
+    
        icon: 'info',
        title,
        text,
        customClass: {
-         popup: 'animate-swal-shake !border-l-4 !border-black',
-         ...options?.customClass
+          popup: 'animate-swal-shake !border !border-blue-500',
+          ...options?.customClass
        },
        ...options
      });
