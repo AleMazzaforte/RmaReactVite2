@@ -82,7 +82,7 @@ router.get('/buscarTransporte', transportes.getBuscarTransporte);
 router.get('/buscarRMA', etiquetas.getBuscarRma);
 
 //Rutas para estadisticas
-router.get('/api/estadisticas/rma', estadisticas.getEstadisticasRMA);
+router.get('/api/Estadisticas/rma', estadisticas.getEstadisticasRMA);
 
 //rutas para Inventario
 router.get('/prepararInventario', inventarioController.getPrepararInventario);
