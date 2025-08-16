@@ -341,7 +341,7 @@ export const CargarImpo = () => {
                   <td>
                     <button
                       onClick={() => eliminarProducto(index)}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-red-600 hover:text-red-800 focus:outline-black focus:ring focus:ring-black"
                     >
                       Eliminar
                     </button>

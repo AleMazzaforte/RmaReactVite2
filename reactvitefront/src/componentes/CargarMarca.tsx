@@ -96,13 +96,13 @@ export const CargarMarca: React.FC = () => {
               type="text"
               id="marca"
               name="marca"
-              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none "
+              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:outline-black focus:ring focus:ring-black "
             />
           </div>
           <div></div><br />
           <button
             type="submit"
-            className="w-full py-2  px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300 mb-5"
+            className="w-full py-2  px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-blackmb-5"
           >
             {loading && <Loader />}
             {loading ? "Cargando..." : "Cargar marca"}

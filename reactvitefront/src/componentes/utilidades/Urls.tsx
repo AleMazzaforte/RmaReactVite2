@@ -9,6 +9,7 @@ const Urls = {
     listar: `${base}/listarCliente`,
     actualizar: `${base}/actualizarCliente`,
     buscar: `${base}/buscarCliente`,
+    eliminar: `${base}/eliminarCliente`,
   },
   transportes: {
     actualizar: `${base}/actualizarTransporte`,

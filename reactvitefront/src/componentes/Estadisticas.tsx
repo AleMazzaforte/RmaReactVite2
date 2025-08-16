@@ -22,8 +22,7 @@ export const Estadisticas: React.FC = () => {
   const [porcentajeMinimo, setPorcentajeMinimo] = useState<number | "">("");
 
   const urlEstadisticas = Urls.estadisticas.estadisticas
-    ? "http://localhost:8080/api/estadisticas/rma"
-    : "https://rma-back.vercel.app/api/estadisticas/rma";
+    
 
   const fetchEstadisticas = async () => {
     setLoading(true);

@@ -233,14 +233,14 @@ export const ActualizarTransporte: React.FC = () => {
           <div className="flex flex-col space-y-4">
             <button
               type="submit"
-              className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg"
+              className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black hover:bg-blue-700"
             >
               {loading ? "Cargando..." : "Actualizar transporte"}
             </button>
             <button
               type="button"
               onClick={handleEliminarTransporte}
-              className="w-full py-2 px-4 bg-red-600 text-white font-semibold rounded-lg"
+              className="w-full py-2 px-4 bg-red-600 text-white font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black hover:bg-red-700"
             >
               {loading ? "Cargando..." : "Eliminar transporte"}
             </button>

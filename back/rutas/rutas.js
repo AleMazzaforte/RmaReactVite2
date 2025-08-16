@@ -31,6 +31,7 @@ router.post('/login', postLogin);
 router.post('/cargarCliente', gestionClientes.cargarCliente);
 router.get('/listarCliente', gestionClientes.listarClientesParaActualizar);
 router.post('/actualizarCliente/:idCliente', gestionClientes.actualizarCliente);
+router.delete('/eliminarCliente/:idCliente', gestionClientes.eliminarCliente);
 
 // Ruta para OP
 router.get('/listarOp/:query', listarOp.getListarOp);

@@ -1,6 +1,8 @@
 // DefinirBloques.tsx
 import React, { useState, useEffect } from 'react';
 import Urls from './utilidades/Urls';
+import {sweetAlert} from "./utilidades/SweetAlertWrapper";
+import Loader from "./utilidades/Loader";
 
 interface ProductoBloque {
   id: number;
@@ -35,7 +37,7 @@ export const DefinirBloques: React.FC = () => {
         setProductosOriginales(data);
         
         const bloquesUnicos = [...new Set(data.map(p => p.idBloque).filter(b => b !== null))] as string[];
-        setBloques(bloquesUnicos);
+        setBloques(bloquesUnicos.sort((a, b) => parseInt(a) - parseInt(b)));
       } catch (error) {
         console.error('Error al cargar productos:', error);
       } finally {
@@ -102,7 +104,7 @@ export const DefinirBloques: React.FC = () => {
 
   const handleGuardarCambios = async () => {
     if (!bloqueSeleccionado && !nuevoBloque) {
-      alert('Selecciona o crea un bloque primero');
+     sweetAlert.error('Error', 'Debe seleccionar un bloque o crear uno nuevo');
       return;
     }
 
@@ -136,14 +138,13 @@ export const DefinirBloques: React.FC = () => {
           setBloques(prev => [...prev, nuevoBloque]);
           setNuevoBloque('');
         }
-        
-        alert('Bloques actualizados correctamente');
+        sweetAlert.success('Éxito', 'Bloques asignados correctamente');
       } else {
         throw new Error('Error al guardar');
       }
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert('Error al guardar los cambios');
+      sweetAlert.error('Error', 'No se pudieron guardar los cambios. Intente nuevamente.');
     } finally {
       setGuardando(false);
     }
@@ -155,9 +156,7 @@ export const DefinirBloques: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+      <Loader />
     );
   }
 
