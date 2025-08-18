@@ -473,7 +473,7 @@ export const DevolucionAGondola: React.FC = () => {
                   key={listarProductosKey}
                   type="button"
                   onClick={agregarProducto}
-                  className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring focus:ring-green-300"
+                  className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-black focus:ring focus:ring-black"
                 >
                   Agregar Producto
                 </button>
@@ -481,7 +481,7 @@ export const DevolucionAGondola: React.FC = () => {
                 <button
                   type="button"
                   onClick={enviarFormulario}
-                  className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
+                  className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-black"
                 >
                   {loading ? "Cargando..." : "Guardar Devolución"}
                 </button>

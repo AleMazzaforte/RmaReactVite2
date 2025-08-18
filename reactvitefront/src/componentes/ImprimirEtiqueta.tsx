@@ -519,13 +519,13 @@ const zplCodes: string[] = [];
           <div className="mt-4 flex space-x-4">
             <button
               onClick={generarPDF}
-              className="flex-1 py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg"
+              className="flex-1 py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black"
             >
               Generar PDF
             </button>
             <button
               onClick={descargarArchivoZPL}
-              className="flex-1 py-2 px-4 bg-green-600 text-white font-semibold rounded-lg"
+              className="flex-1 py-2 px-4 bg-green-600 text-white font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black"
             >
               Descargar ZPL (.txt)
             </button>

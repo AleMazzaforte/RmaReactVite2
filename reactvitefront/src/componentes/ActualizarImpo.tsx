@@ -382,7 +382,7 @@ export const ActualizarImpo = () => {
                         <td className="px-6 py-3 whitespace-nowrap text-center">
                           <button
                             onClick={handleAgregarProducto}
-                            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 focus:outline-black focus:ring focus:ring-black"
                           >
                             Agregar
                           </button>
@@ -395,7 +395,7 @@ export const ActualizarImpo = () => {
               <div className="mt-4 text-center">
                 <button
                   onClick={handleGuardarCambios}
-                  className="bg-blue-500 w-full text-white px-4 py-2 rounded hover:bg-blue-600"
+                  className="bg-blue-500 w-full text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-black focus:ring focus:ring-black"
                 >
                   Guardar Cambios
                 </button>

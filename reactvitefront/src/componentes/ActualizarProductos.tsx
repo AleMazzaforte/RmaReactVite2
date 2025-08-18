@@ -298,7 +298,7 @@ export const ActualizarProductos: React.FC = () => {
             <button
               type="submit"
               id="botonActualizar"
-              className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring "
+              className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-black "
             >
               {loading ? "Cargando..." : "Actualizar producto"}
             </button>
@@ -306,7 +306,7 @@ export const ActualizarProductos: React.FC = () => {
               type="button"
               id="botonEliminar"
               onClick={handleEliminarProducto}
-              className="w-full py-2 px-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-none focus:ring focus:ring-red-300"
+              className="w-full py-2 px-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-black focus:ring focus:ring-black"
             >
               {loading ? "Cargando..." : "Eliminar producto"}
             </button>

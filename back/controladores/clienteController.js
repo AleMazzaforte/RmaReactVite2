@@ -142,6 +142,35 @@ const gestionClientes = {
       res.status(500).json({ message: "Hubo un problema al actualizar el cliente" });
       connection.release();
     }
+  },
+  eliminarCliente: async (req, res) => {
+    try {
+      const id = req.params.idCliente;
+      
+      let connection;
+      try {
+        connection = await conn.getConnection();
+        const [result] = await connection.query(
+          "DELETE FROM clientes WHERE id = ?",
+          [id]
+        );
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ message: "Cliente no encontrado" });
+        }
+        res.status(200).json({ message: "Cliente eliminado correctamente" });
+      } catch (error) {
+        console.error("Error al eliminar el cliente:", error);
+        res.status(500).json({ message: "Hubo un problema al eliminar el cliente" });
+      } finally {
+        if (connection) {
+          connection.release();
+        }
+      }
+    } catch (error) {
+      console.error("Error al eliminar el cliente:", error);
+      res.status(500).json({ message: "Hubo un problema al eliminar el cliente" });
+      connection.release();
+    }
   }
 };
 

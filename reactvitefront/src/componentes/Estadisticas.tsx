@@ -22,8 +22,7 @@ export const Estadisticas: React.FC = () => {
   const [porcentajeMinimo, setPorcentajeMinimo] = useState<number | "">("");
 
   const urlEstadisticas = Urls.estadisticas.estadisticas
-    ? "http://localhost:8080/api/estadisticas/rma"
-    : "https://rma-back.vercel.app/api/estadisticas/rma";
+    
 
   const fetchEstadisticas = async () => {
     setLoading(true);
@@ -143,45 +142,49 @@ export const Estadisticas: React.FC = () => {
   let porcentaje: number = 0;
   // Mostrar resumen general
   const mostrarResumenCompleto = () => {
-    const totalProductos = estadisticasFiltradas.length;
-    const totalImportado = estadisticasFiltradas.reduce(
-      (sum, item) => sum + item.total_importado,
-      0
-    );
-    const totalDevuelto = estadisticasFiltradas.reduce(
-      (sum, item) => sum + item.total_devuelto,
-      0
-    );
-    porcentaje =
-      totalImportado > 0
-        ? parseFloat(((totalDevuelto * 100) / totalImportado).toFixed(2))
-        : 0;
+  const totalProductos = estadisticasFiltradas.length;
 
-    sweetAlert.fire({
-      icon: "info",
-      title: "Resumen General",
-      html: `
-        <div class="text-left">
-          <p><strong>Productos diferentes:</strong> ${totalProductos}</p>
-          <p><strong>Total unidades importadas:</strong> ${totalImportado.toLocaleString()}</p>
-          <p><strong>Total unidades devueltas:</strong> ${totalDevuelto.toLocaleString()}</p>
-          <p><strong>Porcentaje general de fallos:</strong> 
-            <span style="color: ${
-              porcentaje > 10
-                ? "#dc2626"
-                : porcentaje > 1.99
-                ? "#ea580c"
-                : "#16a34a"
-            }; font-weight: ${porcentaje > 10 ? "bold" : "normal"}">
-              ${porcentaje}%
-            </span>
-          </p>
-        </div>
-      `,
-      confirmButtonText: "Cerrar",
-      width: "600px",
-    });
-  };
+  // Sumamos los totales reales vendidos y devueltos
+  const totalVendido = estadisticasFiltradas.reduce(
+    (sum, item) => sum + item.total_vendido,
+    0
+  );
+  const totalDevuelto = estadisticasFiltradas.reduce(
+    (sum, item) => sum + item.total_devuelto,
+    0
+  );
+
+  // Calculamos el porcentaje general basado en unidades vendidas
+  const porcentajeGeneral =
+    totalVendido > 0
+      ? parseFloat(((totalDevuelto * 100) / totalVendido).toFixed(2))
+      : 0;
+
+  sweetAlert.fire({
+    icon: "info",
+    title: "Resumen General",
+    html: `
+      <div class="text-left">
+        <p><strong>Productos diferentes:</strong> ${totalProductos}</p>
+        <p><strong>Total unidades vendidas:</strong> ${totalVendido.toLocaleString()}</p>
+        <p><strong>Total unidades devueltas:</strong> ${totalDevuelto.toLocaleString()}</p>
+        <p><strong>Porcentaje general de fallos:</strong> 
+          <span style="color: ${
+            porcentajeGeneral > 10
+              ? "#dc2626"
+              : porcentajeGeneral > 1.99
+              ? "#ea580c"
+              : "#16a34a"
+          }; font-weight: ${porcentajeGeneral > 10 ? "bold" : "normal"}">
+            ${porcentajeGeneral}%
+          </span>
+        </p>
+      </div>
+    `,
+    confirmButtonText: "Cerrar",
+    width: "600px",
+  });
+};
 
   return (
     <div
@@ -229,12 +232,7 @@ export const Estadisticas: React.FC = () => {
               "Actualizar Datos"
             )}
           </button>
-          {/*<button
-            onClick={mostrarResumenCompleto}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow"
-          >
-            Ver Resumen
-          </button>*/}
+         
         </div>
       </div>
       <div>
@@ -248,6 +246,12 @@ export const Estadisticas: React.FC = () => {
         >
           {filtrarCero ? "Mostrar todos" : "Filtrar 0"}
         </button>
+         <button
+            onClick={mostrarResumenCompleto}
+            className="px-6 py-3 ml-5 bg-green-600 border-black text-white rounded-lg hover:bg-green-700 transition-colors shadow"
+          >
+            Resumen general
+          </button>
       </div>
       {/* Tabla de resultados */}
       <div

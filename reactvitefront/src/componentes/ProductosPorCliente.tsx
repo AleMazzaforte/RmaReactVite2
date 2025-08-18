@@ -231,7 +231,7 @@ export const ProductosPorCliente = (): JSX.Element => {
           )}
           <button
             onClick={cambiarCliente}
-            className="mb-4 ml-20 bg-gradient-to-b from-blue-500 to-green-500 text-white px-4 py-2 rounded"
+            className="mb-4 ml-20 bg-gradient-to-b from-blue-500 to-green-500 text-white px-4 py-2 rounded focus:outline-black focus:ring focus:ring-black"
           >
             Cambiar Cliente
           </button>

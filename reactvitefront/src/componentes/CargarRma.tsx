@@ -528,7 +528,7 @@ export const CargarRma: React.FC = () => {
                   key={listarProductosKey}
                   type="button"
                   onClick={agregarProducto}
-                  className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring focus:ring-green-300"
+                  className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-black"
                 >
                   Agregar Producto
                 </button>
@@ -536,7 +536,7 @@ export const CargarRma: React.FC = () => {
                 <button
                   type="button"
                   onClick={enviarFormulario}
-                  className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
+                  className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-blue-300"
                 >
                   {loading ? "Cargando..." : "Guardar RMA"}
                 </button>
@@ -579,6 +579,13 @@ export const CargarRma: React.FC = () => {
                   </td>
                 </tr>
               ))}
+              <button
+                  type="button"
+                  onClick={enviarFormulario}
+                  className="w-full py-1 px-2 bg-blue-500 mt-5  text-white  rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-blue-300"
+                >
+                  {loading ? "Cargando..." : "Guardar RMA"}
+                </button>
             </tbody>
           </table>
         </div>
