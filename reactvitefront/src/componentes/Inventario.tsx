@@ -5,7 +5,7 @@ import { FiltrosInventario } from "./utilidades/FiltrosInventario";
 import { GetInventarioStock } from "./utilidades/GetInventarioStock";
 import { GuardarInventario } from "./utilidades/GuardarInventario";
 import { InputWithCalculator } from "./utilidades/InputWithCalculator";
-import { sweetAlert } from "./utilidades/SweetAlertWrapper"; 
+import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Loader from "./utilidades/Loader";
 import Urls from "./utilidades/Urls";
 import "../estilos/Inventario.css";
@@ -217,8 +217,19 @@ export const Inventario: React.FC = () => {
     }
     const existe = productosReposicion.some((p) => p.sku === skuSeleccionadoReposicion);
     if (existe) {
-      sweetAlert.warning("SKU duplicado", "Este SKU ya fue agregado a la reposición");
-      return;
+      setProductosReposicion((prev) => {
+        const index = prev.findIndex((p) => p.sku === skuSeleccionadoReposicion);
+        const updated = [...prev];
+        if (index > -1) {
+          updated[index] = { sku: skuSeleccionadoReposicion, cantidad };
+          sweetAlert.info("SKU actualizado", `La cantidad del SKU ${skuSeleccionadoReposicion} fue actualizada.`);
+        } else {
+          updated.push({ sku: skuSeleccionadoReposicion, cantidad });
+          sweetAlert.success("SKU agregado", `SKU ${skuSeleccionadoReposicion} agregado a la reposición.`);
+        }
+        return updated;
+      });
+
     }
     setProductosReposicion((prev) => [...prev, { sku: skuSeleccionadoReposicion, cantidad }]);
     setSkuReposicionABuscar("");
@@ -600,7 +611,7 @@ export const Inventario: React.FC = () => {
                   value={skuReposicionABuscar}
                   onChange={(e) => setSkuReposicionABuscar(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleBuscarSkuReposicion()}
-                  style={{ padding: "0.5rem", border: "1px solid #d1d5db", borderRadius: "0.375rem 0 0 0.375rem", flex: 1, backgroundColor: "white"}}
+                  style={{ padding: "0.5rem", border: "1px solid #d1d5db", borderRadius: "0.375rem 0 0 0.375rem", flex: 1, backgroundColor: "white" }}
                 />
                 <button
                   onClick={handleBuscarSkuReposicion}

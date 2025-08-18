@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import Loader from "./utilidades/Loader";
@@ -27,7 +27,6 @@ export const ImprimirEtiqueta = () => {
   const [cantidadBultos, setCantidadBultos] = useState<number | null>(null);
   const [mostrarInput, setMostrarInput] = useState(false);
   const [mostrarDatosEditable, setMostrarDatosEditable] = useState(false);
-  //const [paginaHorizontal, setPaginaHorizontal] = useState(false);
   const [datosEditables, setDatosEditables] = useState<Cliente | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -125,7 +124,7 @@ const zplCodes: string[] = [];
   }
   // Esto genera: renglon1=520, renglon2=570, ..., renglon17=1320, etc.
   if (datosEditables.telefono === null) datosEditables.telefono = '';
-  if (datosEditables.domicilio === null) datosEditables.domicilio = '';
+  if ((datosEditables.domicilio === null)|| datosEditables.condicionDeEntrega === 'Retira en depósito') datosEditables.domicilio = '';
 
   // === Generar una etiqueta por cada bulto ===
   for (let i = 1; i <= cantidadBultos; i++) {
@@ -249,11 +248,11 @@ const zplCodes: string[] = [];
 
         doc.text(`CUIT: ${datosEditables.cuit}`, marginLeft, y);
         y += 8;
-        doc.text(`Domicilio: ${datosEditables.domicilio}`, marginLeft, y);
-        y += 8;
-        doc.text(`Provincia: ${datosEditables.provincia}`, marginLeft, y);
+        doc.text(`Provincia: ${datosEditables.provincia}`, marginLeft, y);        
         y += 8;
         doc.text(`Ciudad: ${datosEditables.ciudad}`, marginLeft, y);
+        y += 8;
+        doc.text(`Domicilio: ${datosEditables.domicilio}`, marginLeft, y);
         y += 8;
         doc.text(`Teléfono: ${datosEditables.telefono}`, marginLeft, y);
         y += 8;
@@ -303,12 +302,6 @@ const zplCodes: string[] = [];
         URL.revokeObjectURL(pdfUrl);
       }, 1000);
 
-      // Mostrar alerta de éxito
-      sweetAlert.fire({
-        icon: "success",
-        title: "PDF generado",
-        text: `Se abrió el PDF con ${cantidadBultos} etiquetas en una nueva pestaña.`,
-      });
     } catch (error) {
       console.error("Error al generar PDF:", error);
       // Mostrar alerta de error

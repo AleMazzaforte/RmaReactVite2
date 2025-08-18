@@ -9,7 +9,7 @@ const gestionClientes = {
 
     listarClientesParaActualizar: async (req, res) => {
       try {
-        const [clientes] = await conn.query("SELECT * FROM clientes");
+        const [clientes] = await conn.query("SELECT * FROM clientes ORDER BY nombre ASC");
         res.json(clientes); // Retorna los clientes en formato JSON
         
         

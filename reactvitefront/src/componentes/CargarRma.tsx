@@ -121,7 +121,7 @@ export const CargarRma: React.FC = () => {
 
     if (!productoSeleccionado) {
       const skuInput = document.getElementById("skuInput") as HTMLInputElement;
-      console.log(skuInput);
+
       skuInput.focus();
       // Mostrar alerta si el campo SKU está vacío
       sweetAlert.fire({
