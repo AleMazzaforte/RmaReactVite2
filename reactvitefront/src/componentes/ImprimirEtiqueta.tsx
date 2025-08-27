@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
+import { sweetAlert } from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import Loader from "./utilidades/Loader";
 import { jsPDF } from "jspdf";
@@ -31,7 +31,7 @@ export const ImprimirEtiqueta = () => {
   const formRef = useRef<HTMLFormElement>(null);
 
   let urlListarClientes = Urls.clientes.listar;
-  let urlBuscarRMA = Urls.rma.buscar;  
+  let urlBuscarRMA = Urls.rma.buscar;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -109,26 +109,66 @@ export const ImprimirEtiqueta = () => {
     }
   };
 
+  //Funcion para dividir el domicilio si es muy largo
+  function dividirDomicilio(domicilio: string): [string, string] {
+    if (!domicilio) return ["", ""];
+
+    if (domicilio.length <= 25) {
+      return [domicilio, ""];
+    }
+
+    const corte = 26;
+    let adelante = domicilio.indexOf(" ", corte);
+    let atras = domicilio.lastIndexOf(" ", corte);
+
+    let indice: number;
+
+    if (adelante === -1 && atras === -1) {
+      // No hay espacios → lo partimos directo en 25
+      indice = 25;
+    } else if (adelante === -1) {
+      indice = atras;
+    } else if (atras === -1) {
+      indice = adelante;
+    } else {
+      // Elegir el más cercano
+      indice =
+        Math.abs(corte - atras) <= Math.abs(adelante - corte) ? atras : adelante;
+    }
+
+    const primera = domicilio.slice(0, indice).trim();
+    const segunda = domicilio.slice(indice).trim();
+
+    return [primera, segunda];
+  }
+
   const generarZPL = (): string => {
     if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
       throw new Error("Datos incompletos o cantidad de bultos inválida");
     }
-const zplCodes: string[] = [];
+    const zplCodes: string[] = [];
 
-  // === Generación automática de renglones desde 520, cada 50 ===
-  const renglones: Record<string, number> = {};
-  let y = 520; // Empezamos aquí
-  for (let i = 1; i <= 20; i++) {
-    renglones[`renglon${i}`] = y;
-    y += 50;
-  }
-  // Esto genera: renglon1=520, renglon2=570, ..., renglon17=1320, etc.
-  if (datosEditables.telefono === null) datosEditables.telefono = '';
-  if ((datosEditables.domicilio === null)|| datosEditables.condicionDeEntrega === 'Retira en depósito') datosEditables.domicilio = '';
+    // === Generación automática de renglones desde 520, cada 50 ===
+    const renglones: Record<string, number> = {};
+    let y = 520; // Empezamos aquí
+    for (let i = 1; i <= 20; i++) {
+      renglones[`renglon${i}`] = y;
+      y += 50;
+    }
+    // Esto genera: renglon1=520, renglon2=570, ..., renglon17=1320, etc.
+    if (datosEditables.telefono === null) datosEditables.telefono = '';
+    if ((datosEditables.domicilio === null) || datosEditables.condicionDeEntrega === 'Retira en depósito') datosEditables.domicilio = '';
+    // Cálculo del desplazamiento en X según la longitud del nombre
+    let offsetX = 0;
+    if (datosEditables.nombre.length > 18) {
+      offsetX = Math.min(datosEditables.nombre.length - 18, 5);
+    }
 
-  // === Generar una etiqueta por cada bulto ===
-  for (let i = 1; i <= cantidadBultos; i++) {
-    const zpl = `
+    const [domicilioLinea1, domicilioLinea2] = dividirDomicilio(datosEditables.domicilio);
+
+    // === Generar una etiqueta por cada bulto ===
+    for (let i = 1; i <= cantidadBultos; i++) {
+      const zpl = `
 ^XA
 ^PW800
 ^LL1520
@@ -140,17 +180,19 @@ const zplCodes: string[] = [];
 // ==============================================
 
 // --- DATOS DEL DESTINATARIO ---
-^FO70,400^A0N,55,55^FB760,1,0,C^FD${datosEditables.nombre}^FS 
+^FO${offsetX},400^A0N,55,55^FB760,1,0,C^FD${datosEditables.nombre}^FS 
 ^FO75,${renglones.renglon1}^A0N,38,38^FDCUIT: ${datosEditables.cuit}^FS
 ^FO75,${renglones.renglon2}^A0N,38,38^FDProvincia: ${datosEditables.provincia}^FS
 ^FO75,${renglones.renglon3}^A0N,38,38^FDCiudad: ${datosEditables.ciudad}^FS
-^FO75,${renglones.renglon4}^A0N,38,38^FDDomicilio: ${datosEditables.domicilio}^FS
-^FO75,${renglones.renglon5}^A0N,38,38^FD^FS
+^FO75,${renglones.renglon4}^A0N,38,38^FDDomicilio: ${domicilioLinea1}^FS
+^FO75,${renglones.renglon5}^A0N,38,38^FD${domicilioLinea2}^FS
 ^FO75,${renglones.renglon6}^A0N,38,38^FDTeléfono: ${datosEditables.telefono}^FS
 ^FO75,${renglones.renglon7}^A0N,38,38^FDTransporte: ${datosEditables.transporte}^FS
 ^FO75,${renglones.renglon8}^A0N,38,38^FDSeguro: ${datosEditables.seguro}^FS
 ^FO75,${renglones.renglon9}^A0N,38,38^FD${datosEditables.condicionDeEntrega}^FS
+^FO76,${renglones.renglon9}^A0N,38,38^FD${datosEditables.condicionDeEntrega}^FS
 ^FO75,${renglones.renglon10}^A0N,38,38^FD${datosEditables.condicionDePago}^FS
+^FO76,${renglones.renglon10}^A0N,38,38^FD${datosEditables.condicionDePago}^FS
 
 
 // Aquí no imprimimos nada, solo dejamos espacio visual en el diseño
@@ -168,10 +210,10 @@ const zplCodes: string[] = [];
 
 ^XZ`.trim();
 
-    zplCodes.push(zpl);
-  }
+      zplCodes.push(zpl);
+    }
 
-  return zplCodes.join('\n\n');
+    return zplCodes.join('\n\n');
   }
   const generarPDF = () => {
     try {
@@ -217,6 +259,13 @@ const zplCodes: string[] = [];
         }
       };
 
+      // === Ajuste de margen izquierdo para el nombre en PDF ===
+      let offsetX = 0;
+      if (datosEditables.nombre.length > 18) {
+        offsetX = Math.min(datosEditables.nombre.length - 18, 5);
+      }
+      const [domicilioLinea1, domicilioLinea2] = dividirDomicilio(datosEditables.domicilio);
+
       const marginLeft = 15;
       let y = 20;
 
@@ -238,7 +287,7 @@ const zplCodes: string[] = [];
         doc.setFontSize(styles.title.fontSize);
         doc.setFont(styles.title.fontFamily, styles.title.fontStyle);
         doc.setTextColor(...styles.title.textColor);
-        doc.text(datosEditables.nombre, 50, y, { align: 'center' });
+        doc.text(datosEditables.nombre, 50 - offsetX, y, { align: 'center' });
         y += 12;
 
         // Datos del cliente
@@ -248,12 +297,16 @@ const zplCodes: string[] = [];
 
         doc.text(`CUIT: ${datosEditables.cuit}`, marginLeft, y);
         y += 8;
-        doc.text(`Provincia: ${datosEditables.provincia}`, marginLeft, y);        
+        doc.text(`Provincia: ${datosEditables.provincia}`, marginLeft, y);
         y += 8;
         doc.text(`Ciudad: ${datosEditables.ciudad}`, marginLeft, y);
         y += 8;
-        doc.text(`Domicilio: ${datosEditables.domicilio}`, marginLeft, y);
+        doc.text(`Domicilio: ${domicilioLinea1}`, marginLeft, y);
         y += 8;
+        if (domicilioLinea2) {
+          doc.text(domicilioLinea2, marginLeft, y);
+          y += 8;
+        }
         doc.text(`Teléfono: ${datosEditables.telefono}`, marginLeft, y);
         y += 8;
         doc.text(`Transporte: ${datosEditables.transporte}`, marginLeft, y);
@@ -506,29 +559,22 @@ const zplCodes: string[] = [];
                 onChange={(e) => setCantidadBultos(Number(e.target.value))}
               />
             </div>
-            {/*<div>
-              <button
-                type="button"
-                onClick={() => setPaginaHorizontal(!paginaHorizontal)}
-                className="w-full py-2 px-4 bg-gray-600 text-white font-semibold rounded-lg"
-              >
-                {'En construcción'}
-              </button>
-            </div>*/}
+
           </div>
           <div className="mt-4 flex space-x-4">
-            <button
-              onClick={generarPDF}
-              className="flex-1 py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black"
-            >
-              Generar PDF
-            </button>
             <button
               onClick={descargarArchivoZPL}
               className="flex-1 py-2 px-4 bg-green-600 text-white font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black"
             >
               Descargar ZPL (.txt)
             </button>
+            <button
+              onClick={generarPDF}
+              className="flex-1 py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black"
+            >
+              Generar PDF
+            </button>
+
           </div>
         </div>
       )}

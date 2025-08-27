@@ -318,64 +318,82 @@ export const inventarioController = {
 
   //REPOSICION!!!!+++++++++++++++++++++++++++++++++++++
   postGuardarReposicion: async (req, res) => {
-    let connection;
+  let connection;
 
-    try {
-      const { productos } = req.body;
+  try {
+    const { productos } = req.body;
 
-      if (!Array.isArray(productos)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Se esperaba un array de productos'
-        });
-      }
-
-      connection = await conn.getConnection();
-      await connection.beginTransaction();
-
-      // Para cada producto en la reposición
-      for (const producto of productos) {
-        // Primero verificamos si el SKU ya existe en la tabla
-        const [existing] = await connection.query(
-          `SELECT id FROM reposicion WHERE sku = ?`,
-          [producto.sku]
-        );
-
-        if (existing && existing.length > 0) {
-          // Si existe, actualizamos la cantidad
-          await connection.query(
-            `UPDATE reposicion SET cantidad = ? WHERE sku = ?`,
-            [producto.cantidad, producto.sku]
-          );
-        } else {
-          // Si no existe, insertamos nuevo registro
-          await connection.query(
-            `INSERT INTO reposicion (sku, cantidad) VALUES (?, ?)`,
-            [producto.sku, producto.cantidad]
-          );
-        }
-      }
-
-      await connection.commit();
-
-      res.status(200).json({
-        success: true,
-        message: `Reposición guardada correctamente`,
-        productosCount: productos.length
-      });
-
-    } catch (error) {
-      if (connection) await connection.rollback();
-      console.error('Error al guardar reposición:', error);
-      res.status(500).json({
+    if (!Array.isArray(productos)) {
+      return res.status(400).json({
         success: false,
-        message: 'Error al guardar la reposición',
-        error: error.message
+        message: 'Se esperaba un array de productos'
       });
-    } finally {
-      if (connection) connection.release();
     }
-  },
+
+    connection = await conn.getConnection();
+    await connection.beginTransaction();
+
+    // === 1) Traer todos los SKUs que ya existen en un solo select
+    const skus = productos.map(p => p.sku);
+    const [existentes] = await connection.query(
+      `SELECT sku FROM reposicion WHERE sku IN (${skus.map(() => '?').join(',')})`,
+      skus
+    );
+    const existentesSet = new Set(existentes.map(e => e.sku));
+
+    // === 2) Separar en updates e inserts
+    const updates = [];
+    const inserts = [];
+
+    for (const producto of productos) {
+      if (existentesSet.has(producto.sku)) {
+        updates.push(producto);
+      } else {
+        inserts.push(producto);
+      }
+    }
+
+    // === 3) Ejecutar updates
+    for (const p of updates) {
+      await connection.query(
+        `UPDATE reposicion SET cantidad = ? WHERE sku = ?`,
+        [p.cantidad, p.sku]
+      );
+    }
+
+    // === 4) Ejecutar inserts (puede ser uno por uno o en batch)
+    if (inserts.length > 0) {
+      const values = inserts.map(p => [p.sku, p.cantidad]);
+      await connection.query(
+        `INSERT INTO reposicion (sku, cantidad) VALUES ?`,
+        [values]
+      );
+    }
+
+    // === 5) Confirmar transacción
+    await connection.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `Reposición guardada correctamente`,
+      productosCount: productos.length,
+      updates: updates.length,
+      inserts: inserts.length
+    });
+
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error('Error al guardar reposición:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al guardar la reposición',
+      error: error.message
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+},
+
 
   getObtenerReposiciones: async (req, res) => {
     let connection;
