@@ -59,12 +59,14 @@ router.post('/cargarMarca', marcas.postCargarMarca);
 router.post('/actualizarMarca', marcas.postActualizarMarca);
 router.post('/eliminarMarca', marcas.postEliminarMarca);
 
-// Ruta para agregar RMA
+// Ruta para RMA
 router.post('/agregarRma',  cargarRma.postAgregarRma);
 router.get('/getRmaCLiente/:idCliente', gestionarRma.getListarProductosRma);
 router.post('/actualizarProductoRma/:idRma', gestionarRma.postActualizarCliente); 
 router.delete('/eliminarRma/:idRma', gestionarRma.deleteRma);
 router.get('/getUltimoNIngreso', cargarRma.getUltimoNum);
+router.get('/obtenerStock', gestionarRma.getStockRMA);
+
 
 //Ruta para agregar devoluciones
 router.post('/agregarDevolucion', agregarDevolucion.postAgregarDevolucion);

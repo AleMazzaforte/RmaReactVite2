@@ -66,6 +66,9 @@ const Urls = {
     guardar: `${base}/guardarReposicion`,
     obtener: `${base}/obtenerReposiciones`,
     limpiar: `${base}/limpiarReposiciones`,
+  }, 
+  stock: {
+    obtener: `${base}/obtenerStock`,
   }
 
 };

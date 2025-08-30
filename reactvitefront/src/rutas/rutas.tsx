@@ -1,29 +1,30 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import ProtectedRoute from './ProtectedRoute';
-import { LoginContainer } from '../componentes/LoginContainer';
-import { CargarRma } from '../componentes/CargarRma';
-import { CargarUsuario } from '../componentes/CargarUsuario';
-import { ProductosPorCliente } from '../componentes/ProductosPorCliente';
-import { NotFound } from '../componentes/NotFound'; 
-import { CargarClientes } from '../componentes/CargarClientes';
-import { ActualizarClientes } from '../componentes/ActualizarClientes';
-import { CargarProductos } from '../componentes/CargarProductos';
-import { ActualizarProductos } from '../componentes/ActualizarProductos';
-import { CargarMarca } from '../componentes/CargarMarca';
-import { ActualizarMarca } from '../componentes/ActualizarMarca';
-import { CargarTransporte } from '../componentes/CargarTransporte';
-import { ActualizarTransporte } from '../componentes/ActualizarTransporte';
-import { ImprimirEtiqueta  } from '../componentes/ImprimirEtiqueta';
-import { CargarImpo  } from '../componentes/CargarImpo';
-import { ActualizarImpo  } from '../componentes/ActualizarImpo';
-import { Estadisticas } from '../componentes/Estadisticas';
-import { DevolucionAGondola} from '../componentes/DevolucionAGondola';
-import { PokemonList } from '../componentes/PokemonList'
-import { ContadorDeTintas } from '../componentes/ContadorDeTintas';
-import { Contenedor } from '../componentes/utilidades/Contenedor';
-import { Inventario } from '../componentes/Inventario';
-import { DefinirBloques } from '../componentes/DefinirBloques';
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute";
+import { LoginContainer } from "../componentes/LoginContainer";
+import { CargarRma } from "../componentes/CargarRma";
+import { CargarUsuario } from "../componentes/CargarUsuario";
+import { ProductosPorCliente } from "../componentes/ProductosPorCliente";
+import { NotFound } from "../componentes/NotFound";
+import { CargarClientes } from "../componentes/CargarClientes";
+import { ActualizarClientes } from "../componentes/ActualizarClientes";
+import { CargarProductos } from "../componentes/CargarProductos";
+import { ActualizarProductos } from "../componentes/ActualizarProductos";
+import { CargarMarca } from "../componentes/CargarMarca";
+import { ActualizarMarca } from "../componentes/ActualizarMarca";
+import { CargarTransporte } from "../componentes/CargarTransporte";
+import { ActualizarTransporte } from "../componentes/ActualizarTransporte";
+import { ImprimirEtiqueta } from "../componentes/ImprimirEtiqueta";
+import { CargarImpo } from "../componentes/CargarImpo";
+import { ActualizarImpo } from "../componentes/ActualizarImpo";
+import { Estadisticas } from "../componentes/Estadisticas";
+import { DevolucionAGondola } from "../componentes/DevolucionAGondola";
+import { PokemonList } from "../componentes/PokemonList";
+import { ContadorDeTintas } from "../componentes/ContadorDeTintas";
+import { Contenedor } from "../componentes/utilidades/Contenedor";
+import { Inventario } from "../componentes/Inventario";
+import { DefinirBloques } from "../componentes/DefinirBloques";
+import { Stock } from "../componentes/Stock";
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -40,7 +41,10 @@ export const Rutas = (): JSX.Element => {
         <Route path="/cargarMarcas" element={<CargarMarca />} />
         <Route path="/actualizarMarca" element={<ActualizarMarca />} />
         <Route path="/cargarTransporte" element={<CargarTransporte />} />
-        <Route path="/actualizarTransporte" element={<ActualizarTransporte />} />
+        <Route
+          path="/actualizarTransporte"
+          element={<ActualizarTransporte />}
+        />
         <Route path="/imprimirEtiqueta" element={<ImprimirEtiqueta />} />
         <Route path="/cargarOp" element={<CargarImpo />} />
         <Route path="/actualizarOp" element={<ActualizarImpo />} />
@@ -51,8 +55,10 @@ export const Rutas = (): JSX.Element => {
         <Route path="/cargarTintas" element={<ContadorDeTintas />} />
         <Route path="/inventario" element={<Inventario />} />
         <Route path="/bloques" element={<DefinirBloques />} />
+        <Route path="/stock" element={<Stock />} />
       </Route>
-      <Route path="*" element={<NotFound />} /> {/* Ruta para manejar páginas no encontradas */}
+      <Route path="*" element={<NotFound />} />{" "}
+      {/* Ruta para manejar páginas no encontradas */}
     </Routes>
   );
 };

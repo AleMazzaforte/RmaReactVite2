@@ -6,8 +6,8 @@ interface Op {
   id: number;
   nombre: string;
   fechaIngreso?: string;
-  producto: string;
-  cantidad: number;
+  producto?: string;
+  cantidad?: number;
 }
 
 interface BusquedaOpLoteProps {
@@ -44,8 +44,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
       clearTimeout(timer);
     }
 
-    if (value) {
-      
+    if (value) {      
 
       const newTimer = setTimeout(async () => {
         try {
@@ -72,6 +71,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
     } else {
       setResultados([]);
       setLoading(false);
+      onSeleccionado([]); 
     }
   };
 

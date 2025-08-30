@@ -52,6 +52,7 @@ export const GuardarInventario: React.FC<GuardarInventarioProps> = ({
   };
 
   const baseStyle: React.CSSProperties = {
+    
     backgroundColor: 'darkGreen', 
     color: 'white',
     padding: '0.5rem 1rem',

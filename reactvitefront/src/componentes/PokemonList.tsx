@@ -41,7 +41,7 @@ export const PokemonList: React.FC = () => {
 
   // Función para obtener la lista de Pokémon
   const fetchPokemonList = async () => {
-    console.log(pokemonList);
+  
     try {
       const response = await fetch("https://pokeapi.co/api/v2/pokemon?limit=150"); // Limitamos a 151 Pokémon
       if (!response.ok) {

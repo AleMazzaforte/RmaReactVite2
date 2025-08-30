@@ -1,11 +1,11 @@
 import dotenv from "dotenv";
 import { conn } from "../bd/bd.js";
 import events from "events";
+import { get } from "http";
 
 events.EventEmitter.defaultMaxListeners = 15;
 
 dotenv.config();
-
 
 // Definición de la función formatFecha
 const formatFecha = (fecha) => {
@@ -14,16 +14,15 @@ const formatFecha = (fecha) => {
   }
 
   const date = new Date(fecha);
-  
+
   if (isNaN(date.getTime())) {
-    
     return ""; // Retorna una cadena vacía si la fecha no es válida
   }
 
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0"); // Los meses en JavaScript van de 0 a 11
   const year = date.getFullYear();
- 
+
   return `${day}/${month}/${year}`;
 };
 
@@ -37,13 +36,13 @@ const convertirFechaParaBackend = (fecha) => {
   return `${anio}-${mes}-${dia}`; // Retorna en formato aaaa/mm/dd
 };
 
-
 const clienteController = {
   getListarClientesRma: async (req, res) => {
     try {
-      const [clientes] = await conn.query("SELECT id, nombre FROM clientes ORDER BY nombre ASC");
+      const [clientes] = await conn.query(
+        "SELECT id, nombre FROM clientes ORDER BY nombre ASC"
+      );
       res.json(clientes); // Retorna los clientes en formato JSON
-      
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Error al listar los clientes" });
@@ -53,7 +52,8 @@ const clienteController = {
 
 const productosGeneralController = {
   getListarProductos: async (req, res) => {
-    const query = "SELECT id, sku, descripcion, marca, rubro, isActive FROM productos";
+    const query =
+      "SELECT id, sku, descripcion, marca, rubro, isActive FROM productos";
     let connection;
 
     try {
@@ -61,7 +61,6 @@ const productosGeneralController = {
       connection = await conn.getConnection();
       const [results] = await connection.query(query);
       res.json(results);
-      
     } catch (error) {
       console.error("Error al listar productos:", error);
       res.status(500).send("Error al listar productos");
@@ -71,14 +70,9 @@ const productosGeneralController = {
       }
     }
   },
-
-  
 };
 
-
-
-const cargarRma = { 
-
+const cargarRma = {
   postAgregarRma: async (req, res) => {
     // Desestructuración de los campos del cuerpo de la solicitud
     const {
@@ -92,18 +86,25 @@ const cargarRma = {
       nEgreso,
       productos, // Array de productos
     } = req.body;
-  
-   
-   
-    
+
     let connection;
     try {
       connection = await conn.getConnection();
-  
+
       // Iterar sobre cada producto y realizar la inserción en la base de datos
       for (const producto of productos) {
-        const { modelo, cantidad, marca, opLote: productoOpLote, observaciones: productoObservaciones, vencimiento, seEntrega, seRecibe, nEgreso } = producto;
-  
+        const {
+          modelo,
+          cantidad,
+          marca,
+          opLote: productoOpLote,
+          observaciones: productoObservaciones,
+          vencimiento,
+          seEntrega,
+          seRecibe,
+          nEgreso,
+        } = producto;
+
         await connection.query(
           `INSERT INTO r_m_a 
           (modelo, cantidad, marca, solicita, opLote, vencimiento, seEntrega, seRecibe, observaciones, nIngreso, nEgreso, idCliente) 
@@ -124,7 +125,7 @@ const cargarRma = {
           ]
         );
       }
-  
+
       res.status(200).json({ message: "RMA agregado correctamente" });
     } catch (error) {
       console.error("Error al agregar RMA:", error);
@@ -138,7 +139,9 @@ const cargarRma = {
 
   getUltimoNum: async (req, res) => {
     try {
-      const [rows] = await conn.query("SELECT MAX(nIngreso) AS ultimoNIngreso FROM r_m_a");
+      const [rows] = await conn.query(
+        "SELECT MAX(nIngreso) AS ultimoNIngreso FROM r_m_a"
+      );
       if (rows.length > 0 && rows[0].ultimoNIngreso !== null) {
         res.json({ nIngreso: rows[0].ultimoNIngreso });
       } else {
@@ -146,9 +149,11 @@ const cargarRma = {
       }
     } catch (error) {
       console.error("Error al obtener el último número de ingreso:", error);
-      res.status(500).json({ error: "Error al obtener el último número de ingreso" });
+      res
+        .status(500)
+        .json({ error: "Error al obtener el último número de ingreso" });
     }
-  }
+  },
 };
 
 const gestionarRma = {
@@ -167,60 +172,60 @@ const gestionarRma = {
       nIngreso,
       nEgreso,
     } = req.body;
-      
+
     // Cambio de formato de fecha
     solicita = convertirFechaParaBackend(solicita);
     vencimiento = convertirFechaParaBackend(vencimiento);
     seEntrega = convertirFechaParaBackend(seEntrega);
     seRecibe = convertirFechaParaBackend(seRecibe);
-  
+
     let connection;
     try {
       connection = await conn.getConnection();
-  
+
       // Obtener el ID del modelo (producto) a partir del SKU
       const [producto] = await connection.execute(
-        'SELECT id FROM productos WHERE sku = ?',
+        "SELECT id FROM productos WHERE sku = ?",
         [modelo]
       );
-  
+
       if (producto.length === 0) {
-        throw new Error('Modelo no encontrado');
+        throw new Error("Modelo no encontrado");
       }
-  
+
       const productoId = producto[0].id;
-  
+
       // Obtener el ID de la marca a partir del nombre
       const [marcaResult] = await connection.execute(
-        'SELECT id FROM marcas WHERE nombre = ?',
+        "SELECT id FROM marcas WHERE nombre = ?",
         [marca]
       );
-  
+
       if (marcaResult.length === 0) {
-        throw new Error('Marca no encontrada');
+        throw new Error("Marca no encontrada");
       }
-  
+
       const marcaId = marcaResult[0].id;
 
       // Obtener el ID de la op a partir del nombre
       const [opResult] = await connection.execute(
-        'SELECT id FROM OP WHERE nombre = ?',
+        "SELECT id FROM OP WHERE nombre = ?",
         [opLote]
       );
-  
+
       if (marcaResult.length === 0) {
-        throw new Error('Impo no encontrada');
+        throw new Error("Impo no encontrada");
       }
-  
+
       const opId = opResult[0].id;
-  
+
       const query = `
         UPDATE r_m_a
         SET modelo = ?, cantidad = ?, marca = ?, solicita = ?, opLote = ?, 
             vencimiento = ?, seEntrega = ?, seRecibe = ?, observaciones = ?, 
             nIngreso = ?, nEgreso = ?
         WHERE idRma = ?`;
-  
+
       const [result] = await connection.execute(query, [
         productoId,
         cantidad,
@@ -235,7 +240,7 @@ const gestionarRma = {
         nEgreso,
         idRma,
       ]);
-  
+
       if (result.affectedRows > 0) {
         res.status(200).json({
           success: true,
@@ -257,7 +262,6 @@ const gestionarRma = {
       }
     }
   },
-  
 
   deleteRma: async (req, res) => {
     const idRma = req.params.idRma;
@@ -288,7 +292,7 @@ const gestionarRma = {
 
   getListarProductosRma: async (req, res) => {
     const idCliente = req.params.idCliente;
-  
+
     const obtenerProductosPorCliente = async (idCliente) => {
       const query = `
         SELECT 
@@ -309,7 +313,7 @@ const gestionarRma = {
         JOIN marcas m ON rma.marca = m.id
         LEFT JOIN OP ON rma.opLote = OP.id  -- Hacemos un JOIN con la tabla OP
         WHERE rma.idCliente = ?`;
-  
+
       try {
         const [rows] = await conn.execute(query, [idCliente]);
         return rows;
@@ -318,20 +322,20 @@ const gestionarRma = {
         throw executeError;
       }
     };
-  
+
     let connection;
-  
+
     try {
       connection = await conn.getConnection();
-  
+
       let productos = await obtenerProductosPorCliente(idCliente);
-  
+
       productos = productos.map((producto) => ({
-        modelo: producto.modelo_sku || "",  // Asegúrate de que el `sku` está siendo tomado correctamente
+        modelo: producto.modelo_sku || "", // Asegúrate de que el `sku` está siendo tomado correctamente
         cantidad: producto.cantidad || "",
-        marca: producto.marca_nombre || "",  // Asegúrate de que el nombre de la marca está siendo tomado correctamente
+        marca: producto.marca_nombre || "", // Asegúrate de que el nombre de la marca está siendo tomado correctamente
         solicita: formatFecha(producto.solicita) || "",
-        opLote: producto.opLote_nombre || "",  // Usamos el nombre de la OP
+        opLote: producto.opLote_nombre || "", // Usamos el nombre de la OP
         vencimiento: formatFecha(producto.vencimiento || ""),
         seEntrega: formatFecha(producto.seEntrega) || "",
         seRecibe: formatFecha(producto.seRecibe) || "",
@@ -340,7 +344,7 @@ const gestionarRma = {
         nEgreso: producto.nEgreso || "",
         idRma: producto.idRma || "",
       }));
-  
+
       res.json(productos);
     } catch (error) {
       console.error("Error al listar productos:", error);
@@ -351,7 +355,40 @@ const gestionarRma = {
       }
     }
   },
+
+  getStockRMA: async (req, res) => {
   
+    let connection;
+
+    try {
+      connection = await conn.getConnection();
+
+      const [rows] = await connection.query(`
+      SELECT 
+        p.sku AS sku,
+        m.nombre AS marca,
+        op.nombre AS opLote,
+        SUM(rma.cantidad) AS cantidad
+        
+      FROM r_m_a rma
+      JOIN productos p ON rma.modelo = p.id
+      JOIN marcas m ON rma.marca = m.id
+      LEFT JOIN OP op ON rma.opLote = op.id
+      WHERE rma.enExistencia = TRUE
+      GROUP BY p.sku, m.nombre, op.nombre
+      ORDER BY p.sku, m.nombre
+    `);
+
+      res.json(rows);
+    } catch (error) {
+      console.error("Error al obtener el stock de RMA:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
+    } finally {
+      if (connection) {
+        connection.release();
+      }
+    }
+  },
 };
 
 export {
@@ -359,4 +396,5 @@ export {
   productosGeneralController,
   cargarRma,
   gestionarRma,
+  
 };
