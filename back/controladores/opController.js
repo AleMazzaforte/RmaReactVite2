@@ -82,86 +82,129 @@ const listarOp = {
   },
 
   postGuardarOpProductos: async (req, res) => {
-    
-    try {
-        const productos = req.body; // Array de productos: [{ idOp, sku, cantidad }]
-  
-        if (!Array.isArray(productos) || productos.length === 0) {
-            return res.status(400).json({ message: "Debe enviar al menos un producto", success: false });
-        }
-  
-        connection = await conn.getConnection();
-        await connection.beginTransaction();
-  
-        // Verificar si la OP existe
-        const [opExistente] = await connection.query(
-            "SELECT id FROM OP WHERE id = ?",
-            [productos[0].idOp]
-        );
-  
-        if (opExistente.length === 0) {
-            return res.status(400).json({ message: "La OP no existe", success: false });
-        }
-        // Insertar los productos en opProductos con idSku
-        for (const producto of productos) {
-            const { idOp, sku, cantidad } = producto;
-  
-            if (!idOp) {
-                throw new Error("Falta identificador de la OP");
-            }
-            if (!cantidad) {
-              throw new Error("Falta cantidad del producto");
-            }
-            if (!sku) {
-              throw new Error("Falta el producto");
-            }
-            // Obtener el id del producto correspondiente al sku
-            const [productoInfo] = await connection.query(
-                "SELECT id, isActive FROM productos WHERE sku = ?",
-                [sku]
-            );
-  
-            if (productoInfo.length === 0) {
-                throw new Error(`No se encontró el producto con SKU: ${sku}`);
-            }
+  let connection;
+  try {
+    const productos = req.body; // Array: [{ idOp, sku, cantidad }]
 
-            const idSku = productoInfo[0].id;
-
-            if (productoInfo[0].isActive === 0) {
-              await connection.query(
-                `UPDATE productos SET isActive = 1 WHERE id = ${idSku}`,
-                
-              );
-            }
-  
-            
-  
-            await connection.query(
-                "INSERT INTO opProductos (idOp, cantidad, idSku) VALUES (?, ?, ?)",
-                [idOp, cantidad, idSku]
-            );
-        }
-  
-        await connection.commit();
-        res.status(201).json({ message: "Productos guardados correctamente", success: true });
-    } catch (error) {
-        console.error("Error al guardar los productos en opProductos:", error);
-  
-        if (connection) {
-            await connection.rollback();
-        }
-  
-        res.status(500).json({ 
-            message: error.message || "Error interno del servidor", 
-            success: false 
-        });
-    } finally {
-        if (connection) {
-            connection.release();
-        }
+    if (!Array.isArray(productos) || productos.length === 0) {
+      return res.status(400).json({ 
+        message: "Debe enviar al menos un producto", 
+        success: false 
+      });
     }
-  },
 
+    // Validar que todos los productos tengan los campos necesarios
+    for (const prod of productos) {
+      if (!prod.idOp || !prod.sku || !prod.cantidad) {
+        return res.status(400).json({ 
+          message: "Cada producto debe tener idOp, sku y cantidad", 
+          success: false 
+        });
+      }
+    }
+
+    // Reutilizar idOp (deben ser todos del mismo idOp)
+    const idOp = productos[0].idOp;
+    if (!idOp) {
+      return res.status(400).json({ message: "ID de OP inválido", success: false });
+    }
+
+    // Obtener conexión y empezar transacción
+    connection = await conn.getConnection();
+    await connection.beginTransaction();
+
+    // Verificar si la OP existe
+    const [opExistente] = await connection.query(
+      "SELECT id FROM OP WHERE id = ?",
+      [idOp]
+    );
+    if (opExistente.length === 0) {
+      return res.status(400).json({ message: "La OP no existe", success: false });
+    }
+
+    // Extraer todos los SKUs únicos para buscar sus IDs en una sola consulta
+    const skus = [...new Set(productos.map(p => p.sku))];
+
+    const [productosDB] = await connection.query(
+      "SELECT id, sku, isActive FROM productos WHERE sku IN (?)",
+      [skus]
+    );
+
+    if (productosDB.length === 0) {
+      return res.status(400).json({ message: "Ningún producto encontrado con los SKUs proporcionados", success: false });
+    }
+
+    // Mapear SKU a ID y verificar activación
+    const skuMap = {};
+    const productosParaActivar = [];
+
+    productosDB.forEach(prod => {
+      skuMap[prod.sku] = prod.id;
+      if (prod.isActive === 0) {
+        productosParaActivar.push(prod.id);
+      }
+    });
+
+    // Activar productos inactivos (si hay)
+    if (productosParaActivar.length > 0) {
+      await connection.query(
+        "UPDATE productos SET isActive = 1 WHERE id IN (?)",
+        [productosParaActivar]
+      );
+    }
+
+    // Validar que todos los SKUs del request existan
+    const skusNoEncontrados = productos
+      .map(p => p.sku)
+      .filter(sku => !skuMap[sku]);
+
+    if (skusNoEncontrados.length > 0) {
+      return res.status(400).json({
+        message: `No se encontraron productos con los siguientes SKUs: ${skusNoEncontrados.join(', ')}`,
+        success: false
+      });
+    }
+
+    // Preparar datos para inserción múltiple
+    const valores = productos.map(p => {
+      const idSku = skuMap[p.sku];
+      return [p.idOp, p.cantidad, idSku];
+    });
+
+    // Insertar todos los productos en una sola consulta
+    const query = `
+      INSERT INTO opProductos (idOp, cantidad, idSku)
+      VALUES ?
+    `;
+
+    await connection.query(query, [valores]);
+
+    // Confirmar transacción
+    await connection.commit();
+
+    res.status(201).json({
+      message: "Productos guardados correctamente",
+      success: true,
+      total: productos.length
+    });
+
+  } catch (error) {
+    console.error("Error al guardar los productos en opProductos:", error);
+
+    if (connection) {
+      await connection.rollback();
+    }
+
+    res.status(500).json({
+      message: error.message || "Error interno del servidor",
+      success: false
+    });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+},
   getListarOpProductos: async (req, res) => {
     const { idOp } = req.params;
     connection = await conn.getConnection();
