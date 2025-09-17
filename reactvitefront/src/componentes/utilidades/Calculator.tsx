@@ -146,24 +146,39 @@ export const Calculator: React.FC<CalculatorProps> = ({
   };
 
   const handleSubmit = () => {
-    try {
-      let total = 0;
+  try {
+    // Paso 1: Evaluar la expresión en display si es necesario
+    let unidadesSueltas: number;
 
-      if (usarReposicion && cantidadReposicion > 0) {
-        const unidadesSueltas = parseFloat(display) || 0;
-        total = unidadesSueltas + cantidadReposicion;
-      } else {
-        const unidadesSueltas = parseFloat(display) || 0;
-        const parsedBultos = parseFloat(bultos) || 0;
-        const parsedUnidades = parseFloat(unidadesPorBulto) || 0;
-        total = unidadesSueltas + parsedBultos * parsedUnidades;
+    const safeEval = (exp: string): number => {
+      try {
+        // eslint-disable-next-line no-eval
+        const result = eval(exp);
+        return typeof result === "number" && !isNaN(result) ? result : 0;
+      } catch {
+        return 0;
       }
+    };
 
-      onClose(total.toString());
-    } catch {
-      onClose("0");
+    // Intentar evaluar display como expresión
+    unidadesSueltas = safeEval(display);
+
+    // Paso 2: Sumar según corresponda
+    let total = 0;
+
+    if (usarReposicion && cantidadReposicion > 0) {
+      total = unidadesSueltas + cantidadReposicion;
+    } else {
+      const parsedBultos = parseFloat(bultos) || 0;
+      const parsedUnidades = parseFloat(unidadesPorBulto) || 0;
+      total = unidadesSueltas + parsedBultos * parsedUnidades;
     }
-  };
+
+    onClose(total.toString());
+  } catch {
+    onClose("0");
+  }
+};
 
   const handleInputClick = (inputType: "display" | "bultos" | "unidades") => {
     setActiveInput(inputType);
@@ -173,7 +188,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
     <div
       style={{
         backgroundColor: "rgb(138, 139, 141)",
-        padding: "25px", // Aumenté el padding general
+        padding: "25px", 
         transform: "scale(1.2)",
         borderRadius: "1.3rem",
         minHeight: "500px", // Altura mínima garantizada
@@ -196,7 +211,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
           border: "1px solid rgb(138, 139, 141)",
           cursor: "pointer",
           ...(activeInput === "display" && {
-            boxShadow: "0 0 0 2px #3b82f6",
+            boxShadow: "0 0 0 2px black",
           }),
         }}
         onClick={() => handleInputClick("display")}
@@ -286,7 +301,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
                   textAlign: "right",
                   cursor: "pointer",
                   ...(activeInput === "bultos" && {
-                    boxShadow: "0 0 0 2px #3b82f6",
+                    boxShadow: "0 0 0 2px black",
                   }),
                 }}
                 onClick={() => handleInputClick("bultos")}
@@ -316,7 +331,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
                   border: "1px solid rgb(138, 139, 141)",
                   textAlign: "right",
                   ...(activeInput === "unidades" && {
-                    boxShadow: "0 0 0 2px #3b82f6",
+                    boxShadow: "0 0 0 2px black",
                   }),
                 }}
                 onClick={() => handleInputClick("unidades")}
