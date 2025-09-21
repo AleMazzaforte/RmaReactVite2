@@ -69,6 +69,7 @@ const Urls = {
   }, 
   stock: {
     obtener: `${base}/obtenerStock`,
+    actualizarOp: `${base}/actualizarOp`
   }
 
 };

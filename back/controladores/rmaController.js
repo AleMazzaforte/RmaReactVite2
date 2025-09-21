@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { conn } from "../bd/bd.js";
 import events from "events";
-import { get } from "http";
+
 
 events.EventEmitter.defaultMaxListeners = 15;
 
@@ -85,6 +85,7 @@ const cargarRma = {
       nIngreso,
       nEgreso,
       productos, // Array de productos
+      enExistencia,
     } = req.body;
 
     let connection;
@@ -103,12 +104,13 @@ const cargarRma = {
           seEntrega,
           seRecibe,
           nEgreso,
+          enExistencia,
         } = producto;
 
         await connection.query(
           `INSERT INTO r_m_a 
-          (modelo, cantidad, marca, solicita, opLote, vencimiento, seEntrega, seRecibe, observaciones, nIngreso, nEgreso, idCliente) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (modelo, cantidad, marca, solicita, opLote, vencimiento, seEntrega, seRecibe, observaciones, nIngreso, nEgreso, idCliente, enExistencia) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             modelo,
             cantidad,
@@ -122,6 +124,7 @@ const cargarRma = {
             nIngreso,
             nEgreso || null,
             cliente,
+            enExistencia !== undefined ? enExistencia : true, // Valor por defecto true si no se proporciona
           ]
         );
       }
@@ -357,7 +360,6 @@ const gestionarRma = {
   },
 
   getStockRMA: async (req, res) => {
-  
     let connection;
 
     try {
@@ -365,18 +367,20 @@ const gestionarRma = {
 
       const [rows] = await connection.query(`
       SELECT 
+        rma.idRma AS idRma,          -- ✅ ¡Incluimos el ID real!
         p.sku AS sku,
+        c.nombre AS cliente,
         m.nombre AS marca,
         op.nombre AS opLote,
-        SUM(rma.cantidad) AS cantidad
-        
+
+        rma.cantidad AS cantidad  -- ✅ Sin SUM, sin GROUP BY
       FROM r_m_a rma
       JOIN productos p ON rma.modelo = p.id
       JOIN marcas m ON rma.marca = m.id
+      JOIN clientes c ON rma.idCliente = c.id
       LEFT JOIN OP op ON rma.opLote = op.id
-      WHERE rma.enExistencia = TRUE
-      GROUP BY p.sku, m.nombre, op.nombre
-      ORDER BY p.sku, m.nombre
+      WHERE rma.enExistencia = TRUE  -- ✅ Solo los que están en existencia
+      ORDER BY p.sku, m.nombre, op.nombre
     `);
 
       res.json(rows);
@@ -389,6 +393,50 @@ const gestionarRma = {
       }
     }
   },
+  // actualizar SOLO opLote por idRma
+postActualizarOpPorSku: async (req, res) => {
+  const idRma = req.params.idRma; // ← ID del registro a actualizar
+  const { opLote } = req.body;    // ← Nueva OP (nombre, no ID)
+
+  let connection;
+  try {
+    connection = await conn.getConnection();
+
+    // Obtener el ID de la OP a partir de su nombre
+    const [opResult] = await connection.execute(
+      "SELECT id FROM OP WHERE nombre = ?",
+      [opLote]
+    );
+
+    if (opResult.length === 0) {
+      return res.status(404).json({ error: `OP no encontrada: ${opLote}` });
+    }
+
+    const opId = opResult[0].id;
+
+    // Actualizar SOLO el campo opLote del registro específico
+    const [result] = await connection.execute(
+      "UPDATE r_m_a SET opLote = ? WHERE idRma = ?",
+      [opId, idRma]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Registro no encontrado" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "OP actualizada correctamente.",
+    });
+  } catch (error) {
+    console.error("Error al actualizar OP:", error);
+    res.status(500).json({ error: "Error al actualizar OP" });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+},
 };
 
 export {
@@ -396,5 +444,4 @@ export {
   productosGeneralController,
   cargarRma,
   gestionarRma,
-  
 };

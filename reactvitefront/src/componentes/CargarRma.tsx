@@ -191,6 +191,7 @@ export const CargarRma: React.FC = () => {
       seRecibe,
       seEntrega,
       nEgreso,
+      enExistencia: true,
     };
 
     setProductosAgregados([...productosAgregados, producto]);
@@ -269,6 +270,7 @@ export const CargarRma: React.FC = () => {
         seEntrega: producto.seEntrega,
         seRecibe: producto.seRecibe,
         nEgreso: producto.nEgreso,
+        enExistencia: producto.enExistencia,
       })),
     };
 
