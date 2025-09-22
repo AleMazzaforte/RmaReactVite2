@@ -73,72 +73,72 @@ const productosGeneralController = {
 };
 
 const cargarRma = {
-  postAgregarRma: async (req, res) => {
-    // Desestructuración de los campos del cuerpo de la solicitud
-    const {
-      cliente,
-      solicita,
-      vencimiento,
-      seEntrega,
-      seRecibe,
-      observaciones,
-      nIngreso,
-      nEgreso,
-      productos, // Array de productos
-      enExistencia,
-    } = req.body;
+ postAgregarRma: async (req, res) => {
+  const {
+    cliente,
+    solicita,
+    vencimiento,
+    seEntrega,
+    seRecibe: seRecibeGlobal, // ← Renombramos para evitar conflicto
+    observaciones,
+    nIngreso,
+    nEgreso,
+    productos,
+  } = req.body;
 
-    let connection;
-    try {
-      connection = await conn.getConnection();
+  let connection;
+  try {
+    connection = await conn.getConnection();
 
-      // Iterar sobre cada producto y realizar la inserción en la base de datos
-      for (const producto of productos) {
-        const {
+    for (const producto of productos) {
+      const {
+        modelo,
+        cantidad,
+        marca,
+        opLote: productoOpLote,
+        observaciones: productoObservaciones,
+        vencimiento: vencimientoProducto,
+        seEntrega: seEntregaProducto,
+        seRecibe: seRecibeProducto, // ← Fecha de recepción del producto
+        nEgreso: nEgresoProducto,
+      } = producto;
+
+      // ✅ Calcular enExistencia: true si seRecibe tiene fecha válida, false si no
+      const seRecibeFinal = seRecibeProducto || seRecibeGlobal || null;
+      const enExistencia = !!seRecibeFinal && seRecibeFinal.trim() !== "" && !isNaN(new Date(seRecibeFinal).getTime());
+
+      await connection.query(
+        `INSERT INTO r_m_a 
+        (modelo, cantidad, marca, solicita, opLote, vencimiento, seEntrega, seRecibe, observaciones, nIngreso, nEgreso, idCliente, enExistencia) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
           modelo,
           cantidad,
           marca,
-          opLote: productoOpLote,
-          observaciones: productoObservaciones,
-          vencimiento,
-          seEntrega,
-          seRecibe,
-          nEgreso,
-          enExistencia,
-        } = producto;
-
-        await connection.query(
-          `INSERT INTO r_m_a 
-          (modelo, cantidad, marca, solicita, opLote, vencimiento, seEntrega, seRecibe, observaciones, nIngreso, nEgreso, idCliente, enExistencia) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            modelo,
-            cantidad,
-            marca,
-            solicita,
-            productoOpLote || null, // Usar el opLote del producto si existe
-            vencimiento || null,
-            seEntrega || null,
-            seRecibe || null,
-            productoObservaciones || observaciones || null, // Usar las observaciones del producto o las generales
-            nIngreso,
-            nEgreso || null,
-            cliente,
-            enExistencia !== undefined ? enExistencia : true, // Valor por defecto true si no se proporciona
-          ]
-        );
-      }
-
-      res.status(200).json({ message: "RMA agregado correctamente" });
-    } catch (error) {
-      console.error("Error al agregar RMA:", error);
-      res.status(500).json({ message: "Error al agregar RMA" });
-    } finally {
-      if (connection) {
-        connection.release();
-      }
+          solicita,
+          productoOpLote,
+          vencimientoProducto || vencimiento || null,
+          seEntregaProducto || seEntrega || null,
+          seRecibeFinal, // ← Usamos el valor final
+          productoObservaciones || observaciones || null,
+          nIngreso,
+          nEgresoProducto || nEgreso || null,
+          cliente,
+          enExistencia, // ✅ ¡Calculado automáticamente!
+        ]
+      );
     }
-  },
+
+    res.status(200).json({ message: "RMA agregado correctamente" });
+  } catch (error) {
+    console.error("Error al agregar RMA:", error);
+    res.status(500).json({ message: "Error al agregar RMA" });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+},
 
   getUltimoNum: async (req, res) => {
     try {
@@ -161,110 +161,114 @@ const cargarRma = {
 
 const gestionarRma = {
   postActualizarCliente: async (req, res) => {
-    const idRma = req.params.idRma;
-    let {
-      modelo,
+  const idRma = req.params.idRma;
+  let {
+    modelo,
+    cantidad,
+    marca,
+    solicita,
+    opLote,
+    vencimiento,
+    seEntrega,
+    seRecibe,
+    observaciones,
+    nIngreso,
+    nEgreso,
+  } = req.body;
+
+  // Cambio de formato de fecha
+  solicita = convertirFechaParaBackend(solicita);
+  vencimiento = convertirFechaParaBackend(vencimiento);
+  seEntrega = convertirFechaParaBackend(seEntrega);
+  seRecibe = convertirFechaParaBackend(seRecibe);
+
+  // ✅ Calcular enExistencia: true si seRecibe tiene fecha válida, false si no
+  const enExistencia = !!seRecibe && seRecibe.trim() !== "" && !isNaN(new Date(seRecibe).getTime());
+
+  let connection;
+  try {
+    connection = await conn.getConnection();
+
+    // Obtener el ID del modelo (producto) a partir del SKU
+    const [producto] = await connection.execute(
+      "SELECT id FROM productos WHERE sku = ?",
+      [modelo]
+    );
+
+    if (producto.length === 0) {
+      throw new Error("Modelo no encontrado");
+    }
+
+    const productoId = producto[0].id;
+
+    // Obtener el ID de la marca a partir del nombre
+    const [marcaResult] = await connection.execute(
+      "SELECT id FROM marcas WHERE nombre = ?",
+      [marca]
+    );
+
+    if (marcaResult.length === 0) {
+      throw new Error("Marca no encontrada");
+    }
+
+    const marcaId = marcaResult[0].id;
+
+    // Obtener el ID de la op a partir del nombre
+    const [opResult] = await connection.execute(
+      "SELECT id FROM OP WHERE nombre = ?",
+      [opLote]
+    );
+
+    if (opResult.length === 0) { // ❗ ¡Corregí este error! Antes decía marcaResult
+      throw new Error("OP no encontrada");
+    }
+
+    const opId = opResult[0].id;
+
+    const query = `
+      UPDATE r_m_a
+      SET modelo = ?, cantidad = ?, marca = ?, solicita = ?, opLote = ?, 
+          vencimiento = ?, seEntrega = ?, seRecibe = ?, observaciones = ?, 
+          nIngreso = ?, nEgreso = ?, enExistencia = ?  -- ✅ ¡Agregamos enExistencia!
+      WHERE idRma = ?`;
+
+    const [result] = await connection.execute(query, [
+      productoId,
       cantidad,
-      marca,
+      marcaId,
       solicita,
-      opLote,
+      opId,
       vencimiento,
       seEntrega,
       seRecibe,
       observaciones,
       nIngreso,
       nEgreso,
-    } = req.body;
+      enExistencia, // ✅ ¡Valor calculado!
+      idRma,
+    ]);
 
-    // Cambio de formato de fecha
-    solicita = convertirFechaParaBackend(solicita);
-    vencimiento = convertirFechaParaBackend(vencimiento);
-    seEntrega = convertirFechaParaBackend(seEntrega);
-    seRecibe = convertirFechaParaBackend(seRecibe);
-
-    let connection;
-    try {
-      connection = await conn.getConnection();
-
-      // Obtener el ID del modelo (producto) a partir del SKU
-      const [producto] = await connection.execute(
-        "SELECT id FROM productos WHERE sku = ?",
-        [modelo]
-      );
-
-      if (producto.length === 0) {
-        throw new Error("Modelo no encontrado");
-      }
-
-      const productoId = producto[0].id;
-
-      // Obtener el ID de la marca a partir del nombre
-      const [marcaResult] = await connection.execute(
-        "SELECT id FROM marcas WHERE nombre = ?",
-        [marca]
-      );
-
-      if (marcaResult.length === 0) {
-        throw new Error("Marca no encontrada");
-      }
-
-      const marcaId = marcaResult[0].id;
-
-      // Obtener el ID de la op a partir del nombre
-      const [opResult] = await connection.execute(
-        "SELECT id FROM OP WHERE nombre = ?",
-        [opLote]
-      );
-
-      if (marcaResult.length === 0) {
-        throw new Error("Impo no encontrada");
-      }
-
-      const opId = opResult[0].id;
-
-      const query = `
-        UPDATE r_m_a
-        SET modelo = ?, cantidad = ?, marca = ?, solicita = ?, opLote = ?, 
-            vencimiento = ?, seEntrega = ?, seRecibe = ?, observaciones = ?, 
-            nIngreso = ?, nEgreso = ?
-        WHERE idRma = ?`;
-
-      const [result] = await connection.execute(query, [
-        productoId,
-        cantidad,
-        marcaId,
-        solicita,
-        opId,
-        vencimiento,
-        seEntrega,
-        seRecibe,
-        observaciones,
-        nIngreso,
-        nEgreso,
-        idRma,
-      ]);
-
-      if (result.affectedRows > 0) {
-        res.status(200).json({
-          success: true,
-          message: "Producto actualizado correctamente.",
-        });
-      } else {
-        res
-          .status(404)
-          .json({ success: false, message: "Producto no encontrado." });
-      }
-    } catch (error) {
-      console.error("Error al actualizar producto:", error);
+    if (result.affectedRows > 0) {
+      res.status(200).json({
+        success: true,
+        message: "Producto actualizado correctamente.",
+      });
+    } else {
       res
-        .status(500)
-        .json({ success: false, message: "Error al actualizar producto." });
-    } finally {
-      if (connection) {
-        connection.release();
-      }
+        .status(404)
+        .json({ success: false, message: "Producto no encontrado." });
     }
-  },
+  } catch (error) {
+    console.error("Error al actualizar producto:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error al actualizar producto." });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+},
 
   deleteRma: async (req, res) => {
     const idRma = req.params.idRma;

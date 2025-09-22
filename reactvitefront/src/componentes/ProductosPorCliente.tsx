@@ -1,11 +1,9 @@
 import React, { useState } from "react";
-import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
+import {sweetAlert} from "./utilidades/SweetAlertWrapper"; 
 import { TablaListarRmas } from "./TablaListarRmas";
 import { BusquedaClientes } from "./utilidades/BusquedaClientes";
-import { FlechasNavigator } from "./utilidades/FlechasNavigator";
 import { Contenedor } from "./utilidades/Contenedor";
-import Urls from "./utilidades/Urls"; // ✅ IMPORTANTE
-
+import Urls from "./utilidades/Urls"; 
 interface Cliente {
   id: string;
   nombre: string;
@@ -206,11 +204,7 @@ export const ProductosPorCliente = (): JSX.Element => {
                   campos={["nombre"]}
                 />
               </div>
-              <FlechasNavigator
-                resultados={[]}
-                onSeleccionado={handleClienteSeleccionado}
-                campos={["nombre"]}
-              />
+             
             </form>
           </Contenedor>
         </div>
