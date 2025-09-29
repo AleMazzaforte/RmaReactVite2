@@ -28,7 +28,6 @@ export const GetInventarioStock = (urlPrepararInventario: string): InventarioLoa
   const [bloques, setBloques] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [cantidadPorBulto, setCantidadPorBulto] = useState<number>(0);
 
   useEffect(() => {
     const fetchProductos = async () => {
@@ -42,7 +41,7 @@ export const GetInventarioStock = (urlPrepararInventario: string): InventarioLoa
         const data: Producto[] = await response.json();
         const productosConConteoInicial = data.map(p => ({
           ...p,
-          conteoFisico: p.conteoFisico ?? 0
+          conteoFisico: p.conteoFisico 
         }));
         
         setProductos(productosConConteoInicial);

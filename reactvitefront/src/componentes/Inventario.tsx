@@ -332,7 +332,7 @@ export const Inventario: React.FC = () => {
       SKU: producto.sku,
       Bloque: producto.idBloque,
       "Stock Sistema Total": producto.cantSistemaFemex + producto.cantSistemaBlow,
-      "Conteo Físico": producto.conteoFisico || 0,
+      "Conteo Físico": producto.conteoFisico !== null ? producto.conteoFisico : "No Contado",
       Diferencia: calcularDiferencia(producto),
     }));
     const ws = XLSX.utils.json_to_sheet(datosParaExportar);
