@@ -54,7 +54,9 @@ const Urls = {
   preparar: `${base}/prepararInventario`,
   guardar: `${base}/guardarInventario`,
   actualizar: `${base}/actualizarBloques`,
-  actualizarProducto: `${base}/actualizarProductoInventario`
+  actualizarProducto: `${base}/actualizarProductoInventario`,
+  resetearConteos: `${base}/resetearConteos`,
+  productosInactivos: `${base}/productosInactivos`,
   },
   devolucion: {
     agregar: `${base}/agregarDevolucion`,

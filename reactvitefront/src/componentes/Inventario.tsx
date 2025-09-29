@@ -39,6 +39,7 @@ let urlGuardarInventario = Urls.inventario.guardar;
 let urlGuardarReposicion = Urls.reposicion.guardar;
 let urlObtenerReposicion = Urls.reposicion.obtener;
 let urlLimpiarReposicion = Urls.reposicion.limpiar
+let urlResetearConteos = Urls.inventario.resetearConteos;
 
 export const Inventario: React.FC = () => {
   const [stockManager] = useState(() => new StockManager());
@@ -345,6 +346,46 @@ export const Inventario: React.FC = () => {
     XLSX.writeFile(wb, nombreArchivo);
   };
 
+  const exportarInactivos = async () => {
+  setLoading(true);
+  try {
+    const response = await fetch(Urls.inventario.productosInactivos);
+    if (!response.ok) throw new Error("Error al obtener productos inactivos");
+    
+    const productosInactivos: Producto[] = await response.json();
+
+    if (productosInactivos.length === 0) {
+      sweetAlert.info("Sin datos", "No hay productos inactivos.");
+      return;
+    }
+
+    // Preparar datos para Excel
+    const datosParaExportar = productosInactivos.map(p => ({
+      SKU: p.sku,
+      Bloque: p.idBloque || "Sin bloque",
+      "Stock Femex": p.cantSistemaFemex || 0,
+      "Stock Blow": p.cantSistemaBlow || 0,
+      "Conteo Físico": p.conteoFisico !== null ? p.conteoFisico : "NO CONTADO",
+      "Fecha Conteo": p.fechaConteo || "Sin fecha",
+      "Cant. por Bulto": p.cantidadPorBulto || 0,
+    }));
+
+    // Generar Excel
+    const ws = XLSX.utils.json_to_sheet(datosParaExportar);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Inactivos");
+
+    const fecha = new Date().toISOString().split("T")[0];
+    XLSX.writeFile(wb, `Productos_Inactivos_${fecha}.xlsx`);
+
+  } catch (error) {
+    console.error("Error al exportar inactivos:", error);
+    sweetAlert.error("Error", "No se pudo generar el reporte de productos inactivos.");
+  } finally {
+    setLoading(false);
+  }
+};
+
   const handleGuardar = async (productosParaGuardar: ProductoConteo[]) => {
     setLoading(true);
     try {
@@ -380,9 +421,9 @@ export const Inventario: React.FC = () => {
       const productosParaResetear = productos.map((p) => ({
         id: p.id,
         sku: p.sku,
-        conteoFisico: 0,
+        conteoFisico: null,
       }));
-      const response = await fetch(urlGuardarInventario, {
+      const response = await fetch(urlResetearConteos, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(productosParaResetear),
@@ -393,7 +434,7 @@ export const Inventario: React.FC = () => {
       setProductos((prev) =>
         prev.map((p) => ({
           ...p,
-          conteoFisico: 0,
+          conteoFisico: null,
           fechaConteo: null,
         }))
       );
@@ -595,6 +636,26 @@ export const Inventario: React.FC = () => {
                   </svg>
                   Excel
                 </button>
+                <button
+  onClick={exportarInactivos}
+  className="btn-auditoria"
+  title="Descargar productos inactivos"
+  style={{
+    backgroundColor: "#8b5cf6", // morado suave
+    color: "white",
+    padding: "0.5rem 1rem",
+    borderRadius: "0.375rem",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "0.875rem",
+    marginLeft: "1rem",
+  }}
+>
+  <svg xmlns="http://www.w3.org/2000/svg" style={{ height: "1rem", width: "1rem", marginRight: "0.5rem" }} viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+  </svg>
+  Productos Inactivos
+</button>
               </div>
             </div>
           </div>
@@ -747,6 +808,8 @@ export const Inventario: React.FC = () => {
                   Borrar Conteos
                 </button>
               </div>
+              {/* Dentro del bloque de acciones, cerca de "Borrar Conteos" */}
+
             </div>
           </div>
         )}

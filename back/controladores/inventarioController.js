@@ -15,7 +15,7 @@ export const inventarioController = {
                     idBloque, 
                     cantSistemaFemex, 
                     cantSistemaBlow, 
-                    NULLIF(conteoFisico, 0) as conteoFisico, 
+                    conteoFisico, 
                     DATE_FORMAT(fechaConteo, '%Y-%m-%d %H:%i:%s') as fechaConteo,
                     cantidadPorBulto                     
                 FROM productos 
@@ -48,6 +48,39 @@ export const inventarioController = {
     }
   },
 
+  // En tu controlador de inventario
+getProductosInactivos: async (req, res) => {
+
+  let connection;
+  try {
+    connection = await conn.getConnection();
+
+    // Solo inactivos que tienen stock en sistema O conteo físico
+    const [results] = await connection.query(`
+      SELECT 
+        id,
+        sku,
+        idBloque,
+        cantSistemaFemex,
+        cantSistemaBlow,
+        conteoFisico,
+        DATE_FORMAT(fechaConteo, '%Y-%m-%d') AS fechaConteo,
+        cantidadPorBulto,
+        isActive
+      FROM productos
+      WHERE isActive = 0
+      
+      ORDER BY fechaConteo DESC, sku
+    `);
+
+    res.status(200).json(results);
+  } catch (error) {
+    console.error("Error al obtener productos inactivos:", error);
+    res.status(500).json({ error: "Error al cargar productos inactivos" });
+  } finally {
+    if (connection) connection.release();
+  }
+},
   postActualizarConteos: async (req, res) => {
     let connection;
     try {
@@ -271,6 +304,39 @@ export const inventarioController = {
       if (connection) connection.release();
     }
   },
+
+  putResetearConteos: async (req, res) => {
+  let connection;
+  try {
+    connection = await conn.getConnection();
+    await connection.beginTransaction();
+
+    // Actualiza TODOS los productos: elimina conteo físico y fecha de conteo
+    const [result] = await connection.query(`
+      UPDATE productos 
+      SET conteoFisico = NULL, 
+          fechaConteo = NULL
+    `);
+
+    await connection.commit();
+
+    res.status(200).json({
+      success: true,
+      updatedCount: result.affectedRows,
+      message: `${result.affectedRows} conteos físicos reseteados correctamente`
+    });
+
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error al resetear conteos:", error);
+    res.status(500).json({
+      error: "Error al resetear los conteos físicos",
+      details: error.message
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+},
 
   putactualizarCantidadPorBulto: async (req, res) => {
     let connection;

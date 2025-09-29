@@ -93,7 +93,9 @@ router.get('/prepararInventario', inventarioController.getPrepararInventario);
 router.put('/actualizarBloques', inventarioController.putActualizarBloques);
 router.put('/actualizarProductoInventario', inventarioController.putActualizarProductoInventario);
 router.put('/guardarInventario', inventarioController.putGuardarInventario);
+router.put('/resetearConteos', inventarioController.putResetearConteos);
 router.put('/actualizarCantidadPorBulto', inventarioController.putactualizarCantidadPorBulto);
+router.get('/productosInactivos', inventarioController.getProductosInactivos);
 //Inventario reposicion
 router.post('/guardarReposicion', inventarioController.postGuardarReposicion);
 router.get('/obtenerReposiciones', inventarioController.getObtenerReposiciones);
