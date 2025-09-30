@@ -1,0 +1,20 @@
+/* Aumentar tamaño de fuente en tablets (iPad y similares) */
+@media only screen 
+  and (min-device-width: 768px) 
+  and (max-device-width: 1024px) {
+  .tablet-large-text,
+  .tablet-large-text th,
+  .tablet-large-text td,
+  .tablet-large-text button,
+  .tablet-large-text input,
+  .tablet-large-text label {
+    font-size: 1.25rem !important; /* 20px */
+    line-height: 1.5 !important;
+  }
+
+  /* Opcional: hacer inputs más grandes */
+  .tablet-large-text input {
+    padding: 0.75rem !important;
+    min-height: 2.5rem !important;
+  }
+}
