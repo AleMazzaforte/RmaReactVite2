@@ -12,6 +12,7 @@ interface CalculatorProps {
   ) => Promise<void>;
   productosReposicion: ProductoReposicion[];
   sku: string;
+  onUpdateReposicion: (sku: string, cantidad: number) => void;
 }
 
 interface ProductoReposicion {
@@ -27,6 +28,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
   onUpdateCantidadPorBulto,
   productosReposicion,
   sku,
+  onUpdateReposicion,
 }) => {
   const [display, setDisplay] = useState(initialValue);
   const [bultos, setBultos] = useState("0");
@@ -34,36 +36,30 @@ export const Calculator: React.FC<CalculatorProps> = ({
     cantidadPorBulto.toString()
   );
   const [activeInput, setActiveInput] = useState<
-    "display" | "bultos" | "unidades"
+    "display" | "bultos" | "unidades" | "reposicion"
   >("display");
-
-
-  const cantidadReposicion = useMemo(() => {
-    const repo = productosReposicion.find((p) => p.sku === sku);
-    return repo ? repo.cantidad : 0;
-  }, [productosReposicion, sku]);
-
-  const [usarReposicion, setUsarReposicion] = useState(cantidadReposicion > 0);
 
   useEffect(() => {
     setDisplay("0");
     setBultos("0");
   }, []);
 
+  const cantidadReposicion = useMemo(() => {
+    const repo = productosReposicion.find((p) => p.sku === sku);
+    return repo ? repo.cantidad : 0;
+  }, [productosReposicion, sku]);
+  const [reposicionEditada, setReposicionEditada] = useState(
+    cantidadReposicion.toString()
+  );
+  const [usarReposicion, setUsarReposicion] = useState(cantidadReposicion > 0);
+
   useEffect(() => {
     setUnidadesPorBulto(cantidadPorBulto.toString());
   }, [cantidadPorBulto]);
 
   useEffect(() => {
-    if (cantidadReposicion > 0) {
-
-      // Si hay reposición pero no está marcado el checkbox, resetear a 0
-      if (!usarReposicion) {
-        setDisplay("0");
-        setBultos("0");
-      }
-    }
-  }, [cantidadReposicion, usarReposicion]);
+    setReposicionEditada(cantidadReposicion.toString());
+  }, [cantidadReposicion]);
 
   const handleUnidadesPorBultoChange = async (value: string) => {
     // Eliminar caracteres no numéricos excepto punto decimal
@@ -90,12 +86,19 @@ export const Calculator: React.FC<CalculatorProps> = ({
       current === "0" ? value : current + value;
 
     if (activeInput === "display") {
-      setDisplay(updateValue(display));
+      setDisplay(display === "0" ? value : display + value);
     } else if (activeInput === "bultos") {
-      setBultos(updateValue(bultos));
-    } else {
-      const nuevoValor = updateValue(unidadesPorBulto);
-      handleUnidadesPorBultoChange(nuevoValor); // ✅ Esto guarda correctamente
+      setBultos(bultos === "0" ? value : bultos + value);
+    } else if (activeInput === "unidades") {
+      const nuevoValor =
+        unidadesPorBulto === "0" ? value : unidadesPorBulto + value;
+      handleUnidadesPorBultoChange(nuevoValor);
+    } else if (activeInput === "reposicion") {
+      if (/^[0-9]$/.test(value)) {
+        setReposicionEditada(
+          reposicionEditada === "0" ? value : reposicionEditada + value
+        );
+      }
     }
   };
 
@@ -106,7 +109,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
           const result = eval(exp);
           return isNaN(result) ? "0" : result.toString();
         } catch {
-          return "Error";
+          return "0"; // Cambiado a "0" para evitar "Error"
         }
       };
 
@@ -115,70 +118,103 @@ export const Calculator: React.FC<CalculatorProps> = ({
           ? safeEval(display)
           : activeInput === "bultos"
           ? safeEval(bultos)
-          : safeEval(unidadesPorBulto);
+          : activeInput === "unidades"
+          ? safeEval(unidadesPorBulto)
+          : activeInput === "reposicion"
+          ? safeEval(reposicionEditada) // Solo números, pero por si acaso
+          : "0";
 
       if (activeInput === "display") {
         setDisplay(result);
       } else if (activeInput === "bultos") {
         setBultos(result);
-      } else {
+      } else if (activeInput === "unidades") {
         setUnidadesPorBulto(result);
+      } else if (activeInput === "reposicion") {
+        const result = safeEval(reposicionEditada);
+        setReposicionEditada(result === "0" ? "0" : result); // evita "Error"
       }
     } catch {
-      const errorValue = "0"; // Usar "0" en lugar de "Error"
+      const errorValue = "0";
       if (activeInput === "display") {
         setDisplay(errorValue);
       } else if (activeInput === "bultos") {
         setBultos(errorValue);
-      } else {
+      } else if (activeInput === "unidades") {
         setUnidadesPorBulto(errorValue);
+      } else if (activeInput === "reposicion") {
+        setReposicionEditada(errorValue);
       }
     }
   };
+
   const clearActiveInput = () => {
     if (activeInput === "display") {
       setDisplay("0");
     } else if (activeInput === "bultos") {
       setBultos("0");
-    } else {
+    } else if (activeInput === "unidades") {
       setUnidadesPorBulto("0");
+    } else if (activeInput === "reposicion") {
+      setReposicionEditada("0");
     }
   };
 
-  const handleSubmit = () => {
-  try {
-    // Paso 1: Evaluar la expresión en display si es necesario
-    let unidadesSueltas: number;
+  const handleSubmit = async () => {
+    // 👈 IMPORTANTE: ahora es async
+    try {
+      const safeEval = (exp: string): number => {
+        try {
+          // eslint-disable-next-line no-eval
+          const result = eval(exp);
+          return typeof result === "number" && !isNaN(result) ? result : 0;
+        } catch {
+          return 0;
+        }
+      };
 
-    const safeEval = (exp: string): number => {
-      try {
-        // eslint-disable-next-line no-eval
-        const result = eval(exp);
-        return typeof result === "number" && !isNaN(result) ? result : 0;
-      } catch {
-        return 0;
-      }
-    };
+      // 1. Unidades sueltas (resultado de la expresión en display)
+      const unidadesSueltas = safeEval(display);
 
-    // Intentar evaluar display como expresión
-    unidadesSueltas = safeEval(display);
+      // 2. Usar el valor editado en el display de reposición
+      const cantidadReposicionEditada = parseInt(reposicionEditada) || 0;
 
-    // Paso 2: Sumar según corresponda
-    let total = 0;
-
-    if (usarReposicion && cantidadReposicion > 0) {
-      total = unidadesSueltas + cantidadReposicion;
-    } else {
+      // 3. Bultos × unidades por bulto
       const parsedBultos = parseFloat(bultos) || 0;
-      const parsedUnidades = parseFloat(unidadesPorBulto) || 0;
-      total = unidadesSueltas + parsedBultos * parsedUnidades;
-    }
+      const parsedUnidadesPorBulto = parseFloat(unidadesPorBulto) || 0;
+      const totalBultos = parsedBultos * parsedUnidadesPorBulto;
 
-    onClose(total.toString());
-  } catch {
-    onClose("0");
-  }
-};
+      // 4. SUMAR TODO, PERO LA REPOSICIÓN SOLO SI EL CHECKBOX ESTÁ MARCADO
+      let total = unidadesSueltas + totalBultos;
+      if (usarReposicion) {
+        total += cantidadReposicionEditada;
+      }
+
+      // 👇 NUEVO: Guardar la reposición en la BD si cambió y si existe la función
+      if (onUpdateReposicion) {
+        const valorOriginal =
+          productosReposicion.find((p) => p.sku === sku)?.cantidad || 0;
+
+        if (cantidadReposicionEditada !== valorOriginal) {
+          try {
+            await onUpdateReposicion(sku, cantidadReposicionEditada);
+            // ✅ Si llega aquí, fue exitoso
+          } catch (error) {
+            // ❌ Si falla, mostramos mensaje y NO cerramos
+            console.error("Falló la actualización de reposición:", error);
+
+            return; // Salimos sin cerrar la calculadora
+          }
+        }
+      }
+
+      // Cerrar la calculadora con el total
+      onClose(total.toString());
+    } catch (error) {
+      console.error("Error en handleSubmit:", error);
+      onClose("0");
+    }
+  };
 
   const handleInputClick = (inputType: "display" | "bultos" | "unidades") => {
     setActiveInput(inputType);
@@ -188,7 +224,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
     <div
       style={{
         backgroundColor: "rgb(138, 139, 141)",
-        padding: "25px", 
+        padding: "25px",
         transform: "scale(1.2)",
         borderRadius: "1.3rem",
         minHeight: "500px", // Altura mínima garantizada
@@ -239,30 +275,42 @@ export const Calculator: React.FC<CalculatorProps> = ({
           <input
             type="checkbox"
             checked={usarReposicion}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              setUsarReposicion(checked);
-              
-            }}
+            onChange={(e) => setUsarReposicion(e.target.checked)}
             style={{
               width: "1.25rem",
               height: "1.25rem",
               cursor: "pointer",
             }}
           />
-          <div
+          <label
             style={{
-              flex: 1,
-              backgroundColor: "#f3f4f6",
-              padding: "0.25rem 0.5rem",
-              borderRadius: "0.375rem",
-              border: "1px solid rgb(138, 139, 141)",
-              textAlign: "center",
-              fontFamily: "monospace",
-              fontSize: "1.1rem",
+              fontSize: "1,3rem",
+              fontWeight: "500",
+              color: "#374151",
             }}
           >
-            Reposición: {cantidadReposicion}
+            Reposición
+          </label>
+
+          {/* Display editable de reposición */}
+          <div
+            style={{
+              width: "60%",
+              fontSize: "1.5rem",
+              padding: "0.25rem 0.5rem",
+              backgroundColor: "#f3f4f6",
+              borderRadius: "0.375rem",
+              border: "1px solid rgb(138, 139, 141)",
+              textAlign: "right",
+              marginTop: "0.25rem",
+              cursor: "pointer",
+              ...(activeInput === "reposicion" && {
+                boxShadow: "0 0 0 2px black",
+              }),
+            }}
+            onClick={() => setActiveInput("reposicion")}
+          >
+            {reposicionEditada}
           </div>
         </div>
 
