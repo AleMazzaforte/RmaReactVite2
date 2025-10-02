@@ -7,7 +7,7 @@ import { GuardarInventario } from "./utilidades/GuardarInventario";
 import * as XLSX from "xlsx";
 import {sweetAlert} from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
 import Urls from './utilidades/Urls';
-import "../estilos/ContadorDeTintas.css";
+import "../estilos/contadorDeTintas.css";
 
 
 type ResultadoItem = {
