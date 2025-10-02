@@ -438,35 +438,32 @@ export const Inventario: React.FC = () => {
         return;
       }
 
-      // Preparar datos para Excel
-      const datosParaExportar = productosInactivos.map((p) => ({
-        SKU: p.sku,
-        Bloque: p.idBloque || "Sin bloque",
-        "Stock Femex": p.cantSistemaFemex || 0,
-        "Stock Blow": p.cantSistemaBlow || 0,
-        "Conteo Físico":
-          p.conteoFisico !== null ? p.conteoFisico : "NO CONTADO",
-        "Fecha Conteo": p.fechaConteo || "Sin fecha",
-        "Cant. por Bulto": p.cantidadPorBulto || 0,
-      }));
+    // Preparar datos para Excel
+    const datosParaExportar = productosInactivos.map(p => ({
+      SKU: p.sku,
+      Bloque: p.idBloque || "Sin bloque",
+      "Stock Femex": p.cantSistemaFemex || 0,
+      "Stock Blow": p.cantSistemaBlow || 0,
+      "Conteo Físico": p.conteoFisico !== null ? p.conteoFisico : "NO CONTADO",
+      "Fecha Conteo": p.fechaConteo || "Sin fecha",
+      "Cant. por Bulto": p.cantidadPorBulto || 0,
+    }));
 
       // Generar Excel
       const ws = XLSX.utils.json_to_sheet(datosParaExportar);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Inactivos");
 
-      const fecha = new Date().toISOString().split("T")[0];
-      XLSX.writeFile(wb, `Productos_Inactivos_${fecha}.xlsx`);
-    } catch (error) {
-      console.error("Error al exportar inactivos:", error);
-      sweetAlert.error(
-        "Error",
-        "No se pudo generar el reporte de productos inactivos."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fecha = new Date().toISOString().split("T")[0];
+    XLSX.writeFile(wb, `Productos_Inactivos_${fecha}.xlsx`);
+
+  } catch (error) {
+    console.error("Error al exportar inactivos:", error);
+    sweetAlert.error("Error", "No se pudo generar el reporte de productos inactivos.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleGuardar = async (productosParaGuardar: ProductoConteo[]) => {
     setLoading(true);
@@ -773,38 +770,25 @@ export const Inventario: React.FC = () => {
                   Excel
                 </button>
                 <button
-                  onClick={exportarInactivos}
-                  className="btn-auditoria"
-                  title="Descargar productos inactivos"
-                  style={{
-                    backgroundColor: "#8b5cf6", // morado suave
-                    color: "white",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.375rem",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "0.875rem",
-                    marginLeft: "1rem",
-                  }}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{
-                      height: "1rem",
-                      width: "1rem",
-                      marginRight: "0.5rem",
-                    }}
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Productos Inactivos
-                </button>
+  onClick={exportarInactivos}
+  className="btn-auditoria"
+  title="Descargar productos inactivos"
+  style={{
+    backgroundColor: "#8b5cf6", // morado suave
+    color: "white",
+    padding: "0.5rem 1rem",
+    borderRadius: "0.375rem",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "0.875rem",
+    marginLeft: "1rem",
+  }}
+>
+  <svg xmlns="http://www.w3.org/2000/svg" style={{ height: "1rem", width: "1rem", marginRight: "0.5rem" }} viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+  </svg>
+  Productos Inactivos
+</button>
               </div>
             </div>
           </div>

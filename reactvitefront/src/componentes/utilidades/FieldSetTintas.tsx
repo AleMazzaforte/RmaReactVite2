@@ -22,13 +22,14 @@ export interface FieldSetTintasProps {
   disableCombo = false // Valor por defecto false
 }) => {
   return (
-    <fieldset className="grid grid-cols-2 gap-4 border rounded-2xl p-9 bg-blue-50">
+    <fieldset className="grid grid-cols-2 gap-4 border rounded-2xl p-9 bg-blue-50" style={{ border: "black 1px solid", background: "#eff6ff" }}>
       <legend className="text-lg font-semibold text-gray-700 mb-4">{legend}</legend>
 
       {comboId && (
-        <div className="col-span-2 flex flex-col">
+        <div className="col-span-2 flex flex-col" >
           <label htmlFor={comboId} className="mb-1">Combos</label>
           <input
+          style={{ border: "black 1px solid" }}
             type="number"
             name={comboId}
             id={comboId}
@@ -50,6 +51,7 @@ export interface FieldSetTintasProps {
         <div key={input.id} className="flex flex-col">
           <label htmlFor={input.id} className="mb-1">{input.label}</label>
           <input
+          style={{ border: "black 1px solid" }}
             type="number"
             name={input.name}
             id={input.id}

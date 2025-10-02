@@ -7,6 +7,7 @@ import { GuardarInventario } from "./utilidades/GuardarInventario";
 import * as XLSX from "xlsx";
 import {sweetAlert} from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
 import Urls from './utilidades/Urls';
+import "../estilos/ContadorDeTintas.css"
 
 
 type ResultadoItem = {
@@ -275,7 +276,7 @@ export const ContadorDeTintas: React.FC = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative tablet-large-text">
       <Contenedor>
         <div className="grid gap-8  ">
           {FieldSetTintasConfig.map((config) => (
@@ -310,7 +311,7 @@ export const ContadorDeTintas: React.FC = () => {
                 .filter((item) => item.id !== 0)
             )}
             onGuardar={handleGuardarInventario}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition tablet-large-text"
             disabled={resultados.length === 0}
           >
             Guardar Inventario
