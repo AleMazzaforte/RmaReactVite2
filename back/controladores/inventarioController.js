@@ -164,6 +164,31 @@ getProductosInactivos: async (req, res) => {
       }
 
       connection = await conn.getConnection();
+
+          // === VALIDACIÓN: asegurar que SKUs con stock > 0 estén activos ===
+    if (accion !== 'borrar' && Array.isArray(productos)) {
+      // Filtrar SKUs con stock > 0
+      const skusConStock = productos
+        .filter(p => p.cantidad > 0)
+        .map(p => p.sku);
+
+      if (skusConStock.length > 0) {
+        const [inactivos] = await connection.query(
+          `SELECT sku FROM productos 
+           WHERE sku IN (?) AND (isActive = 0 OR isActive IS NULL)`,
+          [skusConStock]
+        );
+
+        if (inactivos.length > 0) {
+          const listaSkus = inactivos.map(p => p.sku).join(', ');
+          return res.status(400).json({
+            error: "SKUs inactivos con stock detectados",
+            message: `Los siguientes SKUs están inactivos pero tienen stock en sistema: ${listaSkus}. Actívelos antes de cargar.`,
+            skusInactivos: inactivos.map(p => p.sku)
+          });
+        }
+      }
+    }
       let updatedCount = 0;
       const fechaActual = new Date();
 
