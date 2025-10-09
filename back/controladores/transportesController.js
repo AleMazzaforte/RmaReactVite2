@@ -28,7 +28,14 @@ export const transportes = {
             }
         } catch (error) {
             console.error(error);
-            res.status(500).json({ success: false, message: "Error interno del servidor al cargar el transporte" });
+           if (error.code === 'ER_DUP_ENTRY') {
+          if (error.sqlMessage.includes("transportes.nombre")) {
+            return res.status(400).json({ error: `El nombre ${nombre} ya está en la base de datos.` });
+          }
+        
+        } else {
+          res.status(500).json({ message: "Hubo un problema al actualizar el cliente" });
+        }
         } finally {
             if (connection) {
                 connection.release();
@@ -63,7 +70,14 @@ export const transportes = {
             }
         } catch (error) {
             console.error(error);
-            res.status(500).json({ message: "Error al actualizar el producto" });
+            if (error.code === 'ER_DUP_ENTRY') {
+          if (error.sqlMessage.includes("transportes.nombre")) {
+            return res.status(400).json({ error: `El nombre ${nombre} ya está en la base de datos.` });
+          }
+          
+        } else {
+          res.status(500).json({ message: "Hubo un problema al actualizar el cliente" });
+        }
         }
     },
     postEliminarTransporte: async (req, res) => {

@@ -5,6 +5,9 @@ import { FiltrosInventario } from "./utilidades/FiltrosInventario";
 import { GetInventarioStock } from "./utilidades/GetInventarioStock";
 import { GuardarInventario } from "./utilidades/GuardarInventario";
 import { InputWithCalculator } from "./utilidades/InputWithCalculator";
+import { UseLongPress } from "./utilidades/UseLongPress";
+import { UseInactivarProducto } from "./utilidades/UseInactivarProducto";
+
 import {
   guardarReposicionCompleta,
   actualizarProductoReposicion,
@@ -112,6 +115,14 @@ export const Inventario: React.FC = () => {
       skusInvalidos,
     };
   };
+
+  const { inactivarProducto, loading: loadingInactivar } = UseInactivarProducto(
+  (sku) => {
+    setProductos((prev) =>
+      prev.map((p) => (p.sku === sku ? { ...p, isActive: 0 } : p))
+    );
+  }
+);
 
   // Cargar reposiciones
   const cargarReposiciones = async () => {
@@ -1140,7 +1151,12 @@ export const Inventario: React.FC = () => {
                     const backgroundColor = backgroundColorDiferencia(producto);
                     return (
                       <tr key={producto.id}>
-                        <td className="td-sku" id={`sku-${producto.sku}`}>
+                        <td 
+                          className="td-sku" 
+                          id={`sku-${producto.sku}`}
+                           {...UseLongPress(() => inactivarProducto(producto.sku), 800)}
+  style={{ cursor: "pointer", userSelect: "none" }}
+                          >
                           {producto.sku}
                         </td>
                         <td className="td-body">

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Calculator } from "./Calculator";
 import { sweetAlert } from "./SweetAlertWrapper";
+import Urls from "./Urls"
 
 interface InputWithLongTouchCalculatorProps {
   value: number | null;
@@ -16,13 +17,8 @@ interface productosReposicion {
   sku: string;
   cantidad: number;
 }
-let urlActualizarCantidadPorBulto =
-  "https://rma-back.vercel.app/actualizarCantidadPorBulto";
+let urlActualizarCantidadPorBulto = Urls.inventario.actualizarcantidadPorBulto
 
-if (window.location.hostname === "localhost") {
-  urlActualizarCantidadPorBulto =
-    "http://localhost:8080/actualizarCantidadPorBulto";
-}
 
 export const InputWithCalculator: React.FC<
   InputWithLongTouchCalculatorProps

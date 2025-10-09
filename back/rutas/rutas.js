@@ -96,6 +96,7 @@ router.put('/guardarInventario', inventarioController.putGuardarInventario);
 router.put('/resetearConteos', inventarioController.putResetearConteos);
 router.put('/actualizarCantidadPorBulto', inventarioController.putactualizarCantidadPorBulto);
 router.get('/productosInactivos', inventarioController.getProductosInactivos);
+router.post('/inactivarProducto', productosController.postInactivarProducto)
 //Inventario reposicion
 router.post('/guardarReposicion', inventarioController.postGuardarReposicion);
 router.get('/obtenerReposiciones', inventarioController.getObtenerReposiciones);

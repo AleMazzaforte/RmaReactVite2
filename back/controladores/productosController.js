@@ -72,6 +72,32 @@ export const postCargarProducto = {
       res.status(500).json({ message: "Error al actualizar el producto" });
     }
   },
+
+  // En tu archivo de rutas/controladores
+postInactivarProducto: async (req, res) => {
+  const { sku } = req.body;
+
+  if (!sku) {
+    return res.status(400).json({ message: "El campo 'sku' es requerido" });
+  }
+
+  try {
+    const results = await conn.query(
+      "UPDATE productos SET isActive = 0 WHERE sku = ?",
+      [sku]
+    );
+
+    if (results[0].affectedRows > 0) {
+      return res.status(200).json({ message: "Producto inactivado correctamente" });
+    } else {
+      return res.status(404).json({ message: "Producto no encontrado" });
+    }
+  } catch (error) {
+    console.error("Error al inactivar producto:", error);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
+},
+
   postELiminarProducto: async (req, res) => {
     const { sku } = req.params;
     try {

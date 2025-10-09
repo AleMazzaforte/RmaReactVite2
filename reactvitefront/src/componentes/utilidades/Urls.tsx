@@ -26,6 +26,7 @@ const Urls = {
     eliminarDeOp: `${base}/eliminarProductoOp`,
     actualizar: `${base}/actualizarProducto`,
     eliminar: `${base}/eliminarProducto`,
+    inactivar: `${base}/inactivarProducto`
   },
   rma: {
     agregar: `${base}/agregarRma`,
@@ -57,6 +58,7 @@ const Urls = {
   actualizarProducto: `${base}/actualizarProductoInventario`,
   resetearConteos: `${base}/resetearConteos`,
   productosInactivos: `${base}/productosInactivos`,
+  actualizarcantidadPorBulto: `${base}/actualizarcantidadPorBulto`
   },
   devolucion: {
     agregar: `${base}/agregarDevolucion`,

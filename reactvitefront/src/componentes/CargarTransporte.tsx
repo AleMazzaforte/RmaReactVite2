@@ -35,6 +35,7 @@ export const CargarTransporte: React.FC = () => {
 
         const result = await response.json();
 
+
         if (response.ok) {
           // Si la respuesta es exitosa
           sweetAlert.fire({
@@ -52,7 +53,7 @@ export const CargarTransporte: React.FC = () => {
           sweetAlert.fire({
             icon: "error",
             title: "Error",
-            text: result.message || "Hubo un problema al cargar el transporte",
+            text: result.error || "Hubo un problema al cargar el transporte",
           });
         }
       } catch (error) {
