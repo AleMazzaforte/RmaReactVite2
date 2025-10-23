@@ -3,15 +3,28 @@ import Loader from "./utilidades/Loader";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Urls from "./utilidades/Urls";
 
+// Interfaz para la respuesta cruda del backend
+interface EstadisticaRaw {
+  producto_id: number;
+  producto_sku: string;
+  total_importado: string;
+  cantSistemaFemex: number | null;
+  cantSistemaBlow: number | null;
+  total_vendido: string;
+  total_devuelto: string;
+  porcentaje_fallados: string;
+}
+
+// Interfaz para los datos procesados en el frontend
 interface EstadisticaRMA {
   producto_id: number;
   producto_sku: string;
   total_importado: number;
-  total_vendido: number; // Nuevo campo
+  total_vendido: number;
   total_devuelto: number;
   porcentaje_fallados: number;
-  cantidadSistemaFemex?: number; // Nuevo campo opcional
-  cantidadSistemaBlow?: number; // Nuevo campo opcional
+  cantSistemaFemex?: number;
+  cantSistemaBlow?: number;
 }
 
 export const Estadisticas: React.FC = () => {
@@ -21,25 +34,29 @@ export const Estadisticas: React.FC = () => {
   const [filtrarCero, setFiltrarCero] = useState(false);
   const [porcentajeMinimo, setPorcentajeMinimo] = useState<number | "">("");
 
-  const urlEstadisticas = Urls.estadisticas.estadisticas
-    
+  const urlEstadisticas = Urls.estadisticas.estadisticas;
+
+  const parseNumber = (value: string | number | null | undefined, fallback = 0): number => {
+    if (value == null) return fallback;
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return isNaN(num) ? fallback : num;
+  };
 
   const fetchEstadisticas = async () => {
     setLoading(true);
 
     try {
       const response = await fetch(urlEstadisticas);
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || "Error al cargar estadísticas");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al cargar estadísticas");
       }
+
+      const data: EstadisticaRaw[] = await response.json();
 
       // Verificar si hay datos de stock
       const hasStockData = data.some(
-        (item: any) =>
-          item.cantidadSistemaFemex !== undefined ||
-          item.cantidadSistemaBlow !== undefined
+        (item) => item.cantSistemaFemex != null || item.cantSistemaBlow != null
       );
 
       if (!hasStockData) {
@@ -53,22 +70,22 @@ export const Estadisticas: React.FC = () => {
       }
 
       // Validar y transformar datos
-      const datosValidados: EstadisticaRMA[] = data.map((item: any) => {
+      const datosValidados: EstadisticaRMA[] = data.map((item) => {
         const stockTotal =
-          (item.cantidadSistemaFemex || 0) + (item.cantidadSistemaBlow || 0);
-        const totalVendido = Math.max(
-          0,
-          (item.total_importado || 0) - stockTotal
-        );
-        const totalDevuelto = Number(item.total_devuelto) || 0;
+          (parseNumber(item.cantSistemaFemex) || 0) +
+          (parseNumber(item.cantSistemaBlow) || 0);
+
+        const totalImportado = parseNumber(item.total_importado);
+        const totalVendido = Math.max(0, totalImportado - stockTotal);
+        const totalDevuelto = parseNumber(item.total_devuelto);
 
         return {
-          producto_id: item.producto_id || 0,
+          producto_id: item.producto_id,
           producto_sku: item.producto_sku || "N/A",
-          total_importado: item.total_importado || 0,
+          total_importado: totalImportado,
           total_vendido: totalVendido,
-          cantidadSistemaFemex: item.cantidadSistemaFemex,
-          cantidadSistemaBlow: item.cantidadSistemaBlow,
+          cantSistemaFemex: item.cantSistemaFemex ?? undefined,
+          cantSistemaBlow: item.cantSistemaBlow ?? undefined,
           total_devuelto: totalDevuelto,
           porcentaje_fallados:
             totalVendido > 0
@@ -96,28 +113,21 @@ export const Estadisticas: React.FC = () => {
   }, []);
 
   const estadisticasFiltradas = estadisticas.filter((est) => {
-    // Filtro por SKU
-    const sku = est.producto_sku?.toString().toLowerCase() || "";
+    const sku = est.producto_sku.toLowerCase();
     const coincideSku = sku.includes(filtro.toLowerCase());
-
-    // Filtro por porcentaje > 0 (botón "Filtrar 0")
     const noEsCero = !filtrarCero || est.porcentaje_fallados > 0;
-
-    // Filtro por porcentaje mayor a X
     const mayorAPorcentaje =
       porcentajeMinimo === "" || est.porcentaje_fallados > porcentajeMinimo;
 
-    // Aplicar todos los filtros
     return coincideSku && noEsCero && mayorAPorcentaje;
   });
 
-  // Función para mostrar detalles de un producto
   const mostrarDetalleProducto = (producto: EstadisticaRMA) => {
     sweetAlert.fire({
       icon: "info",
       title: `Estadísticas completas para ${producto.producto_sku}`,
       html: `
-        <div className="text-left border-black">
+        <div class="text-left">
           <p><strong>SKU:</strong> ${producto.producto_sku}</p>
           <p><strong>Total importado:</strong> ${producto.total_importado.toLocaleString()}</p>
           <p><strong>Total devuelto:</strong> ${producto.total_devuelto.toLocaleString()}</p>
@@ -128,9 +138,7 @@ export const Estadisticas: React.FC = () => {
                 : producto.porcentaje_fallados > 1.99
                 ? "#ea580c"
                 : "#16a34a"
-            }; font-weight: ${
-        producto.porcentaje_fallados > 10 ? "bold" : "normal"
-      }">
+            }; font-weight: ${producto.porcentaje_fallados > 10 ? "bold" : "normal"}">
               ${producto.porcentaje_fallados}%
             </span>
           </p>
@@ -139,56 +147,51 @@ export const Estadisticas: React.FC = () => {
       confirmButtonText: "Cerrar",
     });
   };
-  let porcentaje: number = 0;
-  // Mostrar resumen general
+
   const mostrarResumenCompleto = () => {
-  const totalProductos = estadisticasFiltradas.length;
+    const totalProductos = estadisticasFiltradas.length;
+    const totalVendido = estadisticasFiltradas.reduce(
+      (sum, item) => sum + item.total_vendido,
+      0
+    );
+    const totalDevuelto = estadisticasFiltradas.reduce(
+      (sum, item) => sum + item.total_devuelto,
+      0
+    );
+    const porcentajeGeneral =
+      totalVendido > 0
+        ? parseFloat(((totalDevuelto * 100) / totalVendido).toFixed(2))
+        : 0;
 
-  // Sumamos los totales reales vendidos y devueltos
-  const totalVendido = estadisticasFiltradas.reduce(
-    (sum, item) => sum + item.total_vendido,
-    0
-  );
-  const totalDevuelto = estadisticasFiltradas.reduce(
-    (sum, item) => sum + item.total_devuelto,
-    0
-  );
-
-  // Calculamos el porcentaje general basado en unidades vendidas
-  const porcentajeGeneral =
-    totalVendido > 0
-      ? parseFloat(((totalDevuelto * 100) / totalVendido).toFixed(2))
-      : 0;
-
-  sweetAlert.fire({
-    icon: "info",
-    title: "Resumen General",
-    html: `
-      <div class="text-left">
-        <p><strong>Productos diferentes:</strong> ${totalProductos}</p>
-        <p><strong>Total unidades vendidas:</strong> ${totalVendido.toLocaleString()}</p>
-        <p><strong>Total unidades devueltas:</strong> ${totalDevuelto.toLocaleString()}</p>
-        <p><strong>Porcentaje general de fallos:</strong> 
-          <span style="color: ${
-            porcentajeGeneral > 10
-              ? "#dc2626"
-              : porcentajeGeneral > 1.99
-              ? "#ea580c"
-              : "#16a34a"
-          }; font-weight: ${porcentajeGeneral > 10 ? "bold" : "normal"}">
-            ${porcentajeGeneral}%
-          </span>
-        </p>
-      </div>
-    `,
-    confirmButtonText: "Cerrar",
-    width: "600px",
-  });
-};
+    sweetAlert.fire({
+      icon: "info",
+      title: "Resumen General",
+      html: `
+        <div class="text-left">
+          <p><strong>Productos diferentes:</strong> ${totalProductos}</p>
+          <p><strong>Total unidades vendidas:</strong> ${totalVendido.toLocaleString()}</p>
+          <p><strong>Total unidades devueltas:</strong> ${totalDevuelto.toLocaleString()}</p>
+          <p><strong>Porcentaje general de fallos:</strong> 
+            <span style="color: ${
+              porcentajeGeneral > 10
+                ? "#dc2626"
+                : porcentajeGeneral > 1.99
+                ? "#ea580c"
+                : "#16a34a"
+            }; font-weight: ${porcentajeGeneral > 10 ? "bold" : "normal"}">
+              ${porcentajeGeneral}%
+            </span>
+          </p>
+        </div>
+      `,
+      confirmButtonText: "Cerrar",
+      width: "600px",
+    });
+  };
 
   return (
     <div
-      className="p-4 max-w-2xl mx-auto  bg-white rounded-lg shadow-lg shadow-gray-500  mb-6"
+      className="p-4 max-w-2xl mx-auto bg-white rounded-lg shadow-lg shadow-gray-500 mb-6"
       style={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)" }}
     >
       {loading && <Loader />}
@@ -196,7 +199,6 @@ export const Estadisticas: React.FC = () => {
         Estadísticas de Devoluciones (RMA)
       </h1>
 
-      {/* Controles */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <input
           type="text"
@@ -214,8 +216,7 @@ export const Estadisticas: React.FC = () => {
             className="flex-grow w-1xs p-3 border ml-1 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             value={porcentajeMinimo}
             onChange={(e) => {
-              const value =
-                e.target.value === "" ? "" : parseFloat(e.target.value);
+              const value = e.target.value === "" ? "" : parseFloat(e.target.value);
               setPorcentajeMinimo(value);
             }}
           />
@@ -232,9 +233,9 @@ export const Estadisticas: React.FC = () => {
               "Actualizar Datos"
             )}
           </button>
-         
         </div>
       </div>
+
       <div>
         <button
           onClick={() => setFiltrarCero(!filtrarCero)}
@@ -246,20 +247,20 @@ export const Estadisticas: React.FC = () => {
         >
           {filtrarCero ? "Mostrar todos" : "Filtrar 0"}
         </button>
-         <button
-            onClick={mostrarResumenCompleto}
-            className="px-6 py-3 ml-5 bg-green-600 border-black text-white rounded-lg hover:bg-green-700 transition-colors shadow"
-          >
-            Resumen general
-          </button>
+        <button
+          onClick={mostrarResumenCompleto}
+          className="px-6 py-3 ml-5 bg-green-600 border-black text-white rounded-lg hover:bg-green-700 transition-colors shadow"
+        >
+          Resumen general
+        </button>
       </div>
-      {/* Tabla de resultados */}
+
       <div
         className="bg-white rounded-lg shadow overflow-hidden"
         style={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)" }}
       >
         <div className="overflow-x-auto">
-          <table className=" divide-y divide-gray-300">
+          <table className="divide-y divide-gray-300">
             <thead className="bg-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

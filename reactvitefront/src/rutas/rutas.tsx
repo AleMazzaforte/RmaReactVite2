@@ -25,6 +25,7 @@ import { Contenedor } from "../componentes/utilidades/Contenedor";
 import { Inventario } from "../componentes/Inventario";
 import { DefinirBloques } from "../componentes/DefinirBloques";
 import { Stock } from "../componentes/Stock";
+import { CargarKits } from "../componentes/CargarKits";
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -49,6 +50,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/cargarOp" element={<CargarImpo />} />
         <Route path="/actualizarOp" element={<ActualizarImpo />} />
         <Route path="/estadisticas" element={<Estadisticas />} />
+        <Route path="/cargarKits" element={<CargarKits />} />
         <Route path="/devolucionAGondola" element={<DevolucionAGondola />} />
         <Route path="/pokemon" element={<PokemonList />} />
         <Route path="/pokemon1" element={<Contenedor />} />

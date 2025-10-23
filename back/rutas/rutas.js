@@ -18,6 +18,7 @@ import etiquetas from '../controladores/etiquetasController.js';
 import agregarDevolucion from '../controladores/devolucionController.js';
 import estadisticas from '../controladores/estadisticasController.js'
 import inventarioController from '../controladores/inventarioController.js'
+import kitsController from '../controladores/kitController.js'
 
 
 const router = express.Router();
@@ -101,5 +102,8 @@ router.post('/inactivarProducto', productosController.postInactivarProducto)
 router.post('/guardarReposicion', inventarioController.postGuardarReposicion);
 router.get('/obtenerReposiciones', inventarioController.getObtenerReposiciones);
 router.post('/limpiarReposiciones', inventarioController.postLimpiarReposiciones);
+
+// Rutas para kits
+router.post('/guardarKit', kitsController.postGuardarKit)
 
 export default router;

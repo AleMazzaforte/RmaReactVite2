@@ -3,7 +3,7 @@ import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import { ListarProductos } from "./utilidades/ListarProductos";
 import { ListarMarcas } from "./utilidades/ListarMarcas";
 import { ListarOp } from "./utilidades/ListarOp";
-import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
+import { sweetAlert } from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 import Loader from "./utilidades/Loader";
 import FechaInput from "./utilidades/FechaInput";
 import { Contenedor } from "./utilidades/Contenedor";
@@ -29,6 +29,7 @@ interface Op {
   id: number;
   nombre: string;
   fechaIngreso?: string;
+  skus: string[];
 }
 
 export const CargarRma: React.FC = () => {
@@ -60,6 +61,7 @@ export const CargarRma: React.FC = () => {
   const urlOp = Urls.rma.listarOp;
   const urlNumeroRemito = Urls.remito.getUltimoNumero;
 
+  const opLoteInputRef = useRef<HTMLInputElement>(null);
 
   const handleClienteSeleccionado = async (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
@@ -96,10 +98,44 @@ export const CargarRma: React.FC = () => {
   };
 
   const handleOpLoteSeleccionado = (opLote: Op[]) => {
-    if (opLote.length > 0) {
-      setOpLoteSeleccionado(opLote[0]); // Tomar el primer elemento del array
-    } else {
+    if (opLote.length === 0) {
       setOpLoteSeleccionado(null);
+      return;
+    }
+
+    const op = opLote[0];
+
+    if (!productoSeleccionado) {
+      sweetAlert.fire({
+        icon: "warning",
+        title: "Producto no seleccionado",
+        text: "Primero debe seleccionar un producto.",
+      });
+      setOpLoteSeleccionado(null);
+      if (opLoteInputRef.current) {
+        opLoteInputRef.current.value = "";
+        opLoteInputRef.current.focus();
+      }
+      return;
+    }
+
+    // ✅ Validación local: ¿el producto está en la OP?
+    const productoEnOp = op.skus.includes(productoSeleccionado.id);
+
+    if (productoEnOp) {
+      setOpLoteSeleccionado(op);
+    } else {
+      sweetAlert.fire({
+        icon: "error",
+        title: "Producto no encontrado en OP",
+        text: `El producto ${productoSeleccionado.sku} no está incluido en la OP ${op.nombre}.`,
+      });
+      setOpLoteSeleccionado(null);
+      const opInput = document.getElementById("opLote") as HTMLInputElement;
+      if (opInput) {
+        opInput.value = ""; // limpiar visualmente
+        opInput.focus();
+      }
     }
   };
 
@@ -121,7 +157,7 @@ export const CargarRma: React.FC = () => {
 
     if (!productoSeleccionado) {
       const skuInput = document.getElementById("skuInput") as HTMLInputElement;
-      console.log(skuInput);
+
       skuInput.focus();
       // Mostrar alerta si el campo SKU está vacío
       sweetAlert.fire({
@@ -172,7 +208,7 @@ export const CargarRma: React.FC = () => {
         title: "Campo vacío",
         text: "Debe seleccionar una OP/Lote",
       });
-      
+
       opLoteInput.focus();
       return;
     }
@@ -438,7 +474,8 @@ export const CargarRma: React.FC = () => {
                     endpoint={urlOp}
                     onSeleccionado={(opLote: Op[]) =>
                       handleOpLoteSeleccionado(opLote)
-                    } // Pasar el array de OPs
+                    }
+                    inputRef={opLoteInputRef}
                     campos={["nombre"]}
                     value={opLoteSeleccionado ? opLoteSeleccionado.nombre : ""}
                   />
@@ -582,12 +619,12 @@ export const CargarRma: React.FC = () => {
                 </tr>
               ))}
               <button
-                  type="button"
-                  onClick={enviarFormulario}
-                  className="w-full py-1 px-2 bg-blue-500 mt-5  text-white  rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-blue-300"
-                >
-                  {loading ? "Cargando..." : "Guardar RMA"}
-                </button>
+                type="button"
+                onClick={enviarFormulario}
+                className="w-full py-1 px-2 bg-blue-500 mt-5  text-white  rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-blue-300"
+              >
+                {loading ? "Cargando..." : "Guardar RMA"}
+              </button>
             </tbody>
           </table>
         </div>

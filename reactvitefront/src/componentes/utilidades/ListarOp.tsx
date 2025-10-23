@@ -6,8 +6,7 @@ interface Op {
   id: number;
   nombre: string;
   fechaIngreso?: string;
-  producto?: string;
-  cantidad?: number;
+  skus: string[];
 }
 
 interface BusquedaOpLoteProps {
@@ -32,6 +31,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
 
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
 
+
   useEffect(() => {
     setQuery(value);
   }, [value]);
@@ -44,7 +44,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
       clearTimeout(timer);
     }
 
-    if (value) {      
+    if (value) {
 
       const newTimer = setTimeout(async () => {
         try {
@@ -66,12 +66,12 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
         } finally {
           setLoading(false);
         }
-      }, 1000); 
+      }, 1000);
       setTimer(newTimer);
     } else {
       setResultados([]);
       setLoading(false);
-      onSeleccionado([]); 
+      onSeleccionado([]);
     }
   };
 
@@ -96,7 +96,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
   return (
     <div>
       <input
-      id='opLote'
+        id='opLote'
         autoComplete="off"
         type="text"
         ref={localInputRef}

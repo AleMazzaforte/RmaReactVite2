@@ -74,6 +74,9 @@ const Urls = {
   stock: {
     obtener: `${base}/obtenerStock`,
     actualizarOp: `${base}/actualizarOp`
+  },
+  kits: {
+    guardarKit: `${base}/guardarKit`
   }
 
 };

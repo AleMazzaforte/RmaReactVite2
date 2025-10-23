@@ -119,12 +119,12 @@ const cargarRma = {
           productoOpLote,
           vencimientoProducto || vencimiento || null,
           seEntregaProducto || seEntrega || null,
-          seRecibeFinal, // ← Usamos el valor final
+          seRecibeFinal, 
           productoObservaciones || observaciones || null,
           nIngreso,
           nEgresoProducto || nEgreso || null,
           cliente,
-          enExistencia, // ✅ ¡Calculado automáticamente!
+          enExistencia, 
         ]
       );
     }
@@ -148,7 +148,7 @@ const cargarRma = {
       if (rows.length > 0 && rows[0].ultimoNIngreso !== null) {
         res.json({ nIngreso: rows[0].ultimoNIngreso });
       } else {
-        res.json({ nIngreso: 0 }); // Si no hay registros, devolver 0
+        res.json({ nIngreso: 0 }); 
       }
     } catch (error) {
       console.error("Error al obtener el último número de ingreso:", error);
@@ -219,7 +219,7 @@ const gestionarRma = {
       [opLote]
     );
 
-    if (opResult.length === 0) { // ❗ ¡Corregí este error! Antes decía marcaResult
+    if (opResult.length === 0) { 
       throw new Error("OP no encontrada");
     }
 
