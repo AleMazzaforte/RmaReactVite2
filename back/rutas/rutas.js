@@ -19,6 +19,7 @@ import agregarDevolucion from '../controladores/devolucionController.js';
 import estadisticas from '../controladores/estadisticasController.js'
 import inventarioController from '../controladores/inventarioController.js'
 import kitsController from '../controladores/kitController.js'
+import backupController from '../controladores/backupController.js'
 
 
 const router = express.Router();
@@ -105,5 +106,8 @@ router.post('/limpiarReposiciones', inventarioController.postLimpiarReposiciones
 
 // Rutas para kits
 router.post('/guardarKit', kitsController.postGuardarKit)
+
+// Ruta para backup
+router.get('/backup', backupController.getBackup)
 
 export default router;

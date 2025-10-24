@@ -77,6 +77,9 @@ const Urls = {
   },
   kits: {
     guardarKit: `${base}/guardarKit`
+  },
+  backup: {
+    getBackup: `${base}/backup`
   }
 
 };
