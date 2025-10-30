@@ -4,15 +4,9 @@ import { FlechasNavigator } from './FlechasNavigator'; // Componente para navega
 import Loader from './Loader'; // Componente de carga/spinner
 import { Debounce } from './Debounce'; // Función utilitaria para hacer debounce
 import Swal from 'sweetalert2'; // Librería para mostrar alertas bonitas
+import Urls from './Urls';
 
-
-let urlListartransporte = "https://rma-back.vercel.app/buscarTransporte";
-
-if (window.location.hostname === "localhost") {
-  urlListartransporte = "http://localhost:8080/buscarTransporte";
-}
-
-
+let urlListartransporte = Urls.transportes.buscar;
 
 // Definición de la estructura del objeto Transporte
 interface Transporte {
@@ -37,11 +31,11 @@ interface Cliente {
 
 // Props que recibe el componente BusquedaClientes
 interface BusquedaClientesProps {
-  endpoint: string; // Ruta del servidor para buscar clientes
-  onClienteSeleccionado: (cliente: Cliente) => void; // Callback cuando se selecciona un cliente
-  campos: string[]; // Campos a mostrar en los resultados
-  value?: string; // Valor inicial opcional del input
-  inputRef?: React.RefObject<HTMLInputElement>; // Referencia externa opcional al input
+  endpoint: string;                                     // Ruta del servidor para buscar clientes
+  onClienteSeleccionado: (cliente: Cliente) => void;    // Callback cuando se selecciona un cliente
+  campos: string[];                                     // Campos a mostrar en los resultados
+  value?: string;                                       // Valor inicial opcional del input
+  inputRef?: React.RefObject<HTMLInputElement>;         // Referencia externa opcional al input
 }
 
 
