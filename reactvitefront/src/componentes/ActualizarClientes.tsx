@@ -27,6 +27,9 @@ export const ActualizarClientes: React.FC = () => {
   const [transporteSeleccionado, setTransporteSeleccionado] = useState<
     string | null
   >(null); // Estado para el transporte seleccionado
+  const [nombreEditable, setNombreEditable] = useState("");
+  const [busquedaKey, setBusquedaKey] = useState(0);
+
   const formRef = useRef<HTMLFormElement>(null);
   const busquedaClientesRef = useRef<HTMLInputElement>(null);
 
@@ -41,6 +44,16 @@ export const ActualizarClientes: React.FC = () => {
 
   const handleTransporteSeleccionado = (transporte: any) => {
     setTransporteSeleccionado(transporte.nombre); // Asumimos que el transporte tiene un campo "nombre"
+  };
+
+  const limpiarFormulario = () => {
+    if (formRef.current) {
+      formRef.current.reset();
+    }
+    setClienteSeleccionado(null);
+    setTransporteSeleccionado(null);
+    setNombreEditable("");
+    setBusquedaKey((prev) => prev + 1); // 💥 reinicia BusquedaClientes
   };
 
   useEffect(() => {
@@ -67,6 +80,7 @@ export const ActualizarClientes: React.FC = () => {
       formRef.current.seguro.value = seguro || "";
       formRef.current.condicionDeEntrega.value = condicionDeEntrega || "";
       formRef.current.condicionDePago.value = condicionDePago || "";
+      setNombreEditable(nombre);
     }
   }, [clienteSeleccionado]);
 
@@ -79,7 +93,7 @@ export const ActualizarClientes: React.FC = () => {
     if (formRef.current) {
       const formData = new FormData(formRef.current);
       const data = {
-        cliente: formData.get("cliente"),
+        cliente: nombreEditable,
         cuit: formData.get("cuit"),
         provincia: formData.get("provincia"),
         ciudad: formData.get("ciudad"),
@@ -114,6 +128,8 @@ export const ActualizarClientes: React.FC = () => {
                 setTransporteSeleccionado(null); // Limpiar el transporte seleccionado
               }
             });
+          setClienteSeleccionado(null);
+          limpiarFormulario();
         } else {
           sweetAlert.fire({
             icon: "error",
@@ -192,9 +208,8 @@ export const ActualizarClientes: React.FC = () => {
                 formRef.current.reset();
                 setClienteSeleccionado(null);
                 setTransporteSeleccionado(null); // Limpiar el transporte seleccionado
-                if (busquedaClientesRef.current) {
-                  busquedaClientesRef.current.value = "";
-                }
+                setNombreEditable("");
+                limpiarFormulario();
               }
             });
         } else {
@@ -232,14 +247,24 @@ export const ActualizarClientes: React.FC = () => {
             >
               Cliente:
             </label>
+            {/* Solo para buscar y seleccionar */}
             <BusquedaClientes
               endpoint={urlListarClientes}
               onClienteSeleccionado={handleClienteSeleccionado}
               campos={["nombre"]}
               inputRef={busquedaClientesRef}
-              value={clienteSeleccionado ? clienteSeleccionado.nombre : ""}
+              key={busquedaKey}
             />
-            <input type="hidden" name="cliente" />
+            {/* Campo editable del nombre, independiente */}
+            {clienteSeleccionado && (
+              <input
+                type="text"
+                name="cliente"
+                value={nombreEditable}
+                onChange={(e) => setNombreEditable(e.target.value)}
+                className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 mt-2 focus:ring focus:ring-blue-300 focus:outline-none"
+              />
+            )}
           </div>
           <div>
             <label
