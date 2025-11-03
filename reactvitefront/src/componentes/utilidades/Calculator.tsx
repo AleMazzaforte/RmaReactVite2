@@ -61,6 +61,8 @@ export const Calculator: React.FC<CalculatorProps> = ({
     setReposicionEditada(cantidadReposicion.toString());
   }, [cantidadReposicion]);
 
+
+
   const handleUnidadesPorBultoChange = async (value: string) => {
     // Eliminar caracteres no numéricos excepto punto decimal
     const cleanedValue = value.replace(/[^0-9.]/g, "");
@@ -117,12 +119,12 @@ export const Calculator: React.FC<CalculatorProps> = ({
         activeInput === "display"
           ? safeEval(display)
           : activeInput === "bultos"
-          ? safeEval(bultos)
-          : activeInput === "unidades"
-          ? safeEval(unidadesPorBulto)
-          : activeInput === "reposicion"
-          ? safeEval(reposicionEditada) // Solo números, pero por si acaso
-          : "0";
+            ? safeEval(bultos)
+            : activeInput === "unidades"
+              ? safeEval(unidadesPorBulto)
+              : activeInput === "reposicion"
+                ? safeEval(reposicionEditada) // Solo números, pero por si acaso
+                : "0";
 
       if (activeInput === "display") {
         setDisplay(result);
@@ -219,6 +221,46 @@ export const Calculator: React.FC<CalculatorProps> = ({
   const handleInputClick = (inputType: "display" | "bultos" | "unidades") => {
     setActiveInput(inputType);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const { key } = e;
+
+      // Evitar que se procesen combinaciones como Ctrl, Alt, etc.
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      // Mapeo de teclas válidas
+      if (/^[0-9]$/.test(key)) {
+        handleButtonClick(key);
+      } else if (key === '.' || key === ',') {
+        // Aceptamos punto decimal (convertimos coma a punto si es necesario)
+        handleButtonClick('.');
+      } else if (['+', '-', '*', '/'].includes(key)) {
+        handleButtonClick(key);
+      } else if (key === '(' || key === ')') {
+        handleButtonClick(key);
+      } else if (key === 'Enter' || key === '=') {
+        calculateResult();
+      } else if (key === 'Escape' || key === 'Delete' || key === 'Backspace') {
+        clearActiveInput();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [
+    activeInput,
+    display,
+    bultos,
+    unidadesPorBulto,
+    reposicionEditada,
+    usarReposicion,
+    handleButtonClick,
+    calculateResult,
+    clearActiveInput,
+  ]);
 
   return (
     <div
