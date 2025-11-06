@@ -26,6 +26,7 @@ import { Inventario } from "../componentes/Inventario";
 import { DefinirBloques } from "../componentes/DefinirBloques";
 import { Stock } from "../componentes/Stock";
 import { CargarKits } from "../componentes/CargarKits";
+import { Api } from "../componentes/Api";
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -42,10 +43,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/cargarMarcas" element={<CargarMarca />} />
         <Route path="/actualizarMarca" element={<ActualizarMarca />} />
         <Route path="/cargarTransporte" element={<CargarTransporte />} />
-        <Route
-          path="/actualizarTransporte"
-          element={<ActualizarTransporte />}
-        />
+        <Route path="/actualizarTransporte" element={<ActualizarTransporte />} />
         <Route path="/imprimirEtiqueta" element={<ImprimirEtiqueta />} />
         <Route path="/cargarOp" element={<CargarImpo />} />
         <Route path="/actualizarOp" element={<ActualizarImpo />} />
@@ -58,6 +56,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/inventario" element={<Inventario />} />
         <Route path="/bloques" element={<DefinirBloques />} />
         <Route path="/stock" element={<Stock />} />
+        <Route path="/api" element={<Api />} />
       </Route>
       <Route path="*" element={<NotFound />} />{" "}
       {/* Ruta para manejar páginas no encontradas */}

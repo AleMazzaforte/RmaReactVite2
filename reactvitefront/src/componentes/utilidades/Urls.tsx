@@ -4,6 +4,9 @@ const isLocalhost = window.location.hostname === "localhost";
 const base = isLocalhost ? "http://localhost:8080" : "https://rma-back.vercel.app";
                                                    //https://rma-back.vercel.app/actualizarProductoInventario
 const Urls = {
+  usuarios: {
+    cargar: `${base}/cargarUsuario`
+  },
   clientes: {
     cargar: `${base}/cargarCliente`,
     listar: `${base}/listarCliente`,

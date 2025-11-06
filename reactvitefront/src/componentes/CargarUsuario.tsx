@@ -12,8 +12,7 @@ export const CargarUsuario: React.FC = () => {
   const enviarFormulario = async () => {
     const formData = { username, password };
 
-    const urlCargarUsuario = Urls.clientes.cargar; // O una clave separada si querés algo más específico
-
+    const urlCargarUsuario = Urls.usuarios.cargar; 
     try { 
       const response = await fetch(urlCargarUsuario, { 
         method: 'POST', 

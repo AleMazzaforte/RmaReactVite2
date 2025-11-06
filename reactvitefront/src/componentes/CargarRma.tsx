@@ -120,21 +120,26 @@ export const CargarRma: React.FC = () => {
     }
 
     // ✅ Validación local: ¿el producto está en la OP?
-    const productoEnOp = op.skus.includes(productoSeleccionado.id);
-
-    if (productoEnOp) {
+    if (op.id === 1) {
       setOpLoteSeleccionado(op);
+      return;
     } else {
-      sweetAlert.fire({
-        icon: "error",
-        title: "Producto no encontrado en OP",
-        text: `El producto ${productoSeleccionado.sku} no está incluido en la OP ${op.nombre}.`,
-      });
-      setOpLoteSeleccionado(null);
-      const opInput = document.getElementById("opLote") as HTMLInputElement;
-      if (opInput) {
-        opInput.value = ""; // limpiar visualmente
-        opInput.focus();
+
+      const productoEnOp = op.skus.includes(productoSeleccionado.id);
+
+      if (productoEnOp) {
+        setOpLoteSeleccionado(op);
+      } else {
+        sweetAlert.fire({
+          icon: "error",
+          title: "Producto no encontrado en OP",
+          text: `El producto ${productoSeleccionado.sku} no está incluido en la OP ${op.nombre}.`,
+        });
+        setOpLoteSeleccionado(null);
+        if (opLoteInputRef.current) {
+          opLoteInputRef.current.value = "";
+          opLoteInputRef.current.focus();
+        }
       }
     }
   };
