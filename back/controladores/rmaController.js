@@ -441,6 +441,82 @@ postActualizarOpPorSku: async (req, res) => {
     }
   }
 },
+
+getRmaNoEntregados: async (req, res) => {
+  let connection;
+  try {
+    connection = await conn.getConnection();
+
+    // Consulta: obtenemos los RMA no entregados (seEntrega y nEgreso = NULL)
+    // Ordenamos por cliente (c.nombre) y luego por modelo para consistencia
+    const query = `
+      SELECT 
+        rma.idRma,
+        p.sku AS modelo_sku,
+        rma.cantidad,
+        m.nombre AS marca_nombre,
+        c.nombre AS cliente_nombre,
+        rma.solicita,
+        OP.nombre AS opLote_nombre,
+        rma.vencimiento,
+        rma.seEntrega,
+        rma.seRecibe,
+        rma.observaciones,
+        rma.nIngreso,
+        rma.nEgreso
+      FROM r_m_a rma
+      JOIN productos p ON rma.modelo = p.id
+      JOIN marcas m ON rma.marca = m.id
+      JOIN clientes c ON rma.idCliente = c.id
+      LEFT JOIN OP ON rma.opLote = OP.id
+      WHERE rma.seEntrega IS NULL 
+        AND rma.nEgreso IS NULL
+      ORDER BY c.nombre ASC, p.sku ASC
+    `;
+
+    const [rows] = await connection.execute(query);
+
+    // Agrupamos los resultados por cliente_nombre
+    const agrupados = {};
+    rows.forEach((item) => {
+      const cliente = item.cliente_nombre || "Cliente sin nombre";
+      if (!agrupados[cliente]) {
+        agrupados[cliente] = [];
+      }
+      agrupados[cliente].push({
+        idRma: item.idRma || "",
+        modelo: item.modelo_sku || "",
+        cantidad: item.cantidad || "",
+        marca: item.marca_nombre || "",
+        solicita: formatFecha(item.solicita) || "",
+        opLote: item.opLote_nombre || "",
+        vencimiento: formatFecha(item.vencimiento) || "",
+        seEntrega: formatFecha(item.seEntrega) || "",
+        seRecibe: formatFecha(item.seRecibe) || "",
+        observaciones: item.observaciones || "",
+        nIngreso: item.nIngreso || "",
+        nEgreso: item.nEgreso || "",
+      });
+    });
+
+    // Convertimos el objeto en un array de { cliente, rmas }
+    const resultado = Object.keys(agrupados)
+      .sort() // Aseguramos orden alfabético (aunque ya venga ordenado)
+      .map(cliente => ({
+        cliente,
+        rmas: agrupados[cliente]
+      }));
+
+    res.json(resultado);
+  } catch (error) {
+    console.error("Error al obtener RMA no entregados agrupados:", error);
+    res.status(500).json({ error: "Error al cargar los RMA pendientes de entrega" });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+},
 };
 
 export {
