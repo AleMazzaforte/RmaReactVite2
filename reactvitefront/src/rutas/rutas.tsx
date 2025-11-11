@@ -27,6 +27,7 @@ import { DefinirBloques } from "../componentes/DefinirBloques";
 import { Stock } from "../componentes/Stock";
 import { CargarKits } from "../componentes/CargarKits";
 import { Api } from "../componentes/Api";
+import { ProductosConDescuento } from "../componentes/ProductosConDescuento";
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -57,6 +58,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/bloques" element={<DefinirBloques />} />
         <Route path="/stock" element={<Stock />} />
         <Route path="/api" element={<Api />} />
+        <Route path="/productosConDescuento" element={<ProductosConDescuento />} />
       </Route>
       <Route path="*" element={<NotFound />} />{" "}
       {/* Ruta para manejar páginas no encontradas */}

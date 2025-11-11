@@ -21,6 +21,7 @@ import inventarioController from '../controladores/inventarioController.js'
 import kitsController from '../controladores/kitController.js'
 import backupController from '../controladores/backupController.js'
 import apiController from '../controladores/apiController.js'
+import { productosConDescuentoController } from '../controladores/productosConDescuentoController.js';
 
 
 const router = express.Router();
@@ -118,4 +119,8 @@ router.get('/backup', backupController.getBackup)
 router.get('/ventas', apiController.getVentas);
 router.post('/tokens', apiController.saveTokens);
 
+// RutasProductos con descuento
+router.get('/getProductosConDescuento', productosConDescuentoController.getProductosConDescuento);
+router.get('/getProductosConDescuentoVendidos', productosConDescuentoController.getProductosConDescuentoVendidos);
+router.post('/postGuardarVentasConDescuento', productosConDescuentoController.postGuardarVentasConDescuento);
 export default router;
