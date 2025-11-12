@@ -7,7 +7,7 @@ dotenv.config();
 
 // Función para obtener tokens de la DB
 const getTokensFromDB = async () => {
- 
+
   const [rows] = await conn.execute('SELECT * FROM ml_tokens ORDER BY id DESC LIMIT 1');
   if (rows.length === 0) {
     return null;
@@ -79,18 +79,28 @@ const refreshAccessToken = async () => {
   }
 };
 
+// Función para obtener detalles completos de una orden
+const getOrderDetails = async (orderId, accessToken) => {
+  try {
+    const response = await axios.get(`https://api.mercadolibre.com/orders/${orderId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.warn(`⚠️ No se pudo obtener detalles de la orden ${orderId}:`, error.message);
+    return null;
+  }
+};
+
 // Controlador para obtener órdenes
 const getVentas = async (req, res) => {
-
   try {
     const dias = parseInt(req.query.dias) || 7;
-
-    if (dias < 1 || dias > 30) {
-      return res.status(400).json({ message: "El parámetro 'dias' debe estar entre 1 y 30.", success: false });
+    if (dias < 1 || dias > 10) { // 👈 Recomendamos máximo 10 días por rendimiento
+      return res.status(400).json({ message: "El parámetro 'dias' debe estar entre 1 y 10.", success: false });
     }
 
-    const accessToken = await refreshAccessToken();    
-
+    const accessToken = await refreshAccessToken();
     const mlUserId = process.env.ML_USER_ID;
     if (!mlUserId) {
       throw new Error("ML_USER_ID no está definido en .env");
@@ -98,50 +108,62 @@ const getVentas = async (req, res) => {
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - dias);
- 
+
+
+    // Paso 1: Obtener lista básica
     const url = `https://api.mercadolibre.com/orders/search?seller=${mlUserId}&sort=date_desc&limit=50`;
- 
     const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
     const orders = response.data.results || [];
-    
-    
-    const filteredOrders = orders.filter(order => {
-      const orderDate = new Date(order.date_created);
-      return orderDate >= startDate;
-    }).map(order => {
-      const receiver = order.receiver_address || {};
-      return {
+
+    const filteredOrders = orders.filter(order => new Date(order.date_created) >= startDate);
+
+    // Paso 2: Enriquecer cada orden con tipo_envio (llamada individual)
+    const enrichedOrders = [];
+    for (const order of filteredOrders) {
+
+      let tipo_envio = "desconocido";
+      let etiqueta_impresa = !!order.shipping?.id;
+
+      // Solo si no sabemos el tipo de envío, llamamos a la orden completa
+      const fullOrder = await getOrderDetails(order.id, accessToken);
+      if (fullOrder?.shipping) {
+        const shipping = fullOrder.shipping;
+        etiqueta_impresa = !!shipping.id; // actualizamos por las dudas
+
+        if (shipping.logistic_type === "fulfillment" || shipping.mode === "fulfillment") {
+          tipo_envio = "full";
+        } else if (shipping.mode === "me2") {
+          tipo_envio = "mercado_envios";
+        } else if (shipping.mode === "custom") {
+          if (["drop_off", "cross_docking"].includes(shipping.logistic_type)) {
+            tipo_envio = "flex";
+          } else {
+            tipo_envio = "vendedor";
+          }
+        }
+      }
+
+      enrichedOrders.push({
         id: order.id,
-        status: order.status,
+        buyer_nickname: order.buyer?.nickname || '',
+        seller_nickname: order.seller?.nickname || '',
         date_created: order.date_created,
-        shipping: {
-          id: order.shipping?.id || null,
-          status: order.shipping?.status || null,
-          etiqueta_impresa: !!order.shipping?.id
-        },
+        etiqueta_impresa,
+        tipo_envio,
         items: (order.order_items || []).map(item => ({
           sku: item.item.seller_sku || item.item.id,
           quantity: item.quantity
-        })),
-        receiver_info: {
-          name: receiver.receiver_name || '',
-          street: receiver.street_name || '',
-          number: receiver.street_number || '',
-          city: receiver.city?.name || '',
-          state: receiver.state?.name || '',
-          zip_code: receiver.zip_code || ''
-        }
-      };
-    });
-console.log('orders', orders);
-//console.log('orders items', filteredOrders.order_items);
+        }))
+      });
+    }
+
     res.status(200).json({
       message: `Órdenes de los últimos ${dias} días`,
       success: true,
-      data: filteredOrders
+      data: enrichedOrders
     });
 
   } catch (error) {
@@ -149,7 +171,7 @@ console.log('orders', orders);
     console.error("   - Mensaje:", error.message);
     if (error.response) {
       console.error("   - Status:", error.response.status);
-      console.error("   - Datos de respuesta:", error.response.data);
+      console.error("   - Datos:", error.response.data);
     }
     res.status(500).json({
       message: error.message || "Error al obtener órdenes",
@@ -157,6 +179,7 @@ console.log('orders', orders);
     });
   }
 };
+
 
 // Controlador para guardar los tokens
 const saveTokens = async (req, res) => {
