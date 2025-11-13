@@ -1,11 +1,10 @@
-// components/Api.tsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jsPDF from "jspdf";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Urls from "./utilidades/Urls";
 
-// Tipos (actualizados)
+// Tipos actualizados
 interface OrderItem {
   sku: string;
   quantity: number;
@@ -26,8 +25,15 @@ interface ApiResponse {
   data?: Order[];
 }
 
+// ✅ Nueva constante: cuentas disponibles
+const CUENTAS = [
+  { id: "1", nombre: "Cuenta 1" },
+  { id: "2", nombre: "Cuenta 2" },
+];
+
 export const Api = () => {
   const [dias, setDias] = useState<number>(3);
+  const [cuentaSeleccionada, setCuentaSeleccionada] = useState<string>("1"); // ← nueva state
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +43,7 @@ export const Api = () => {
   >({});
   const [loadingDescuento, setLoadingDescuento] = useState<boolean>(true);
 
-  // Cargar productos con descuento
+  // Cargar productos con descuento (sin cambios)
   useEffect(() => {
     const fetchProductosConDescuento = async () => {
       try {
@@ -60,7 +66,7 @@ export const Api = () => {
     fetchProductosConDescuento();
   }, []);
 
-  // Toggle selección de una orden
+  // Toggle selección de una orden (sin cambios)
   const toggleOrderSelection = (orderId: number) => {
     const newSelected = new Set(selectedOrders);
     if (newSelected.has(orderId)) {
@@ -71,7 +77,7 @@ export const Api = () => {
     setSelectedOrders(newSelected);
   };
 
-  // Seleccionar/deseleccionar todas
+  // Seleccionar/deseleccionar todas (sin cambios)
   const toggleAll = () => {
     if (selectedOrders.size === orders.length) {
       setSelectedOrders(new Set());
@@ -81,7 +87,7 @@ export const Api = () => {
     }
   };
 
-  // Generar PDF
+  // Generar PDF (sin cambios)
   const generatePDF = () => {
     const selectedOrdersList = orders.filter((o) => selectedOrders.has(o.id));
 
@@ -92,8 +98,8 @@ export const Api = () => {
 
     const doc = new jsPDF("p", "mm", "a4");
     const margin = 10;
-    const pageWidth = 210; // A4 width in mm
-    const cardWidth = pageWidth - 2 * margin; // 190mm
+    const pageWidth = 210;
+    const cardWidth = pageWidth - 2 * margin;
     let yPos = margin;
 
     const controllers = ["Javi", "Ro", "Lu", "Rodri"];
@@ -170,10 +176,10 @@ export const Api = () => {
       yPos = startY + cardHeight + 8;
     });
 
-    doc.save("ordenes_seleccionadas.pdf");
+    doc.save(`ordenes_cuenta${cuentaSeleccionada}.pdf`);
   };
 
-  // Registrar ventas con descuento
+  // Registrar ventas con descuento (sin cambios en lógica)
   const registrarVentasConDescuento = async () => {
     if (selectedOrders.size === 0) {
       sweetAlert.warning("Selecciona al menos una orden.");
@@ -181,7 +187,7 @@ export const Api = () => {
     }
 
     const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.id));
-    const ventasParaGuardar: any[] | undefined = [];
+    const ventasParaGuardar: any[] = [];
 
     for (const orden of ordenesSeleccionadas) {
       for (const item of orden.items) {
@@ -208,17 +214,15 @@ export const Api = () => {
       return;
     }
 
-    // Mostrar resumen
     sweetAlert.confirm(
-      `¿Registrar ${ventasParaGuardar.length} items con descuento en ${ordenesSeleccionadas.length} órdenes?`,
+      `¿Registrar ${ventasParaGuardar.length} items con descuento en ${ordenesSeleccionadas.length} órdenes (Cuenta ${cuentaSeleccionada})?`,
       async () => {
         try {
-          // AHORA (correcto)
           const response = await axios.post(
             Urls.ProductosConDescuento.guardarVenta,
             ventasParaGuardar
           );
-          const { count, message, skipped } = response.data;
+          const { count, message } = response.data;
 
           if (count > 0) {
             sweetAlert.success(`✅ ${count} ventas con descuento registradas.`);
@@ -235,9 +239,10 @@ export const Api = () => {
     );
   };
 
+  // ✅ Función actualizada: ahora incluye "cuenta"
   const handleFetchOrders = async () => {
     if (dias < 1 || dias > 30) {
-      alert("Por favor, ingresa un valor entre 1 y 30.");
+      sweetAlert.warning("Ingresa un valor entre 1 y 30.");
       return;
     }
 
@@ -247,10 +252,11 @@ export const Api = () => {
     setSelectedOrders(new Set());
 
     try {
+      // ✅ Añadimos "&cuenta=X" a la URL
       const response = await axios.get<ApiResponse>(
-        `http://localhost:8080/ventas?dias=${dias}`
+        `http://localhost:8080/ventas?dias=${dias}&cuenta=${cuentaSeleccionada}`
       );
-      const { data } = response;
+      const data = response.data;
 
       if (data.success && data.data) {
         setOrders(data.data);
@@ -275,7 +281,23 @@ export const Api = () => {
         Órdenes de Mercado Libre
       </h2>
 
-      <div className="mb-6 flex items-center gap-4 flex-wrap">
+      {/* ✅ Selector de cuenta + días */}
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <label className="text-gray-700 font-medium whitespace-nowrap">
+          Cuenta:
+          <select
+            value={cuentaSeleccionada}
+            onChange={(e) => setCuentaSeleccionada(e.target.value)}
+            className="ml-2 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+          >
+            {CUENTAS.map((cuenta) => (
+              <option key={cuenta.id} value={cuenta.id}>
+                {cuenta.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <label className="text-gray-700 font-medium whitespace-nowrap">
           Últimos días:
           <input
@@ -337,8 +359,8 @@ export const Api = () => {
         <div>
           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
             <p className="text-gray-700">
-              Se encontraron{" "}
-              <span className="font-semibold">{orders.length}</span> órdenes:
+              Cuenta <span className="font-semibold">{cuentaSeleccionada}</span> —{" "}
+              <span className="font-semibold">{orders.length}</span> órdenes
             </p>
             <label className="flex items-center gap-2 text-sm whitespace-nowrap">
               <input
