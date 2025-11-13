@@ -62,7 +62,7 @@ export const ProductosConDescuento: React.FC = () => {
     useState<SingleValue<OptionType>>(null);
   const [productoConDescuentoVendidos, setProductoConDescuentoVendidos] =
     useState<ProductoConDescuentoVendidos[]>([]);
-console.log('listado de productos con descuento', listadoProductosConDescuento);
+
 
   // Formulario
   const [canalVenta, setCanalVenta] = useState("");
@@ -178,10 +178,20 @@ console.log('listado de productos con descuento', listadoProductosConDescuento);
       };
     });
 
-    try {
-      await axios.post(urlGuardarVenta, payload);
-      sweetAlert.success("Ventas guardadas correctamente");
-      setItemsParaGuardar([]); // Limpiar lista
+      try {
+    const response = await axios.post(urlGuardarVenta, payload); // ✅ Capturar respuesta
+
+    const { count, message } = response.data;
+
+    if (count > 0) {
+      sweetAlert.success(message || "Ventas guardadas correctamente");
+      setItemsParaGuardar([]);
+    } else {
+      // count === 0 → nada se guardó (todo duplicado o sin SKU válido)
+      sweetAlert.info(message || "No se guardaron nuevas ventas.");
+      
+      setItemsParaGuardar([]); 
+    }
     } catch (error) {
       console.error("Error al guardar ventas:", error);
       sweetAlert.error("Error al enviar las ventas");
@@ -203,10 +213,12 @@ console.log('listado de productos con descuento', listadoProductosConDescuento);
     return listadoProductosConDescuento.map((producto) => {
       const vendidos = ventasPorProducto[producto.id] || 0;
       const diferencia = (producto.totalUnidadesConDescuento || 0) - vendidos;
+      const totalesIniciales = producto.totalUnidadesConDescuento || 0;
       return {
         sku: producto.sku,
         vendidosTotales: vendidos,
         diferencia,
+        totalesIniciales,
       };
     });
   };
@@ -344,6 +356,7 @@ console.log('listado de productos con descuento', listadoProductosConDescuento);
                 <tr>
                   <th className="px-4 py-2 text-left">SKU</th>
                   <th className="px-4 py-2 text-center">Vendidos totales</th>
+                  <th className="px-4 py-2 text-center">Totales</th>
                   <th className="px-4 py-2 text-left">Diferencia</th>
                 </tr>
               </thead>
@@ -352,13 +365,14 @@ console.log('listado de productos con descuento', listadoProductosConDescuento);
                   <tr
                     key={index}
                     className={
-                      item.diferencia === 0
+                      item.diferencia <= 0
                         ? "bg-red-600 text-white"
                         : "border-t"
                     }
                   >
                     <td className="px-4 py-2">{item.sku}</td>
                     <td className="px-4 py-2 text-center">{item.vendidosTotales}</td>
+                    <td className="px-4 py-2 text-center">{item.totalesIniciales}</td>
                     <td className="px-4 py-2 text-center">{item.diferencia}</td>
                   </tr>
                 ))}

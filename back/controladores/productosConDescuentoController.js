@@ -28,60 +28,102 @@ export const productosConDescuentoController = {
   getProductosConDescuentoVendidos: async (req, res) => {
     try {
       conection = await conn.getConnection();
-        const [rowsvendidos] = await conection.query(
-            `SELECT idVendido, idSku, canalVenta, numeroOperacion, cantidad, fecha, sku
+      const [rowsvendidos] = await conection.query(
+        `SELECT idVendido, idSku, canalVenta, numeroOperacion, cantidad, fecha, sku
             FROM ventasConDescuento
             LEFT JOIN productos ON ventasConDescuento.idSku = productos.id
             Order BY sku `
-        );
-        console.log(rowsvendidos);
-        res.json(rowsvendidos);
+      );
+     
+      res.json(rowsvendidos);
     } catch (error) {
       console.error("Error fetching productos con descuento vendidos:", error);
       res
         .status(500)
-        .json({ error: "Error al obtener los productos con descuento vendidos" });
-    }
-    finally {
+        .json({
+          error: "Error al obtener los productos con descuento vendidos",
+        });
+    } finally {
       if (conection) {
         conection.release();
       }
     }
   },
 
-  // En tu controlador (POST)
-postGuardarVentasConDescuento: async (req, res) => {
-    let connection;
+  postGuardarVentasConDescuento: async (req, res) => {
+  let connection;
   try {
     const ventas = Array.isArray(req.body) ? req.body : [req.body];
-    
-    connection = await conn.getConnection();
-    const values = [];
-    const placeholders = [];
 
-    for (const venta of ventas) {
-      const { idSku, canalVenta, numeroOperacion, cantidad, fecha } = venta;
-      if (!idSku || !canalVenta || !numeroOperacion || !cantidad || !fecha) {
-        return res.status(400).json({ error: "Faltan campos obligatorios" });
-      }
-      placeholders.push("(?, ?, ?, ?, ?)");
-      values.push(idSku, canalVenta, numeroOperacion, cantidad, fecha);
+    if (ventas.length === 0) {
+      return res.status(400).json({ error: "No se enviaron ventas" });
     }
 
-    const query = `
-      INSERT INTO ventasConDescuento (idSku, canalVenta, numeroOperacion, cantidad, fecha)
-      VALUES ${placeholders.join(", ")}
-    `;
+    // Validar campos obligatorios
+    for (const venta of ventas) {
+      const { idSku, canalVenta, numeroOperacion, cantidad, fecha } = venta;
+      if (idSku == null || canalVenta == null || numeroOperacion == null || cantidad == null || fecha == null) {
+        return res.status(400).json({ error: "Faltan campos obligatorios en una de las ventas" });
+      }
+    }
 
-    await connection.query(query, values);
-    res.status(200).json({ message: "Ventas guardadas correctamente", count: ventas.length });
+    connection = await conn.getConnection();
+
+    const numerosOperacion = [...new Set(ventas.map(v => v.numeroOperacion))]; // Evitar repetidos innecesarios
+
+    if (numerosOperacion.length > 0) {
+      const placeholders = numerosOperacion.map(() => '?').join(',');
+      const [existingRows] = await connection.query(
+        `SELECT DISTINCT numeroOperacion FROM ventasConDescuento WHERE numeroOperacion IN (${placeholders})`,
+        numerosOperacion
+      );
+
+      const existingNumeros = new Set(existingRows.map(row => row.numeroOperacion));
+
+      // Filtrar: solo mantener ventas cuyo numeroOperacion NO exista en la base
+      let ventasFiltradas = ventas.filter(venta => !existingNumeros.has(venta.numeroOperacion));
+
+
+      if (ventasFiltradas.length === 0) {
+        return res.status(200).json({
+          message: "Todas las operaciones ya estaban registradas. Ninguna fue insertada.",
+          count: 0,
+          skipped: ventas.length
+        });
+      }
+
+      const values = [];
+      const insertPlaceholders = [];
+
+      for (const venta of ventasFiltradas) {
+        const { idSku, canalVenta, numeroOperacion, cantidad, fecha } = venta;
+        insertPlaceholders.push("(?, ?, ?, ?, ?)");
+        values.push(idSku, canalVenta, numeroOperacion, cantidad, fecha);
+      }
+
+      const insertQuery = `
+        INSERT INTO ventasConDescuento (idSku, canalVenta, numeroOperacion, cantidad, fecha)
+        VALUES ${insertPlaceholders.join(", ")}
+      `;
+
+      await connection.query(insertQuery, values);
+
+      return res.status(200).json({
+        message: "Ventas guardadas correctamente",
+        count: ventasFiltradas.length,
+        skipped: ventas.length - ventasFiltradas.length,
+      });
+    } else {
+      return res.status(400).json({ error: "No se proporcionaron números de operación válidos" });
+    }
+
   } catch (error) {
     console.error("Error saving ventas con descuento:", error);
     res.status(500).json({ error: "Error al guardar las ventas" });
   } finally {
     if (connection) connection.release();
   }
-}
+},
 };
 
 export default productosConDescuentoController;

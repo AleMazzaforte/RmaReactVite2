@@ -1,7 +1,7 @@
 // components/Api.tsx
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import jsPDF from 'jspdf';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import jsPDF from "jspdf";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Urls from "./utilidades/Urls";
 
@@ -32,7 +32,9 @@ export const Api = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrders, setSelectedOrders] = useState<Set<number>>(new Set());
-  const [productosConDescuento, setProductosConDescuento] = useState<Record<string, number>>({});
+  const [productosConDescuento, setProductosConDescuento] = useState<
+    Record<string, number>
+  >({});
   const [loadingDescuento, setLoadingDescuento] = useState<boolean>(true);
 
   // Cargar productos con descuento
@@ -74,21 +76,21 @@ export const Api = () => {
     if (selectedOrders.size === orders.length) {
       setSelectedOrders(new Set());
     } else {
-      const allIds = new Set(orders.map(o => o.id));
+      const allIds = new Set(orders.map((o) => o.id));
       setSelectedOrders(allIds);
     }
   };
 
   // Generar PDF
   const generatePDF = () => {
-    const selectedOrdersList = orders.filter(o => selectedOrders.has(o.id));
+    const selectedOrdersList = orders.filter((o) => selectedOrders.has(o.id));
 
     if (selectedOrdersList.length === 0) {
       alert("Por favor, selecciona al menos una orden.");
       return;
     }
 
-    const doc = new jsPDF('p', 'mm', 'a4');
+    const doc = new jsPDF("p", "mm", "a4");
     const margin = 10;
     const pageWidth = 210; // A4 width in mm
     const cardWidth = pageWidth - 2 * margin; // 190mm
@@ -102,15 +104,21 @@ export const Api = () => {
       const startY = yPos;
 
       doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont("helvetica", "bold");
       doc.text(`Orden #${order.id}`, margin + 5, yPos + 10);
 
-      const badgeText = order.etiqueta_impresa ? 'Etiqueta generada' : 'Sin etiqueta';
+      const badgeText = order.etiqueta_impresa
+        ? "Etiqueta generada"
+        : "Sin etiqueta";
       const badgeWidth = doc.getTextWidth(badgeText) + 6;
       const badgeX = margin + cardWidth - badgeWidth - 3;
       const badgeY = yPos + 6;
-      doc.setFillColor(order.etiqueta_impresa ? 220 : 255, order.etiqueta_impresa ? 255 : 255, 220);
-      doc.rect(badgeX, badgeY, badgeWidth, 8, 'F');
+      doc.setFillColor(
+        order.etiqueta_impresa ? 220 : 255,
+        order.etiqueta_impresa ? 255 : 255,
+        220
+      );
+      doc.rect(badgeX, badgeY, badgeWidth, 8, "F");
       doc.setTextColor(0);
       doc.setFontSize(10);
       doc.text(badgeText, badgeX + 3, badgeY + 5);
@@ -118,19 +126,21 @@ export const Api = () => {
       let currentY = yPos + 18;
 
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont("helvetica", "normal");
       doc.text(`Comprador: ${order.buyer_nickname}`, margin + 5, currentY);
       currentY += 6;
       doc.text(`Vendedor: ${order.seller_nickname}`, margin + 5, currentY);
       currentY += 6;
-      const formattedDate = new Date(order.date_created).toLocaleString('es-AR');
+      const formattedDate = new Date(order.date_created).toLocaleString(
+        "es-AR"
+      );
       doc.text(`Fecha: ${formattedDate}`, margin + 5, currentY);
       currentY += 8;
 
-      doc.setFont('helvetica', 'normal');
-      doc.text('Items:', margin + 5, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.text("Items:", margin + 5, currentY);
       currentY += 4;
-      doc.setFont('helvetica', 'bold');
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       order.items.forEach((item) => {
         doc.text(`• ${item.sku} — ${item.quantity} Un.`, margin + 5, currentY);
@@ -138,13 +148,13 @@ export const Api = () => {
       });
 
       currentY += 4;
-      doc.setFont('helvetica', 'normal');
+      doc.setFont("helvetica", "normal");
       doc.text("Controló:", margin + 5, currentY);
 
       let ctrlX = margin + 25;
       controllers.forEach((name) => {
         doc.rect(ctrlX, currentY - 2, checkboxSize, checkboxSize);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont("helvetica", "normal");
         doc.text(name, ctrlX + checkboxSize + 2, currentY);
         ctrlX += checkboxSize + 2 + doc.getTextWidth(name) + checkboxSpacing;
       });
@@ -160,7 +170,7 @@ export const Api = () => {
       yPos = startY + cardHeight + 8;
     });
 
-    doc.save('ordenes_seleccionadas.pdf');
+    doc.save("ordenes_seleccionadas.pdf");
   };
 
   // Registrar ventas con descuento
@@ -170,27 +180,31 @@ export const Api = () => {
       return;
     }
 
-    const ordenesSeleccionadas = orders.filter(o => selectedOrders.has(o.id));
+    const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.id));
     const ventasParaGuardar: any[] | undefined = [];
 
     for (const orden of ordenesSeleccionadas) {
       for (const item of orden.items) {
         const idProducto = productosConDescuento[item.sku];
         if (idProducto) {
-          const fechaISO = new Date(orden.date_created).toISOString().split('T')[0];
+          const fechaISO = new Date(orden.date_created)
+            .toISOString()
+            .split("T")[0];
           ventasParaGuardar.push({
             idSku: idProducto,
             canalVenta: orden.seller_nickname,
             numeroOperacion: orden.id.toString(),
             cantidad: item.quantity,
-            fecha: fechaISO
+            fecha: fechaISO,
           });
         }
       }
     }
 
     if (ventasParaGuardar.length === 0) {
-      sweetAlert.info("Ninguna de las órdenes seleccionadas contiene productos con descuento.");
+      sweetAlert.info(
+        "Ninguna de las órdenes seleccionadas contiene productos con descuento."
+      );
       return;
     }
 
@@ -199,8 +213,20 @@ export const Api = () => {
       `¿Registrar ${ventasParaGuardar.length} items con descuento en ${ordenesSeleccionadas.length} órdenes?`,
       async () => {
         try {
-          await axios.post(Urls.ProductosConDescuento.guardarVenta, ventasParaGuardar);
-          sweetAlert.success(`Se registraron ${ventasParaGuardar.length} ventas con descuento.`);
+          // AHORA (correcto)
+          const response = await axios.post(
+            Urls.ProductosConDescuento.guardarVenta,
+            ventasParaGuardar
+          );
+          const { count, message, skipped } = response.data;
+
+          if (count > 0) {
+            sweetAlert.success(`✅ ${count} ventas con descuento registradas.`);
+          } else {
+            sweetAlert.info(
+              `ℹ️ ${message || "No se registraron nuevas ventas."}`
+            );
+          }
         } catch (error) {
           console.error("Error al registrar ventas:", error);
           sweetAlert.error("Error al registrar las ventas con descuento.");
@@ -211,7 +237,7 @@ export const Api = () => {
 
   const handleFetchOrders = async () => {
     if (dias < 1 || dias > 30) {
-      alert('Por favor, ingresa un valor entre 1 y 30.');
+      alert("Por favor, ingresa un valor entre 1 y 30.");
       return;
     }
 
@@ -221,20 +247,22 @@ export const Api = () => {
     setSelectedOrders(new Set());
 
     try {
-      const response = await axios.get<ApiResponse>(`http://localhost:8080/ventas?dias=${dias}`);
+      const response = await axios.get<ApiResponse>(
+        `http://localhost:8080/ventas?dias=${dias}`
+      );
       const { data } = response;
 
       if (data.success && data.data) {
         setOrders(data.data);
       } else {
-        setError(data.message || 'Error desconocido');
+        setError(data.message || "Error desconocido");
       }
     } catch (err: any) {
       console.error(err);
       setError(
         err.response?.data?.message ||
-        err.message ||
-        'Error al conectar con el servidor'
+          err.message ||
+          "Error al conectar con el servidor"
       );
     } finally {
       setLoading(false);
@@ -243,7 +271,9 @@ export const Api = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Órdenes de Mercado Libre</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        Órdenes de Mercado Libre
+      </h2>
 
       <div className="mb-6 flex items-center gap-4 flex-wrap">
         <label className="text-gray-700 font-medium whitespace-nowrap">
@@ -261,21 +291,23 @@ export const Api = () => {
         <button
           onClick={handleFetchOrders}
           disabled={loading}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${loading
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
-            }`}
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
+            loading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
-          {loading ? 'Cargando...' : 'Obtener órdenes'}
+          {loading ? "Cargando..." : "Obtener órdenes"}
         </button>
 
         <button
           onClick={generatePDF}
           disabled={selectedOrders.size === 0}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700'
-            }`}
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
+            selectedOrders.size === 0
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-green-600 hover:bg-green-700"
+          }`}
         >
           Imprimir {selectedOrders.size} seleccionadas
         </button>
@@ -283,12 +315,15 @@ export const Api = () => {
         <button
           onClick={registrarVentasConDescuento}
           disabled={selectedOrders.size === 0 || loadingDescuento}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0 || loadingDescuento
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-purple-600 hover:bg-purple-700'
-            }`}
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
+            selectedOrders.size === 0 || loadingDescuento
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-purple-600 hover:bg-purple-700"
+          }`}
         >
-          {loadingDescuento ? 'Cargando...' : `Registrar ${selectedOrders.size} con descuento`}
+          {loadingDescuento
+            ? "Cargando..."
+            : `Registrar ${selectedOrders.size} con descuento`}
         </button>
       </div>
 
@@ -302,7 +337,8 @@ export const Api = () => {
         <div>
           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
             <p className="text-gray-700">
-              Se encontraron <span className="font-semibold">{orders.length}</span> órdenes:
+              Se encontraron{" "}
+              <span className="font-semibold">{orders.length}</span> órdenes:
             </p>
             <label className="flex items-center gap-2 text-sm whitespace-nowrap">
               <input
@@ -335,25 +371,30 @@ export const Api = () => {
                     Orden #{order.id}
                   </h3>
                   <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${order.etiqueta_impresa
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                      }`}
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      order.etiqueta_impresa
+                        ? "bg-green-100 text-green-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
                   >
-                    {order.etiqueta_impresa ? 'Etiqueta generada' : 'Sin etiqueta'}
+                    {order.etiqueta_impresa
+                      ? "Etiqueta generada"
+                      : "Sin etiqueta"}
                   </span>
                 </div>
 
                 <p className="text-sm text-gray-600 mt-2">
-                  <span className="font-medium">Comprador:</span> {order.buyer_nickname}
+                  <span className="font-medium">Comprador:</span>{" "}
+                  {order.buyer_nickname}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Vendedor:</span> {order.seller_nickname}
+                  <span className="font-medium">Vendedor:</span>{" "}
+                  {order.seller_nickname}
                 </p>
 
                 <p className="text-sm text-gray-600 mt-3">
-                  <span className="font-medium">Fecha:</span>{' '}
-                  {new Date(order.date_created).toLocaleString('es-AR')}
+                  <span className="font-medium">Fecha:</span>{" "}
+                  {new Date(order.date_created).toLocaleString("es-AR")}
                 </p>
 
                 <div className="mt-3">
@@ -361,7 +402,8 @@ export const Api = () => {
                   <ul className="list-disc list-inside mt-1 text-sm text-gray-600">
                     {order.items.map((item, idx) => (
                       <li key={idx}>
-                        SKU: <span className="font-mono">{item.sku}</span> — Cantidad: {item.quantity}
+                        SKU: <span className="font-mono">{item.sku}</span> —
+                        Cantidad: {item.quantity}
                       </li>
                     ))}
                   </ul>
