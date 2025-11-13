@@ -91,7 +91,9 @@ const Urls = {
     listar: `${base}/getProductosConDescuento`,
     ListarVendidos: `${base}/getProductosConDescuentoVendidos`, 
     guardarVenta: `${base}/postGuardarVentasConDescuento`
-
+  },
+  apiMeli: {
+    getVentas: `${base}/ventas?dias=`,
   }
 
 };

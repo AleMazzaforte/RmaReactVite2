@@ -110,7 +110,7 @@ const getVentas = async (req, res) => {
 
     const cuenta = req.query.cuenta || '1'; // '1' o '2'
     let mlUserId;
-
+     
     if (cuenta === '1') {
       mlUserId = process.env.ML_USER_ID_1;
     } else if (cuenta === '2') {

@@ -27,8 +27,8 @@ interface ApiResponse {
 
 // ✅ Nueva constante: cuentas disponibles
 const CUENTAS = [
-  { id: "1", nombre: "Cuenta 1" },
-  { id: "2", nombre: "Cuenta 2" },
+  { id: "1", nombre: "Femex" },
+  { id: "2", nombre: "Blow" },
 ];
 
 export const Api = () => {
@@ -42,7 +42,11 @@ export const Api = () => {
     Record<string, number>
   >({});
   const [loadingDescuento, setLoadingDescuento] = useState<boolean>(true);
+  
+  let indice: number = Number(cuentaSeleccionada) - 1;
 
+  const urlGetVentas = Urls.apiMeli.getVentas;
+ 
   // Cargar productos con descuento (sin cambios)
   useEffect(() => {
     const fetchProductosConDescuento = async () => {
@@ -144,7 +148,7 @@ export const Api = () => {
       currentY += 8;
 
       doc.setFont("helvetica", "normal");
-      doc.text("Items:", margin + 5, currentY);
+      doc.text("", margin + 5, currentY);
       currentY += 4;
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
@@ -254,7 +258,7 @@ export const Api = () => {
     try {
       // ✅ Añadimos "&cuenta=X" a la URL
       const response = await axios.get<ApiResponse>(
-        `http://localhost:8080/ventas?dias=${dias}&cuenta=${cuentaSeleccionada}`
+        `${urlGetVentas}${dias}&cuenta=${cuentaSeleccionada}`
       );
       const data = response.data;
 
@@ -274,6 +278,7 @@ export const Api = () => {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -359,7 +364,7 @@ export const Api = () => {
         <div>
           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
             <p className="text-gray-700">
-              Cuenta <span className="font-semibold">{cuentaSeleccionada}</span> —{" "}
+              Cuenta <span className="font-semibold">{CUENTAS[indice].nombre}</span> —{" "}
               <span className="font-semibold">{orders.length}</span> órdenes
             </p>
             <label className="flex items-center gap-2 text-sm whitespace-nowrap">
