@@ -12,6 +12,23 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Agrupa librerías de PDF/imágenes en un chunk separado
+          if (id.includes('node_modules')) {
+            if (id.includes('jspdf')) {
+              return 'pdf-utils';
+            }
+            if (id.includes('axios')) {
+              return 'network';
+            }
+            // El resto de node_modules en un chunk "vendor"
+            return 'vendor';
+          }
+        }
+      }
+    },
   }
 })
 
