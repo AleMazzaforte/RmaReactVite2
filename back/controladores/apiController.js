@@ -112,10 +112,14 @@ const getVentas = async (req, res) => {
     }
 
     const cuenta = req.query.cuenta || '1';
-    let mlUserId;
-
+    let mlUserId= 'userId';
+    console.log(mlUserId);
+    console.log('femex:',process.env.ML_USER_ID_1);
+    console.log('blow:',process.env.ML_USER_ID_2);
+    
+    
     if (cuenta === '1') {
-      mlUserId = process.env.ML_USER_ID_1;
+      mlUserId = process.env.ML_USER_ID_1;      
     } else if (cuenta === '2') {
       mlUserId = process.env.ML_USER_ID_2;
     } else {
