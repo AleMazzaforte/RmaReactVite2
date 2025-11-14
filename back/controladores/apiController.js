@@ -89,6 +89,7 @@ const refreshAccessToken = async (mlUserId) => {
 
 // Función para obtener detalles completos de una orden
 const getOrderDetails = async (orderId, accessToken) => {
+
   try {
     const response = await axios.get(`https://api.mercadolibre.com/orders/${orderId}`, {
       headers: { Authorization: `Bearer ${accessToken}` }
@@ -100,6 +101,8 @@ const getOrderDetails = async (orderId, accessToken) => {
   }
 };
 
+
+
 // Controlador para obtener órdenes
 const getVentas = async (req, res) => {
   try {
@@ -108,9 +111,9 @@ const getVentas = async (req, res) => {
       return res.status(400).json({ message: "El parámetro 'dias' debe estar entre 1 y 10.", success: false });
     }
 
-    const cuenta = req.query.cuenta || '1'; // '1' o '2'
+    const cuenta = req.query.cuenta || '1';
     let mlUserId;
-     
+
     if (cuenta === '1') {
       mlUserId = process.env.ML_USER_ID_1;
     } else if (cuenta === '2') {
@@ -136,42 +139,61 @@ const getVentas = async (req, res) => {
     const orders = response.data.results || [];
     const filteredOrders = orders.filter(order => new Date(order.date_created) >= startDate);
 
-    const enrichedOrders = [];
+    // Agrupar por pack_id (si existe), sino por id
+    const ordersByPack = {};
+
     for (const order of filteredOrders) {
-      let tipo_envio = "desconocido";
-      let etiqueta_impresa = !!order.shipping?.id;
-
       const fullOrder = await getOrderDetails(order.id, accessToken);
-      if (fullOrder?.shipping) {
-        const shipping = fullOrder.shipping;
-        etiqueta_impresa = !!shipping.id;
-
-        if (shipping.logistic_type === "fulfillment" || shipping.mode === "fulfillment") {
-          tipo_envio = "full";
-        } else if (shipping.mode === "me2") {
-          tipo_envio = "mercado_envios";
-        } else if (shipping.mode === "custom") {
-          if (["drop_off", "cross_docking"].includes(shipping.logistic_type)) {
-            tipo_envio = "flex";
-          } else {
-            tipo_envio = "vendedor";
-          }
-        }
+      if (!fullOrder) {
+        continue;
       }
 
-      enrichedOrders.push({
-        id: order.id,
-        buyer_nickname: order.buyer?.nickname || '',
-        seller_nickname: order.seller?.nickname || '',
-        date_created: order.date_created,
-        etiqueta_impresa,
-        tipo_envio,
-        items: (order.order_items || []).map(item => ({
+      // ✅ Usar pack_id si existe, sino usar el id normal
+      const mainOrderId = fullOrder.pack_id || fullOrder.id;
+
+      if (!ordersByPack[mainOrderId]) {
+        let tipo_envio = "desconocido";
+        let etiqueta_impresa = !!fullOrder.shipping?.id;
+
+        if (fullOrder.shipping) {
+          const shipping = fullOrder.shipping;
+          etiqueta_impresa = !!shipping.id;
+
+          if (shipping.logistic_type === "fulfillment" || shipping.mode === "fulfillment") {
+            tipo_envio = "full";
+          } else if (shipping.mode === "me2") {
+            tipo_envio = "mercado_envios";
+          } else if (shipping.mode === "custom") {
+            if (["drop_off", "cross_docking"].includes(shipping.logistic_type)) {
+              tipo_envio = "flex";
+            } else {
+              tipo_envio = "vendedor";
+            }
+          }
+        }
+
+        ordersByPack[mainOrderId] = {
+          id: mainOrderId, // ← Este será el ID que se muestra en la UI
+          buyer_nickname: fullOrder.buyer?.nickname || '',
+          seller_nickname: fullOrder.seller?.nickname || '',
+          date_created: fullOrder.date_created,
+          etiqueta_impresa,
+          tipo_envio,
+          items: []
+        };
+      }
+
+      // Agregar todos los items de esta suborden
+      for (const item of fullOrder.order_items || []) {
+        ordersByPack[mainOrderId].items.push({
           sku: item.item.seller_sku || item.item.id,
-          quantity: item.quantity
-        }))
-      });
+          quantity: item.quantity,
+          description: item.item.title
+        });
+      }
     }
+
+    const enrichedOrders = Object.values(ordersByPack);
 
     res.status(200).json({
       message: `Órdenes de los últimos ${dias} días para la cuenta ${cuenta}`,
@@ -193,6 +215,7 @@ const getVentas = async (req, res) => {
   }
 };
 
+
 // Controlador para guardar tokens (desde frontend o script)
 const saveTokens = async (req, res) => {
   const { access_token, refresh_token, expires_in, mlUser } = req.body;
@@ -212,3 +235,4 @@ const saveTokens = async (req, res) => {
 
 const apiController = { getVentas, saveTokens };
 export default apiController;
+

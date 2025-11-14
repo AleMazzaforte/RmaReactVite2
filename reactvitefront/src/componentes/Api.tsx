@@ -8,6 +8,7 @@ import Urls from "./utilidades/Urls";
 interface OrderItem {
   sku: string;
   quantity: number;
+  description: string;
 }
 
 export interface Order {
@@ -153,7 +154,7 @@ export const Api = () => {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       order.items.forEach((item) => {
-        doc.text(`• ${item.sku} — ${item.quantity} Un.`, margin + 5, currentY);
+        doc.text(`• ${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 5, currentY);
         currentY += 5;
       });
 
@@ -430,7 +431,7 @@ export const Api = () => {
                     {order.items.map((item, idx) => (
                       <li key={idx}>
                         SKU: <span className="font-mono">{item.sku}</span> —
-                        Cantidad: {item.quantity}
+                        Cantidad: {item.quantity} - <span className="text-gray-500 text-sm">{item.description}</span>
                       </li>
                     ))}
                   </ul>
