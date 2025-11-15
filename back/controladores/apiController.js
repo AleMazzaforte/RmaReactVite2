@@ -4,6 +4,24 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// ✅ Verificar variables de entorno
+const requiredEnvVars = [
+  'ML_CLIENT_ID_1',
+  'ML_CLIENT_SECRET_1',
+  'ML_USER_ID_1',
+  'ML_CLIENT_ID_2',
+  'ML_CLIENT_SECRET_2',
+  'ML_USER_ID_2'
+];
+
+requiredEnvVars.forEach(varName => {
+  if (process.env[varName]) {
+    console.log(`✅ La variable ${varName} existe.`);
+  } else {
+    console.log(`❌ La variable ${varName} NO existe.`);
+  }
+});
+
 // Función para obtener tokens de la DB por mlUser
 const getTokensFromDB = async (mlUserId) => {
   const [rows] = await conn.execute(
@@ -113,10 +131,6 @@ const getVentas = async (req, res) => {
 
     const cuenta = req.query.cuenta || '1';
     let mlUserId= 'userId';
-    console.log(mlUserId);
-    console.log('femex:',process.env.ML_USER_ID_1);
-    console.log('blow:',process.env.ML_USER_ID_2);
-    
     
     if (cuenta === '1') {
       mlUserId = process.env.ML_USER_ID_1;      
