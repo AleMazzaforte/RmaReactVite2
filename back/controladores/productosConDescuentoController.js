@@ -51,6 +51,7 @@ export const productosConDescuentoController = {
   },
 
   postGuardarVentasConDescuento: async (req, res) => {
+    
   let connection;
   try {
     const ventas = Array.isArray(req.body) ? req.body : [req.body];

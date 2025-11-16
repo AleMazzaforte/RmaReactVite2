@@ -63,7 +63,6 @@ export const ProductosConDescuento: React.FC = () => {
   const [productoConDescuentoVendidos, setProductoConDescuentoVendidos] =
     useState<ProductoConDescuentoVendidos[]>([]);
 
-
   // Formulario
   const [canalVenta, setCanalVenta] = useState("");
   const [numeroOperacion, setNumeroOperacion] = useState("");
@@ -100,7 +99,6 @@ export const ProductosConDescuento: React.FC = () => {
         );
       });
   }, []);
- 
 
   const options = listadoProductosConDescuento.map((producto) => ({
     value: producto.id,
@@ -178,20 +176,20 @@ export const ProductosConDescuento: React.FC = () => {
       };
     });
 
-      try {
-    const response = await axios.post(urlGuardarVenta, payload); // ✅ Capturar respuesta
+    try {
+      const response = await axios.post(urlGuardarVenta, payload); // ✅ Capturar respuesta
 
-    const { count, message } = response.data;
+      const { count, message } = response.data;
 
-    if (count > 0) {
-      sweetAlert.success(message || "Ventas guardadas correctamente");
-      setItemsParaGuardar([]);
-    } else {
-      // count === 0 → nada se guardó (todo duplicado o sin SKU válido)
-      sweetAlert.info(message || "No se guardaron nuevas ventas.");
-      
-      setItemsParaGuardar([]); 
-    }
+      if (count > 0) {
+        sweetAlert.success(message || "Ventas guardadas correctamente");
+        setItemsParaGuardar([]);
+      } else {
+        // count === 0 → nada se guardó (todo duplicado o sin SKU válido)
+        sweetAlert.info(message || "No se guardaron nuevas ventas.");
+
+        setItemsParaGuardar([]);
+      }
     } catch (error) {
       console.error("Error al guardar ventas:", error);
       sweetAlert.error("Error al enviar las ventas");
@@ -345,42 +343,48 @@ export const ProductosConDescuento: React.FC = () => {
             </>
           )}
         </div>
-</div>
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-2 ml-30">
-            Resumen: Descuento vs Vendido
-          </h2>
-          <div className="w-100 ml-30 border rounded-lg">
-            <table className=" bg-white">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-4 py-2 text-left">SKU</th>
-                  <th className="px-4 py-2 text-center">Vendidos totales</th>
-                  <th className="px-4 py-2 text-center">Totales</th>
-                  <th className="px-4 py-2 text-left">Diferencia</th>
+      </div>
+      <div className="mt-8 w-200 ">
+        <h2 className="text-xl font-bold mb-2 ml-30">
+          Resumen: Descuento vs Vendido
+        </h2>
+        <div className="w-115 ml-30  rounded-lg">
+          <table className=" bg-white">
+            <thead className="bg-gray-100">
+              <tr className="border rounded-lg">
+                <th className="px-4 py-2 text-left">SKU</th>
+                <th className=" py-2 text-center">Vendidos</th>
+                <th className="px-4 py-2 text-center">Totales</th>
+                <th className="px-4 py-2 text-left">Diferencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumenPorSku().map((item, index) => (
+                <tr
+                  key={index}
+                  className={
+                    " py-2 border " + // clases base (opcional)
+                    (item.diferencia <= 0
+                      ? "bg-red-600 text-white"
+                      : item.vendidosTotales > 0
+                      ? "bg-green-200 text-black" // o el color que quieras
+                      : "bg-white border-t")
+                  }
+                >
+                  <td className="px-4 py-2">{item.sku}</td>
+                  <td className="px-4 py-2 text-center">
+                    {item.vendidosTotales}
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    {item.totalesIniciales}
+                  </td>
+                  <td className="px-4 py-2 text-center">{item.diferencia}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {resumenPorSku().map((item, index) => (
-                  <tr
-                    key={index}
-                    className={
-                      item.diferencia <= 0
-                        ? "bg-red-600 text-white"
-                        : "border-t"
-                    }
-                  >
-                    <td className="px-4 py-2">{item.sku}</td>
-                    <td className="px-4 py-2 text-center">{item.vendidosTotales}</td>
-                    <td className="px-4 py-2 text-center">{item.totalesIniciales}</td>
-                    <td className="px-4 py-2 text-center">{item.diferencia}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-      
+      </div>
     </>
   );
 };

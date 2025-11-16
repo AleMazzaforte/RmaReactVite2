@@ -1,31 +1,13 @@
 import { conn } from "../bd/bd.js";
-import axios from 'axios';
-import dotenv from 'dotenv';
+import axios from "axios";
+import dotenv from "dotenv";
 
 dotenv.config();
-
-// ✅ Verificar variables de entorno
-const requiredEnvVars = [
-  'ML_CLIENT_ID_1',
-  'ML_CLIENT_SECRET_1',
-  'ML_USER_ID_1',
-  'ML_CLIENT_ID_2',
-  'ML_CLIENT_SECRET_2',
-  'ML_USER_ID_2'
-];
-
-requiredEnvVars.forEach(varName => {
-  if (process.env[varName]) {
-    console.log(`✅ La variable ${varName} existe.`);
-  } else {
-    console.log(`❌ La variable ${varName} NO existe.`);
-  }
-});
 
 // Función para obtener tokens de la DB por mlUser
 const getTokensFromDB = async (mlUserId) => {
   const [rows] = await conn.execute(
-    'SELECT * FROM ml_tokens WHERE mlUser = ? ORDER BY id DESC LIMIT 1',
+    "SELECT * FROM ml_tokens WHERE mlUser = ? ORDER BY id DESC LIMIT 1",
     [mlUserId]
   );
   if (rows.length === 0) {
@@ -35,18 +17,23 @@ const getTokensFromDB = async (mlUserId) => {
 };
 
 // Función para guardar/actualizar tokens en la DB
-const saveTokensToDB = async (accessToken, refreshToken, expiresIn, mlUserId) => {
+const saveTokensToDB = async (
+  accessToken,
+  refreshToken,
+  expiresIn,
+  mlUserId
+) => {
   const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
 
   const tokens = await getTokensFromDB(mlUserId);
   if (tokens) {
     await conn.execute(
-      'UPDATE ml_tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = ?',
+      "UPDATE ml_tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = ?",
       [accessToken, refreshToken, expiresAt, tokens.id]
     );
   } else {
     await conn.execute(
-      'INSERT INTO ml_tokens (access_token, refresh_token, expires_at, mlUser) VALUES (?, ?, ?, ?)',
+      "INSERT INTO ml_tokens (access_token, refresh_token, expires_at, mlUser) VALUES (?, ?, ?, ?)",
       [accessToken, refreshToken, expiresAt, mlUserId]
     );
   }
@@ -55,7 +42,10 @@ const saveTokensToDB = async (accessToken, refreshToken, expiresIn, mlUserId) =>
 // Función para refrescar el token si está vencido
 const refreshAccessToken = async (mlUserId) => {
   const tokens = await getTokensFromDB(mlUserId);
-  if (!tokens) throw new Error(`No hay tokens guardados para la cuenta ${mlUserId}. Debes autenticarte primero.`);
+  if (!tokens)
+    throw new Error(
+      `No hay tokens guardados para la cuenta ${mlUserId}. Debes autenticarte primero.`
+    );
 
   const now = Math.floor(Date.now() / 1000);
   if (now < tokens.expires_at - 60) {
@@ -80,15 +70,15 @@ const refreshAccessToken = async (mlUserId) => {
 
   try {
     const response = await axios.post(
-      'https://api.mercadolibre.com/oauth/token',
+      "https://api.mercadolibre.com/oauth/token",
       new URLSearchParams({
-        grant_type: 'refresh_token',
+        grant_type: "refresh_token",
         client_id: clientId,
         client_secret: clientSecret,
-        refresh_token: tokens.refresh_token
+        refresh_token: tokens.refresh_token,
       }),
       {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
       }
     );
 
@@ -96,52 +86,76 @@ const refreshAccessToken = async (mlUserId) => {
     await saveTokensToDB(access_token, refresh_token, expires_in, mlUserId);
     return access_token;
   } catch (error) {
-    console.error(`❌ Error al refrescar token para la cuenta ${mlUserId}:`, error.message);
+    console.error(
+      `❌ Error al refrescar token para la cuenta ${mlUserId}:`,
+      error.message
+    );
     if (error.response) {
       console.error("   - Status:", error.response.status);
       console.error("   - Datos:", error.response.data);
     }
-    throw new Error(`Token expirado y no se pudo refrescar para la cuenta ${mlUserId}. Vuelve a autenticarte.`);
-  }
+    throw new Error(
+      `Token expirado y no se pudo refrescar para la cuenta ${mlUserId}. Vuelve a autenticarte.`
+    );
+  } 
 };
 
 // Función para obtener detalles completos de una orden
 const getOrderDetails = async (orderId, accessToken) => {
-
   try {
-    const response = await axios.get(`https://api.mercadolibre.com/orders/${orderId}`, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+    const response = await axios.get(
+      `https://api.mercadolibre.com/orders/${orderId}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
     return response.data;
   } catch (error) {
-    console.warn(`⚠️ No se pudo obtener detalles de la orden ${orderId}:`, error.message);
+    console.warn(
+      `⚠️ No se pudo obtener detalles de la orden ${orderId}:`,
+      error.message
+    );
     return null;
   }
 };
-
-
 
 // Controlador para obtener órdenes
 const getVentas = async (req, res) => {
   try {
     const dias = parseInt(req.query.dias) || 7;
-    if (dias < 1 || dias > 10) {
-      return res.status(400).json({ message: "El parámetro 'dias' debe estar entre 1 y 10.", success: false });
+    if (dias < 1 || dias > 21) {
+      return res
+        .status(400)
+        .json({
+          message: "El parámetro 'dias' debe estar entre 1 y 10.",
+          success: false,
+        });
     }
 
-    const cuenta = req.query.cuenta || '1';
-    let mlUserId= 'userId';
-    
-    if (cuenta === '1') {
-      mlUserId = process.env.ML_USER_ID_1;      
-    } else if (cuenta === '2') {
+    const cuenta = req.query.cuenta || "1";
+    let mlUserId = "userId";
+
+    if (cuenta === "1") {
+      mlUserId = process.env.ML_USER_ID_1;
+    } else if (cuenta === "2") {
       mlUserId = process.env.ML_USER_ID_2;
     } else {
-      return res.status(400).json({ message: "Parámetro 'cuenta' inválido. Usa '1' o '2'.", success: false });
+      return res
+        .status(400)
+        .json({
+          message: "Parámetro 'cuenta' inválido. Usa '1' o '2'.",
+          success: false,
+        });
     }
 
     if (!mlUserId) {
-      return res.status(500).json({ message: `ML_USER_ID no configurado para la cuenta ${cuenta}`, success: false });
+      return res
+        .status(500)
+        .json({
+          message: `ML_USER_ID no configurado para la cuenta ${cuenta}`,
+          success: false,
+        });
     }
 
     const accessToken = await refreshAccessToken(mlUserId);
@@ -151,11 +165,13 @@ const getVentas = async (req, res) => {
 
     const url = `https://api.mercadolibre.com/orders/search?seller=${mlUserId}&sort=date_desc&limit=50`;
     const response = await axios.get(url, {
-      headers: { Authorization: `Bearer ${accessToken}` }
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     const orders = response.data.results || [];
-    const filteredOrders = orders.filter(order => new Date(order.date_created) >= startDate);
+    const filteredOrders = orders.filter(
+      (order) => new Date(order.date_created) >= startDate
+    );
 
     // Agrupar por pack_id (si existe), sino por id
     const ordersByPack = {};
@@ -166,38 +182,65 @@ const getVentas = async (req, res) => {
         continue;
       }
 
-      // ✅ Usar pack_id si existe, sino usar el id normal
       const mainOrderId = fullOrder.pack_id || fullOrder.id;
 
+      // ✅ Solo procesamos una vez por pack o por orden
       if (!ordersByPack[mainOrderId]) {
         let tipo_envio = "desconocido";
-        let etiqueta_impresa = !!fullOrder.shipping?.id;
+        let etiqueta_impresa = false;
 
-        if (fullOrder.shipping) {
-          const shipping = fullOrder.shipping;
-          etiqueta_impresa = !!shipping.id;
+        // ✅ Obtener detalles del envío desde /shipments/{id} si existe
+        if (fullOrder.shipping?.id) {
+          try {
+            const shipmentRes = await axios.get(
+              `https://api.mercadolibre.com/shipments/${fullOrder.shipping.id}`,
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
+            const shipping = shipmentRes.data;
 
-          if (shipping.logistic_type === "fulfillment" || shipping.mode === "fulfillment") {
-            tipo_envio = "full";
-          } else if (shipping.mode === "me2") {
-            tipo_envio = "mercado_envios";
-          } else if (shipping.mode === "custom") {
-            if (["drop_off", "cross_docking"].includes(shipping.logistic_type)) {
+            etiqueta_impresa = !!shipping.id;
+
+            if (
+              shipping.logistic_type === "fulfillment" ||
+              shipping.mode === "fulfillment"
+            ) {
+              tipo_envio = "full";
+            } else if (shipping.logistic_type === "me2") {
+              tipo_envio = "mercado_envios";
+            } else if (
+              ["drop_off", "xd_drop_off"].includes(shipping.logistic_type)
+            ) {
+              tipo_envio = "mercado_envios";
+            } else if (shipping.logistic_type === "self_service") {
               tipo_envio = "flex";
-            } else {
+            } else if (shipping.mode === "custom") {
               tipo_envio = "vendedor";
+            } else {
+              tipo_envio = "desconocido";
             }
+          } catch (err) {
+            console.warn(
+              `⚠️ No se pudo obtener shipment ${fullOrder.shipping.id}:`,
+              err.message
+            );
+            // Si no podemos obtener el shipment, al menos marcamos que tiene envío
+            etiqueta_impresa = true;
           }
         }
 
+        const sellerNicknameMap = {
+  [process.env.ML_USER_ID_1]: "FEMEX",
+  [process.env.ML_USER_ID_2]: "BLOW INK"
+};;
+
         ordersByPack[mainOrderId] = {
-          id: mainOrderId, // ← Este será el ID que se muestra en la UI
-          buyer_nickname: fullOrder.buyer?.nickname || '',
-          seller_nickname: fullOrder.seller?.nickname || '',
-          date_created: fullOrder.date_created,
+          id: mainOrderId,
+          buyer_nickname: fullOrder.buyer?.nickname || "",
+          seller_nickname: sellerNicknameMap[mlUserId] || "Desconocido",
+          date_created: fullOrder.date_created, // ← ¡formato ISO! (no formateado)
           etiqueta_impresa,
           tipo_envio,
-          items: []
+          items: [],
         };
       }
 
@@ -206,7 +249,7 @@ const getVentas = async (req, res) => {
         ordersByPack[mainOrderId].items.push({
           sku: item.item.seller_sku || item.item.id,
           quantity: item.quantity,
-          description: item.item.title
+          description: item.item.title,
         });
       }
     }
@@ -216,9 +259,8 @@ const getVentas = async (req, res) => {
     res.status(200).json({
       message: `Órdenes de los últimos ${dias} días para la cuenta ${cuenta}`,
       success: true,
-      data: enrichedOrders
+      data: enrichedOrders,
     });
-
   } catch (error) {
     console.error("🔥 ERROR EN GETVENTAS:");
     console.error("   - Mensaje:", error.message);
@@ -228,29 +270,40 @@ const getVentas = async (req, res) => {
     }
     res.status(500).json({
       message: error.message || "Error al obtener órdenes",
-      success: false
+      success: false,
     });
-  }
+  } 
 };
-
 
 // Controlador para guardar tokens (desde frontend o script)
 const saveTokens = async (req, res) => {
   const { access_token, refresh_token, expires_in, mlUser } = req.body;
 
   if (!access_token || !refresh_token || !expires_in || !mlUser) {
-    return res.status(400).json({ message: "Faltan datos en el cuerpo: access_token, refresh_token, expires_in y mlUser son obligatorios", success: false });
+    return res
+      .status(400)
+      .json({
+        message:
+          "Faltan datos en el cuerpo: access_token, refresh_token, expires_in y mlUser son obligatorios",
+        success: false,
+      });
   }
 
   try {
     await saveTokensToDB(access_token, refresh_token, expires_in, mlUser);
-    res.status(200).json({ message: `Tokens guardados exitosamente para la cuenta ${mlUser}`, success: true });
+    res
+      .status(200)
+      .json({
+        message: `Tokens guardados exitosamente para la cuenta ${mlUser}`,
+        success: true,
+      });
   } catch (error) {
     console.error("❌ Error al guardar tokens:", error);
-    res.status(500).json({ message: "Error al guardar tokens", success: false });
+    res
+      .status(500)
+      .json({ message: "Error al guardar tokens", success: false });
   }
 };
 
 const apiController = { getVentas, saveTokens };
 export default apiController;
-
