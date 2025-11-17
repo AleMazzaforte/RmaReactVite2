@@ -59,6 +59,8 @@ const getTipoEnvioLabel = (tipo: string): string => {
     mercado_envios: "Mercado Envíos",
     flex: "Flex",
     vendedor: "Vendedor",
+    retiro_local: "Retiro en local",
+    cancelada: "❌ Cancelada",
     desconocido: "Desconocido"
   };
   return labels[tipo] || tipo;
@@ -66,7 +68,7 @@ const getTipoEnvioLabel = (tipo: string): string => {
 
 export const Api = () => {
   const [dias, setDias] = useState<number>(3);
-  const [cuentaSeleccionada, setCuentaSeleccionada] = useState<string>("1"); 
+  const [cuentaSeleccionada, setCuentaSeleccionada] = useState<string>("1");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,11 +77,11 @@ export const Api = () => {
     Record<string, number>
   >({});
   const [loadingDescuento, setLoadingDescuento] = useState<boolean>(true);
-  
+
   let indice: number = Number(cuentaSeleccionada) - 1;
 
   const urlGetVentas = Urls.apiMeli.getVentas;
- 
+
   // Cargar productos con descuento (sin cambios)
   useEffect(() => {
     const fetchProductosConDescuento = async () => {
@@ -128,110 +130,110 @@ export const Api = () => {
 
   // Generar PDF (con fecha formateada en 24h y tipo de envío)
   const generatePDF = () => {
-  const selectedOrdersList = orders.filter((o) => selectedOrders.has(o.id));
+    const selectedOrdersList = orders.filter((o) => selectedOrders.has(o.id));
 
-  if (selectedOrdersList.length === 0) {
-    alert("Por favor, selecciona al menos una orden.");
-    return;
-  }
-
-  const doc = new jsPDF("p", "mm", "a4");
-  const margin = 10;
-  const pageWidth = 210;
-  const cardWidth = pageWidth - 2 * margin;
-  let yPos = margin;
-
-  const controllers = ["Javi", "Ro", "Lu", "Rodri"];
-  const checkboxSize = 3.5;
-  const checkboxSpacing = 15;
-
-  selectedOrdersList.forEach((order, index) => {
-    if (index > 0 && index % 3 === 0) {
-      doc.addPage();
-      yPos = margin;
+    if (selectedOrdersList.length === 0) {
+      alert("Por favor, selecciona al menos una orden.");
+      return;
     }
 
-    const startY = yPos;
+    const doc = new jsPDF("p", "mm", "a4");
+    const margin = 10;
+    const pageWidth = 210;
+    const cardWidth = pageWidth - 2 * margin;
+    let yPos = margin;
 
-    // ✅ "Orden #" y "Tipo: ..." en la misma línea (y = yPos + 10)
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Orden #${order.id}`, margin + 5, yPos + 10);
+    const controllers = ["Javi", "Ro", "Lu", "Rodri"];
+    const checkboxSize = 3.5;
+    const checkboxSpacing = 15;
 
-    const tipoEnvioLabel = getTipoEnvioLabel(order.tipo_envio);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Tipo: ${tipoEnvioLabel}`, margin + 76, yPos + 10); // mismo Y
+    selectedOrdersList.forEach((order, index) => {
+      if (index > 0 && index % 3 === 0) {
+        doc.addPage();
+        yPos = margin;
+      }
 
-    // Badge de etiqueta (ligera subida si era +6 antes)
-    const badgeText = order.etiqueta_impresa
-      ? "Etiqueta generada"
-      : "Sin etiqueta";
-    const badgeWidth = doc.getTextWidth(badgeText) + 6;
-    const badgeX = margin + cardWidth - badgeWidth - 3;
-    const badgeY = yPos + 6; // sigue igual (arriba del título, no cambia)
-    doc.setFillColor(
-      order.etiqueta_impresa ? 220 : 255,
-      order.etiqueta_impresa ? 255 : 255,
-      220
-    );
-    doc.rect(badgeX, badgeY, badgeWidth, 8, "F");
-    doc.setTextColor(0);
-    doc.setFontSize(10);
-    doc.text(badgeText, badgeX + 3, badgeY + 5);
+      const startY = yPos;
 
-    // ✅ Todo sube: ahora currentY empieza en yPos + 18 (en lugar de +22)
-    let currentY = yPos + 18;
+      // ✅ "Orden #" y "Tipo: ..." en la misma línea (y = yPos + 10)
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Orden #${order.id}`, margin + 5, yPos + 10);
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Comprador: ${order.buyer_nickname}`, margin + 5, currentY);
-    currentY += 6;
-    doc.text(`Vendedor: ${order.seller_nickname}`, margin + 5, currentY);
-    currentY += 6;
-    const formattedDate = formatDateToDisplay(order.date_created);
-    doc.text(`Fecha: ${formattedDate}`, margin + 5, currentY);
-    currentY += 8;
-
-    doc.setFont("helvetica", "normal");
-    doc.text("", margin + 5, currentY);
-    currentY += 4;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    order.items.forEach((item) => {
-      doc.text(`• ${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 5, currentY);
-      currentY += 5;
-    });
-
-    currentY += 4;
-    doc.setFont("helvetica", "normal");
-    doc.text("Controló:", margin + 5, currentY);
-
-    let ctrlX = margin + 25;
-    controllers.forEach((name) => {
-      doc.rect(ctrlX, currentY - 2, checkboxSize, checkboxSize);
+      const tipoEnvioLabel = getTipoEnvioLabel(order.tipo_envio);
       doc.setFont("helvetica", "normal");
-      doc.text(name, ctrlX + checkboxSize + 2, currentY);
-      ctrlX += checkboxSize + 2 + doc.getTextWidth(name) + checkboxSpacing;
+      doc.text(`Tipo: ${tipoEnvioLabel}`, margin + 76, yPos + 10); // mismo Y
+
+      // Badge de etiqueta (ligera subida si era +6 antes)
+      const badgeText = order.etiqueta_impresa
+        ? "Etiqueta generada"
+        : "Sin etiqueta";
+      const badgeWidth = doc.getTextWidth(badgeText) + 6;
+      const badgeX = margin + cardWidth - badgeWidth - 3;
+      const badgeY = yPos + 6; // sigue igual (arriba del título, no cambia)
+      doc.setFillColor(
+        order.etiqueta_impresa ? 220 : 255,
+        order.etiqueta_impresa ? 255 : 255,
+        220
+      );
+      doc.rect(badgeX, badgeY, badgeWidth, 8, "F");
+      doc.setTextColor(0);
+      doc.setFontSize(10);
+      doc.text(badgeText, badgeX + 3, badgeY + 5);
+
+      // ✅ Todo sube: ahora currentY empieza en yPos + 18 (en lugar de +22)
+      let currentY = yPos + 18;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Comprador: ${order.buyer_nickname}`, margin + 5, currentY);
+      currentY += 6;
+      doc.text(`Vendedor: ${order.seller_nickname}`, margin + 5, currentY);
+      currentY += 6;
+      const formattedDate = formatDateToDisplay(order.date_created);
+      doc.text(`Fecha: ${formattedDate}`, margin + 5, currentY);
+      currentY += 8;
+
+      doc.setFont("helvetica", "normal");
+      doc.text("", margin + 5, currentY);
+      currentY += 4;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      order.items.forEach((item) => {
+        doc.text(`• ${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 5, currentY);
+        currentY += 5;
+      });
+
+      currentY += 4;
+      doc.setFont("helvetica", "normal");
+      doc.text("Controló:", margin + 5, currentY);
+
+      let ctrlX = margin + 25;
+      controllers.forEach((name) => {
+        doc.rect(ctrlX, currentY - 2, checkboxSize, checkboxSize);
+        doc.setFont("helvetica", "normal");
+        doc.text(name, ctrlX + checkboxSize + 2, currentY);
+        ctrlX += checkboxSize + 2 + doc.getTextWidth(name) + checkboxSpacing;
+      });
+
+      const cardHeight = currentY - startY + 6;
+
+      if (startY + cardHeight > 297 - margin) {
+        doc.addPage();
+        yPos = margin;
+      }
+
+      doc.setDrawColor(0, 0, 0);
+      doc.rect(margin, startY, cardWidth, cardHeight);
+      yPos = startY + cardHeight + 8;
     });
 
-    const cardHeight = currentY - startY + 6;
-
-    if (startY + cardHeight > 297 - margin) {
-      doc.addPage();
-      yPos = margin;
-    }
-
-    doc.setDrawColor(0, 0, 0);
-    doc.rect(margin, startY, cardWidth, cardHeight);
-    yPos = startY + cardHeight + 8;
-  });
-
-  doc.save(`ordenes_cuenta${cuentaSeleccionada}.pdf`);
-};
+    doc.save(`ordenes_cuenta${cuentaSeleccionada}.pdf`);
+  };
 
   // Registrar ventas con descuento (sin cambios)
   const registrarVentasConDescuento = async () => {
-    
+
     if (selectedOrders.size === 0) {
       sweetAlert.warning("Selecciona al menos una orden.");
       return;
@@ -286,7 +288,7 @@ export const Api = () => {
         } catch (error) {
           console.error("Error al registrar ventas:", error);
           sweetAlert.error("Error al registrar las ventas con descuento.");
-        }finally {
+        } finally {
           setLoading(false);
         }
       }
@@ -320,8 +322,8 @@ export const Api = () => {
       console.error(err);
       setError(
         err.response?.data?.message ||
-          err.message ||
-          "Error al conectar con el servidor"
+        err.message ||
+        "Error al conectar con el servidor"
       );
     } finally {
       setLoading(false);
@@ -366,11 +368,10 @@ export const Api = () => {
         <button
           onClick={handleFetchOrders}
           disabled={loading}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
-            loading
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${loading
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-blue-600 hover:bg-blue-700"
-          }`}
+            }`}
         >
           {loading ? "Cargando..." : "Obtener órdenes"}
         </button>
@@ -378,11 +379,10 @@ export const Api = () => {
         <button
           onClick={generatePDF}
           disabled={selectedOrders.size === 0}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
-            selectedOrders.size === 0
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-green-600 hover:bg-green-700"
-          }`}
+            }`}
         >
           Imprimir {selectedOrders.size} seleccionadas
         </button>
@@ -390,11 +390,10 @@ export const Api = () => {
         <button
           onClick={registrarVentasConDescuento}
           disabled={selectedOrders.size === 0 || loadingDescuento}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
-            selectedOrders.size === 0 || loadingDescuento
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0 || loadingDescuento
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-purple-600 hover:bg-purple-700"
-          }`}
+            }`}
         >
           {loadingDescuento
             ? "Cargando..."
@@ -430,7 +429,12 @@ export const Api = () => {
             {orders.map((order) => (
               <div
                 key={order.id}
-                className="border border-gray-200 rounded-lg p-5 bg-white shadow-sm relative"
+                className={`rounded-lg p-5 shadow-sm relative border ${order.tipo_envio === "cancelada"
+                    ? "bg-gray-100 border-gray-300"
+                    : order.tipo_envio === "retiro_local"
+                      ? "bg-amber-50 border-amber-200"
+                      : "bg-white border-gray-200"
+                  }`}
               >
                 <div className="absolute top-3 right-3">
                   <input
@@ -446,19 +450,18 @@ export const Api = () => {
                     <h3 className="text-lg font-semibold text-gray-800">
                       Orden #{order.id}
                     </h3>
-                    
+
                   </div>
-                      
-                    <p className="text-sm text-gray-600 mt-1">
-                      <span className="font-medium">Envío: </span> 
-                      <span className="font-semibold">{getTipoEnvioLabel(order.tipo_envio)}</span>
-                    </p>
+
+                  <p className="text-sm text-gray-600 mt-1">
+                    <span className="font-medium">Envío: </span>
+                    <span className="font-semibold">{getTipoEnvioLabel(order.tipo_envio)}</span>
+                  </p>
                   <div
-                    className={`px-2 py-1 mr-10 text-xs font-medium rounded-full ${
-                      order.etiqueta_impresa
+                    className={`px-2 py-1 mr-10 text-xs font-medium rounded-full ${order.etiqueta_impresa
                         ? "bg-green-100 text-green-800"
                         : "bg-blue-100 text-blue-800"
-                    }`}
+                      }`}
                   >
                     {order.etiqueta_impresa
                       ? "Etiqueta generada"
@@ -486,7 +489,7 @@ export const Api = () => {
                     {order.items.map((item, idx) => (
                       <li key={idx}>
                         <span className="font-bold">{item.sku}</span> —{" "}
-                          <span className="font-bold">{item.quantity} Un.</span>- <span className="text-gray-500 text-sm">{item.description}</span>
+                        <span className="font-bold">{item.quantity} Un.</span>- <span className="text-gray-500 text-sm">{item.description}</span>
                       </li>
                     ))}
                   </ul>

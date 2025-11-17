@@ -97,7 +97,7 @@ const refreshAccessToken = async (mlUserId) => {
     throw new Error(
       `Token expirado y no se pudo refrescar para la cuenta ${mlUserId}. Vuelve a autenticarte.`
     );
-  } 
+  }
 };
 
 // Función para obtener detalles completos de una orden
@@ -120,42 +120,37 @@ const getOrderDetails = async (orderId, accessToken) => {
   }
 };
 
-// Controlador para obtener órdenes
+
+
 const getVentas = async (req, res) => {
   try {
     const dias = parseInt(req.query.dias) || 7;
     if (dias < 1 || dias > 21) {
-      return res
-        .status(400)
-        .json({
-          message: "El parámetro 'dias' debe estar entre 1 y 10.",
-          success: false,
-        });
+      return res.status(400).json({
+        message: "El parámetro 'dias' debe estar entre 1 y 21.",
+        success: false,
+      });
     }
 
     const cuenta = req.query.cuenta || "1";
-    let mlUserId = "userId";
+    let mlUserId;
 
     if (cuenta === "1") {
       mlUserId = process.env.ML_USER_ID_1;
     } else if (cuenta === "2") {
       mlUserId = process.env.ML_USER_ID_2;
     } else {
-      return res
-        .status(400)
-        .json({
-          message: "Parámetro 'cuenta' inválido. Usa '1' o '2'.",
-          success: false,
-        });
+      return res.status(400).json({
+        message: "Parámetro 'cuenta' inválido. Usa '1' o '2'.",
+        success: false,
+      });
     }
 
     if (!mlUserId) {
-      return res
-        .status(500)
-        .json({
-          message: `ML_USER_ID no configurado para la cuenta ${cuenta}`,
-          success: false,
-        });
+      return res.status(500).json({
+        message: `ML_USER_ID no configurado para la cuenta ${cuenta}`,
+        success: false,
+      });
     }
 
     const accessToken = await refreshAccessToken(mlUserId);
@@ -173,24 +168,38 @@ const getVentas = async (req, res) => {
       (order) => new Date(order.date_created) >= startDate
     );
 
-    // Agrupar por pack_id (si existe), sino por id
     const ordersByPack = {};
 
     for (const order of filteredOrders) {
       const fullOrder = await getOrderDetails(order.id, accessToken);
-      if (!fullOrder) {
-        continue;
-      }
+      if (!fullOrder) continue;
 
       const mainOrderId = fullOrder.pack_id || fullOrder.id;
 
-      // ✅ Solo procesamos una vez por pack o por orden
       if (!ordersByPack[mainOrderId]) {
         let tipo_envio = "desconocido";
         let etiqueta_impresa = false;
 
-        // ✅ Obtener detalles del envío desde /shipments/{id} si existe
-        if (fullOrder.shipping?.id) {
+        // ✅ 1. Órdenes canceladas
+        if (fullOrder.status === "cancelled") {
+          tipo_envio = "cancelada";
+          etiqueta_impresa = false;
+        }
+        // ✅ 2. Retiro en local: sin shipping.id y sin costo de envío
+        else if (
+          fullOrder.shipping?.id === null &&
+          (fullOrder.shipping_cost === null || fullOrder.shipping_cost === 0)
+        ) {
+          tipo_envio = "retiro_local";
+          etiqueta_impresa = false;
+        }
+        // ✅ 3. También detectar por tag (por compatibilidad)
+        else if (fullOrder.tags?.includes("no_shipping")) {
+          tipo_envio = "retiro_local";
+          etiqueta_impresa = false;
+        }
+        // ✅ 4. Si tiene shipping, obtener detalles
+        else if (fullOrder.shipping?.id) {
           try {
             const shipmentRes = await axios.get(
               `https://api.mercadolibre.com/shipments/${fullOrder.shipping.id}`,
@@ -218,33 +227,40 @@ const getVentas = async (req, res) => {
             } else {
               tipo_envio = "desconocido";
             }
+
           } catch (err) {
             console.warn(
               `⚠️ No se pudo obtener shipment ${fullOrder.shipping.id}:`,
               err.message
             );
-            // Si no podemos obtener el shipment, al menos marcamos que tiene envío
             etiqueta_impresa = true;
+            tipo_envio = "desconocido";
           }
+        }
+        // ✅ 5. Caso residual
+        else {
+          tipo_envio = "desconocido";
+          etiqueta_impresa = false;
         }
 
         const sellerNicknameMap = {
-  [process.env.ML_USER_ID_1]: "FEMEX",
-  [process.env.ML_USER_ID_2]: "BLOW INK"
-};;
+          [process.env.ML_USER_ID_1]: "FEMEX",
+          [process.env.ML_USER_ID_2]: "BLOW INK"
+        };
 
         ordersByPack[mainOrderId] = {
           id: mainOrderId,
           buyer_nickname: fullOrder.buyer?.nickname || "",
           seller_nickname: sellerNicknameMap[mlUserId] || "Desconocido",
-          date_created: fullOrder.date_created, // ← ¡formato ISO! (no formateado)
+          date_created: fullOrder.date_created, // ISO string
           etiqueta_impresa,
           tipo_envio,
+          status: fullOrder.status, // útil para debugging en frontend
           items: [],
         };
       }
 
-      // Agregar todos los items de esta suborden
+      // Agregar ítems
       for (const item of fullOrder.order_items || []) {
         ordersByPack[mainOrderId].items.push({
           sku: item.item.seller_sku || item.item.id,
@@ -266,13 +282,13 @@ const getVentas = async (req, res) => {
     console.error("   - Mensaje:", error.message);
     if (error.response) {
       console.error("   - Status:", error.response.status);
-      console.error("   - Datos:", error.response.data);
+      console.error("   - Datos:", JSON.stringify(error.response.data, null, 2));
     }
     res.status(500).json({
       message: error.message || "Error al obtener órdenes",
       success: false,
     });
-  } 
+  }
 };
 
 // Controlador para guardar tokens (desde frontend o script)
