@@ -207,7 +207,7 @@ export const Api = () => {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       order.items.forEach((item) => {
-        doc.text(`☐ ${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 5, currentY);
+        doc.text(`[ ] ${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 5, currentY);
         currentY += 5;
       });
 
@@ -235,7 +235,9 @@ export const Api = () => {
       yPos = startY + cardHeight + 8;
     });
 
-    doc.save(`ordenes_cuenta${cuentaSeleccionada}.pdf`);
+    const pdfBlob = doc.output('blob');
+const pdfUrl = URL.createObjectURL(pdfBlob);
+window.open(pdfUrl, '_blank');
   };
 
   // Registrar ventas con descuento (sin cambios)
