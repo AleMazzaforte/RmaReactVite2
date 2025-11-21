@@ -4,8 +4,9 @@ import { FieldSetTintas } from "./utilidades/FieldSetTintas";
 import { FieldSetTintasConfig } from "./utilidades/FieldSetTintasConfig";
 import { GetInventarioStock } from "./utilidades/GetInventarioStock";
 import { GuardarInventario } from "./utilidades/GuardarInventario";
-import * as XLSX from "xlsx";
-import {sweetAlert} from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+import { sweetAlert } from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
 import Urls from './utilidades/Urls';
 import "../estilos/contadorDeTintas.css";
 
@@ -81,7 +82,7 @@ export const ContadorDeTintas: React.FC = () => {
     }
   }, [resultados, productosSistema]);
 
-  const descargarExcel = () => {
+  const descargarExcel = async () => {
     if (resultados.length === 0) {
       // Si no hay resultados, mostrar alerta
       sweetAlert.fire({
@@ -93,20 +94,40 @@ export const ContadorDeTintas: React.FC = () => {
       return;
     }
 
-    // Aplanar los resultados para el Excel
-    const datosParaExcel = resultados.flatMap((categoria) => [
-      { Color: categoria.legend, Cantidad: "" }, // Fila de categoría
-      ...categoria.items.map((item) => ({
-        Color: item.nombre,
-        Cantidad: item.cantidad,
-      })),
-    ]);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Resultados");
 
-    const hoja = XLSX.utils.json_to_sheet(datosParaExcel);
-    const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, "Resultados");
+    worksheet.columns = [
+      { header: "Color", key: "color", width: 30 },
+      { header: "Cantidad", key: "cantidad", width: 15 },
+    ];
 
-    XLSX.writeFile(libro, "resultados-tintas.xlsx");
+    resultados.forEach((categoria) => {
+      // Fila de categoría (negrita, fondo gris claro)
+      const row = worksheet.addRow({
+        color: categoria.legend,
+        cantidad: "",
+      });
+      row.font = { bold: true };
+      row.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFEEEEEE" },
+      };
+
+      categoria.items.forEach((item) => {
+        worksheet.addRow({
+          color: item.nombre,
+          cantidad: item.cantidad,
+        });
+      });
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "resultados-tintas.xlsx");
   };
 
   const handleGuardarInventario = async (
@@ -122,7 +143,7 @@ export const ContadorDeTintas: React.FC = () => {
       if (!response.ok) throw new Error("Error al guardar");
 
       const result = await response.json();
-       sweetAlert.fire({
+      sweetAlert.fire({
         title: "Éxito",
         text: `${result.updatedCount} productos actualizados`,
         icon: "success",
@@ -131,7 +152,7 @@ export const ContadorDeTintas: React.FC = () => {
       setCambiosPendientes([]);
     } catch (error) {
       console.error("Error:", error);
-       sweetAlert.fire({
+      sweetAlert.fire({
         title: "Error",
         text: "Error al guardar cambios",
         icon: "error",
@@ -215,9 +236,9 @@ export const ContadorDeTintas: React.FC = () => {
             cantidad: leerValor("combo544") + leerValor("negro544"),
           },
           {
-  nombre: "EP555 G 70ML",
-  cantidad: leerValor("gris555")
-},
+            nombre: "EP555 G 70ML",
+            cantidad: leerValor("gris555")
+          },
           {
             nombre: "EP504-EP544 C 70ML",
             cantidad:
@@ -365,12 +386,11 @@ export const ContadorDeTintas: React.FC = () => {
                           </td>
                           <td className="p-2 text-center ">{item.cantidad}</td>
                           <td
-                            className={`p-2 text-center ${
-                              item.diferencia !== undefined &&
+                            className={`p-2 text-center ${item.diferencia !== undefined &&
                               item.diferencia < 0
-                                ? "text-red-500 font-bold"
-                                : ""
-                            }`}
+                              ? "text-red-500 font-bold"
+                              : ""
+                              }`}
                           >
                             {item.diferencia ?? "-"}
                           </td>

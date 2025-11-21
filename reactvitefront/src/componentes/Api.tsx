@@ -207,7 +207,8 @@ export const Api = () => {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       order.items.forEach((item) => {
-        doc.text(`[ ] ${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 5, currentY);
+        doc.rect(margin + 5, currentY - 3, checkboxSize, checkboxSize);
+        doc.text(`${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 11, currentY);
         currentY += 5;
       });
 
@@ -236,105 +237,105 @@ export const Api = () => {
     });
 
     const pdfBlob = doc.output('blob');
-const pdfUrl = URL.createObjectURL(pdfBlob);
-window.open(pdfUrl, '_blank');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
   };
 
   // Registrar ventas con descuento (sin cambios)
-const registrarVentasConDescuento = async () => {
-  if (selectedOrders.size === 0) {
-    sweetAlert.warning("Selecciona al menos una orden.");
-    return;
-  }
+  const registrarVentasConDescuento = async () => {
+    if (selectedOrders.size === 0) {
+      sweetAlert.warning("Selecciona al menos una orden.");
+      return;
+    }
 
-  const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.id));
+    const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.id));
 
-  // Acumulador: clave única = numeroOperacion + idSku
-  const acumulador: Record<string, {
-    idSku: number;
-    canalVenta: string;
-    numeroOperacion: string;
-    fecha: string;
-    cantidad: number;
-  }> = {};
+    // Acumulador: clave única = numeroOperacion + idSku
+    const acumulador: Record<string, {
+      idSku: number;
+      canalVenta: string;
+      numeroOperacion: string;
+      fecha: string;
+      cantidad: number;
+    }> = {};
 
-  for (const orden of ordenesSeleccionadas) {
-    const fechaISO = new Date(orden.date_created).toISOString().split("T")[0];
-    const numeroOperacion = orden.id.toString();
-    const canalVenta = orden.seller_nickname;
+    for (const orden of ordenesSeleccionadas) {
+      const fechaISO = new Date(orden.date_created).toISOString().split("T")[0];
+      const numeroOperacion = orden.id.toString();
+      const canalVenta = orden.seller_nickname;
 
-    for (const item of orden.items) {
-      const { sku, quantity } = item;
+      for (const item of orden.items) {
+        const { sku, quantity } = item;
 
-      // Función auxiliar para acumular
-      const acumular = (skuDescuento: string, qty: number) => {
-        const idSku = productosConDescuento[skuDescuento];
-        if (idSku == null) return;
+        // Función auxiliar para acumular
+        const acumular = (skuDescuento: string, qty: number) => {
+          const idSku = productosConDescuento[skuDescuento];
+          if (idSku == null) return;
 
-        const clave = `${numeroOperacion}-${idSku}`;
-        if (acumulador[clave]) {
-          acumulador[clave].cantidad += qty;
-        } else {
-          acumulador[clave] = {
-            idSku,
-            canalVenta,
-            numeroOperacion,
-            fecha: fechaISO,
-            cantidad: qty,
-          };
+          const clave = `${numeroOperacion}-${idSku}`;
+          if (acumulador[clave]) {
+            acumulador[clave].cantidad += qty;
+          } else {
+            acumulador[clave] = {
+              idSku,
+              canalVenta,
+              numeroOperacion,
+              fecha: fechaISO,
+              cantidad: qty,
+            };
+          }
+        };
+
+        // 1. Si el ítem es directamente un producto con descuento
+        if (productosConDescuento[sku] !== undefined) {
+          acumular(sku, quantity);
         }
-      };
 
-      // 1. Si el ítem es directamente un producto con descuento
-      if (productosConDescuento[sku] !== undefined) {
-        acumular(sku, quantity);
-      }
-
-      // 2. Si el ítem es un kit, agregar su producto con descuento
-      const kitInfo = kitsConDescuento[sku];
-      if (kitInfo) {
-        acumular(kitInfo.skuDescuento, quantity);
+        // 2. Si el ítem es un kit, agregar su producto con descuento
+        const kitInfo = kitsConDescuento[sku];
+        if (kitInfo) {
+          acumular(kitInfo.skuDescuento, quantity);
+        }
       }
     }
-  }
 
-  // Convertir acumulador a array
-  const ventasParaGuardar = Object.values(acumulador);
+    // Convertir acumulador a array
+    const ventasParaGuardar = Object.values(acumulador);
 
-  if (ventasParaGuardar.length === 0) {
-    sweetAlert.info(
-      "Ninguna de las órdenes seleccionadas contiene productos con descuento ni kits que los incluyan."
-    );
-    return;
-  }
+    if (ventasParaGuardar.length === 0) {
+      sweetAlert.info(
+        "Ninguna de las órdenes seleccionadas contiene productos con descuento ni kits que los incluyan."
+      );
+      return;
+    }
 
-  sweetAlert.confirm(
-    `¿Registrar ${ventasParaGuardar.length} items con descuento en ${ordenesSeleccionadas.length} órdenes (Cuenta ${cuentaSeleccionada})?`,
-    async () => {
-      setLoading(true);
-      try {
-        const response = await axios.post(
-          Urls.ProductosConDescuento.guardarVenta,
-          ventasParaGuardar
-        );
-        const { count, message } = response.data;
-
-        if (count > 0) {
-          sweetAlert.success(`✅ ${count} ventas con descuento registradas.`);
-        } else {
-          sweetAlert.info(
-            `ℹ️ ${message || "No se registraron nuevas ventas."}`
+    sweetAlert.confirm(
+      `¿Registrar ${ventasParaGuardar.length} items con descuento en ${ordenesSeleccionadas.length} órdenes (Cuenta ${cuentaSeleccionada})?`,
+      async () => {
+        setLoading(true);
+        try {
+          const response = await axios.post(
+            Urls.ProductosConDescuento.guardarVenta,
+            ventasParaGuardar
           );
+          const { count, message } = response.data;
+
+          if (count > 0) {
+            sweetAlert.success(`✅ ${count} ventas con descuento registradas.`);
+          } else {
+            sweetAlert.info(
+              `ℹ️ ${message || "No se registraron nuevas ventas."}`
+            );
+          }
+        } catch (error) {
+          console.error("Error al registrar ventas:", error);
+          sweetAlert.error("Error al registrar las ventas con descuento.");
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Error al registrar ventas:", error);
-        sweetAlert.error("Error al registrar las ventas con descuento.");
-      } finally {
-        setLoading(false);
       }
-    }
-  );
-};
+    );
+  };
 
   // ✅ Función actualizada: ahora incluye "cuenta"
   const handleFetchOrders = async () => {
@@ -410,8 +411,8 @@ const registrarVentasConDescuento = async () => {
           onClick={handleFetchOrders}
           disabled={loading}
           className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${loading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700"
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-600 hover:bg-blue-700"
             }`}
         >
           {loading ? "Cargando..." : "Obtener órdenes"}
@@ -421,8 +422,8 @@ const registrarVentasConDescuento = async () => {
           onClick={generatePDF}
           disabled={selectedOrders.size === 0}
           className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-green-600 hover:bg-green-700"
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-green-600 hover:bg-green-700"
             }`}
         >
           Imprimir {selectedOrders.size} seleccionadas
@@ -432,8 +433,8 @@ const registrarVentasConDescuento = async () => {
           onClick={registrarVentasConDescuento}
           disabled={selectedOrders.size === 0 || loadingDescuento}
           className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0 || loadingDescuento
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-purple-600 hover:bg-purple-700"
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-purple-600 hover:bg-purple-700"
             }`}
         >
           {loadingDescuento
@@ -471,10 +472,10 @@ const registrarVentasConDescuento = async () => {
               <div
                 key={order.id}
                 className={`rounded-lg p-5 shadow-sm relative border ${order.tipo_envio === "cancelada"
-                    ? "bg-gray-100 border-gray-300"
-                    : order.tipo_envio === "retiro_local"
-                      ? "bg-amber-50 border-amber-200"
-                      : "bg-white border-gray-200"
+                  ? "bg-gray-100 border-gray-300"
+                  : order.tipo_envio === "retiro_local"
+                    ? "bg-amber-50 border-amber-200"
+                    : "bg-white border-gray-200"
                   }`}
               >
                 <div className="absolute top-3 right-3">
@@ -500,8 +501,8 @@ const registrarVentasConDescuento = async () => {
                   </p>
                   <div
                     className={`px-2 py-1 mr-10 text-xs font-medium rounded-full ${order.etiqueta_impresa
-                        ? "bg-green-100 text-green-800"
-                        : "bg-blue-100 text-blue-800"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-blue-100 text-blue-800"
                       }`}
                   >
                     {order.etiqueta_impresa

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { StockManager } from "./utilidades/StockManager";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { FiltrosInventario } from "./utilidades/FiltrosInventario";
 import { GetInventarioStock } from "./utilidades/GetInventarioStock";
 import { GuardarInventario } from "./utilidades/GuardarInventario";
@@ -105,8 +106,7 @@ export const Inventario: React.FC = () => {
     if (skusInvalidos.length > 0) {
       sweetAlert.error(
         "SKUs inválidos",
-        `SKUs no encontrados: <br> ${skusInvalidos.slice(0, 5).join(", ")}${
-          skusInvalidos.length > 5 ? "..." : ""
+        `SKUs no encontrados: <br> ${skusInvalidos.slice(0, 5).join(", ")}${skusInvalidos.length > 5 ? "..." : ""
         }`
       );
     }
@@ -117,12 +117,12 @@ export const Inventario: React.FC = () => {
   };
 
   const { inactivarProducto, loading: loadingInactivar } = UseInactivarProducto(
-  (sku) => {
-    setProductos((prev) =>
-      prev.map((p) => (p.sku === sku ? { ...p, isActive: 0 } : p))
-    );
-  }
-);
+    (sku) => {
+      setProductos((prev) =>
+        prev.map((p) => (p.sku === sku ? { ...p, isActive: 0 } : p))
+      );
+    }
+  );
 
   // Cargar reposiciones
   const cargarReposiciones = async () => {
@@ -404,13 +404,13 @@ export const Inventario: React.FC = () => {
       prev.map((producto) =>
         producto.id === id
           ? {
-              ...producto,
-              conteoFisico: numericValue,
-              fechaConteo:
-                numericValue !== null
-                  ? new Date().toISOString().split("T")[0]
-                  : null,
-            }
+            ...producto,
+            conteoFisico: numericValue,
+            fechaConteo:
+              numericValue !== null
+                ? new Date().toISOString().split("T")[0]
+                : null,
+          }
           : producto
       )
     );
@@ -423,25 +423,40 @@ export const Inventario: React.FC = () => {
     });
   };
 
-  const exportarAExcel = (productosParaExportar: Producto[]) => {
-    const datosParaExportar = productosParaExportar.map((producto) => ({
-      SKU: producto.sku,
-      Bloque: producto.idBloque,
-      "Stock Sistema Total":
-        producto.cantSistemaFemex + producto.cantSistemaBlow,
-      "Conteo Físico":
-        producto.conteoFisico !== null ? producto.conteoFisico : "No Contado",
-      Diferencia: calcularDiferencia(producto),
-    }));
-    const ws = XLSX.utils.json_to_sheet(datosParaExportar);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+  const exportarAExcel = async (productosParaExportar: Producto[]) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Inventario");
+
+    worksheet.columns = [
+      { header: "SKU", key: "sku", width: 20 },
+      { header: "Bloque", key: "bloque", width: 10 },
+      { header: "Stock Sistema Total", key: "stockSistema", width: 20 },
+      { header: "Conteo Físico", key: "conteoFisico", width: 15 },
+      { header: "Diferencia", key: "diferencia", width: 15 },
+    ];
+
+    productosParaExportar.forEach((producto) => {
+      worksheet.addRow({
+        sku: producto.sku,
+        bloque: producto.idBloque,
+        stockSistema: producto.cantSistemaFemex + producto.cantSistemaBlow,
+        conteoFisico:
+          producto.conteoFisico !== null ? producto.conteoFisico : "No Contado",
+        diferencia: calcularDiferencia(producto),
+      });
+    });
+
     const fecha = new Date().toISOString().split("T")[0];
     let nombreArchivo = `Inventario_${fecha}`;
     if (bloqueSeleccionado) nombreArchivo += `_Bloque-${bloqueSeleccionado}`;
     if (filtro) nombreArchivo += `_Filtro-${filtro.substring(0, 10)}`;
     nombreArchivo += ".xlsx";
-    XLSX.writeFile(wb, nombreArchivo);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, nombreArchivo);
   };
 
   const exportarInactivos = async () => {
@@ -457,25 +472,38 @@ export const Inventario: React.FC = () => {
         return;
       }
 
-      // Preparar datos para Excel
-      const datosParaExportar = productosInactivos.map((p) => ({
-        SKU: p.sku,
-        Bloque: p.idBloque || "Sin bloque",
-        "Stock Femex": p.cantSistemaFemex || 0,
-        "Stock Blow": p.cantSistemaBlow || 0,
-        "Conteo Físico":
-          p.conteoFisico !== null ? p.conteoFisico : "NO CONTADO",
-        "Fecha Conteo": p.fechaConteo || "Sin fecha",
-        "Cant. por Bulto": p.cantidadPorBulto || 0,
-      }));
+      // Generar Excel con ExcelJS
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Inactivos");
 
-      // Generar Excel
-      const ws = XLSX.utils.json_to_sheet(datosParaExportar);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Inactivos");
+      worksheet.columns = [
+        { header: "SKU", key: "sku", width: 20 },
+        { header: "Bloque", key: "bloque", width: 15 },
+        { header: "Stock Femex", key: "stockFemex", width: 15 },
+        { header: "Stock Blow", key: "stockBlow", width: 15 },
+        { header: "Conteo Físico", key: "conteoFisico", width: 15 },
+        { header: "Fecha Conteo", key: "fechaConteo", width: 15 },
+        { header: "Cant. por Bulto", key: "cantBulto", width: 15 },
+      ];
+
+      productosInactivos.forEach((p) => {
+        worksheet.addRow({
+          sku: p.sku,
+          bloque: p.idBloque || "Sin bloque",
+          stockFemex: p.cantSistemaFemex || 0,
+          stockBlow: p.cantSistemaBlow || 0,
+          conteoFisico: p.conteoFisico !== null ? p.conteoFisico : "NO CONTADO",
+          fechaConteo: p.fechaConteo || "Sin fecha",
+          cantBulto: p.cantidadPorBulto || 0,
+        });
+      });
 
       const fecha = new Date().toISOString().split("T")[0];
-      XLSX.writeFile(wb, `Productos_Inactivos_${fecha}.xlsx`);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `Productos_Inactivos_${fecha}.xlsx`);
     } catch (error) {
       console.error("Error al exportar inactivos:", error);
       sweetAlert.error(
@@ -688,12 +716,47 @@ export const Inventario: React.FC = () => {
   const readExcelFile = (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: "array" });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+          const buffer = e.target?.result as ArrayBuffer;
+          const workbook = new ExcelJS.Workbook();
+          await workbook.xlsx.load(buffer);
+
+          const worksheet = workbook.getWorksheet(1); // Obtener la primera hoja
+          if (!worksheet) {
+            reject(new Error("No se encontró ninguna hoja en el archivo Excel"));
+            return;
+          }
+
+          const jsonData: any[] = [];
+
+          // Obtener encabezados de la primera fila
+          const headers: string[] = [];
+          const firstRow = worksheet.getRow(1);
+          firstRow.eachCell((cell, colNumber) => {
+            headers[colNumber] = cell.text;
+          });
+
+          // Iterar sobre las filas de datos (desde la fila 2)
+          worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return; // Saltar encabezados
+
+            const rowData: any = {};
+            row.eachCell((cell, colNumber) => {
+              const header = headers[colNumber];
+              if (header) {
+                // Intentar obtener el valor crudo, si es objeto (fórmula/link) obtener result o text
+                let value = cell.value;
+                if (typeof value === 'object' && value !== null) {
+                  if ('result' in value) value = (value as any).result;
+                  else if ('text' in value) value = (value as any).text;
+                }
+                rowData[header] = value;
+              }
+            });
+            jsonData.push(rowData);
+          });
+
           resolve(jsonData);
         } catch (error) {
           reject(error);
@@ -988,9 +1051,8 @@ export const Inventario: React.FC = () => {
                 >
                   {productosReposicion.map((producto, index) => (
                     <div
-                      className={`producto-reposicion-lista ${
-                        index % 2 === 0 ? "fila-par" : "fila-impar"
-                      }`}
+                      className={`producto-reposicion-lista ${index % 2 === 0 ? "fila-par" : "fila-impar"
+                        }`}
                       key={index}
                     >
                       <div>
@@ -1151,12 +1213,12 @@ export const Inventario: React.FC = () => {
                     const backgroundColor = backgroundColorDiferencia(producto);
                     return (
                       <tr key={producto.id}>
-                        <td 
-                          className="td-sku" 
+                        <td
+                          className="td-sku"
                           id={`sku-${producto.sku}`}
-                           {...UseLongPress(() => inactivarProducto(producto.sku), 800)}
-  style={{ cursor: "pointer", userSelect: "none" }}
-                          >
+                          {...UseLongPress(() => inactivarProducto(producto.sku), 800)}
+                          style={{ cursor: "pointer", userSelect: "none" }}
+                        >
                           {producto.sku}
                         </td>
                         <td className="td-body">
@@ -1165,7 +1227,7 @@ export const Inventario: React.FC = () => {
                         <td className="td-body">
                           {producto.cantSistemaFemex + producto.cantSistemaBlow}
                         </td>
-                        {}
+                        { }
                         <td
                           className="td-body"
                           style={{ backgroundColor: `${backgroundColor}` }}
@@ -1193,13 +1255,12 @@ export const Inventario: React.FC = () => {
                           />
                         </td>
                         <td
-                          className={`td-diferencia ${
-                            diferencia > 0
-                              ? "positivo"
-                              : diferencia < 0
+                          className={`td-diferencia ${diferencia > 0
+                            ? "positivo"
+                            : diferencia < 0
                               ? "negativo"
                               : ""
-                          }`}
+                            }`}
                         >
                           {diferencia !== 0
                             ? diferencia > 0
