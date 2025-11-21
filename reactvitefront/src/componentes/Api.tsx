@@ -34,6 +34,13 @@ const CUENTAS = [
   { id: "2", nombre: "Blow" },
 ];
 
+const kitsConDescuento: Record<string, { skuDescuento: string }> = {
+  "KIT GI190 345ML": { skuDescuento: "GI190 N 135ML" },
+  "KIT EP544 280ML": { skuDescuento: "EP544 N 70ML" },
+  "KIT EP664 400ML": { skuDescuento: "EP664-EP673 N 100ML" },
+  "KIT EP544-EP664 4L": { skuDescuento: "EP544-EP664-EP673 N" },
+};
+
 // ✅ Función para formatear fecha en 24h (solo para visualización)
 const formatDateToDisplay = (isoDateString: string): string => {
   const date = new Date(isoDateString);
@@ -200,7 +207,7 @@ export const Api = () => {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       order.items.forEach((item) => {
-        doc.text(`• ${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 5, currentY);
+        doc.text(`☐ ${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 5, currentY);
         currentY += 5;
       });
 
@@ -232,68 +239,100 @@ export const Api = () => {
   };
 
   // Registrar ventas con descuento (sin cambios)
-  const registrarVentasConDescuento = async () => {
+const registrarVentasConDescuento = async () => {
+  if (selectedOrders.size === 0) {
+    sweetAlert.warning("Selecciona al menos una orden.");
+    return;
+  }
 
-    if (selectedOrders.size === 0) {
-      sweetAlert.warning("Selecciona al menos una orden.");
-      return;
-    }
+  const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.id));
 
-    const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.id));
-    const ventasParaGuardar: any[] = [];
+  // Acumulador: clave única = numeroOperacion + idSku
+  const acumulador: Record<string, {
+    idSku: number;
+    canalVenta: string;
+    numeroOperacion: string;
+    fecha: string;
+    cantidad: number;
+  }> = {};
 
-    for (const orden of ordenesSeleccionadas) {
-      for (const item of orden.items) {
-        const idProducto = productosConDescuento[item.sku];
-        if (idProducto) {
-          const fechaISO = new Date(orden.date_created)
-            .toISOString()
-            .split("T")[0];
-          ventasParaGuardar.push({
-            idSku: idProducto,
-            canalVenta: orden.seller_nickname,
-            numeroOperacion: orden.id.toString(),
-            cantidad: item.quantity,
+  for (const orden of ordenesSeleccionadas) {
+    const fechaISO = new Date(orden.date_created).toISOString().split("T")[0];
+    const numeroOperacion = orden.id.toString();
+    const canalVenta = orden.seller_nickname;
+
+    for (const item of orden.items) {
+      const { sku, quantity } = item;
+
+      // Función auxiliar para acumular
+      const acumular = (skuDescuento: string, qty: number) => {
+        const idSku = productosConDescuento[skuDescuento];
+        if (idSku == null) return;
+
+        const clave = `${numeroOperacion}-${idSku}`;
+        if (acumulador[clave]) {
+          acumulador[clave].cantidad += qty;
+        } else {
+          acumulador[clave] = {
+            idSku,
+            canalVenta,
+            numeroOperacion,
             fecha: fechaISO,
-          });
+            cantidad: qty,
+          };
         }
+      };
+
+      // 1. Si el ítem es directamente un producto con descuento
+      if (productosConDescuento[sku] !== undefined) {
+        acumular(sku, quantity);
+      }
+
+      // 2. Si el ítem es un kit, agregar su producto con descuento
+      const kitInfo = kitsConDescuento[sku];
+      if (kitInfo) {
+        acumular(kitInfo.skuDescuento, quantity);
       }
     }
+  }
 
-    if (ventasParaGuardar.length === 0) {
-      sweetAlert.info(
-        "Ninguna de las órdenes seleccionadas contiene productos con descuento."
-      );
-      return;
-    }
+  // Convertir acumulador a array
+  const ventasParaGuardar = Object.values(acumulador);
 
-    sweetAlert.confirm(
-      `¿Registrar ${ventasParaGuardar.length} items con descuento en ${ordenesSeleccionadas.length} órdenes (Cuenta ${cuentaSeleccionada})?`,
-      async () => {
-        setLoading(true);
-        try {
-          const response = await axios.post(
-            Urls.ProductosConDescuento.guardarVenta,
-            ventasParaGuardar
-          );
-          const { count, message } = response.data;
-
-          if (count > 0) {
-            sweetAlert.success(`✅ ${count} ventas con descuento registradas.`);
-          } else {
-            sweetAlert.info(
-              `ℹ️ ${message || "No se registraron nuevas ventas."}`
-            );
-          }
-        } catch (error) {
-          console.error("Error al registrar ventas:", error);
-          sweetAlert.error("Error al registrar las ventas con descuento.");
-        } finally {
-          setLoading(false);
-        }
-      }
+  if (ventasParaGuardar.length === 0) {
+    sweetAlert.info(
+      "Ninguna de las órdenes seleccionadas contiene productos con descuento ni kits que los incluyan."
     );
-  };
+    return;
+  }
+
+  sweetAlert.confirm(
+    `¿Registrar ${ventasParaGuardar.length} items con descuento en ${ordenesSeleccionadas.length} órdenes (Cuenta ${cuentaSeleccionada})?`,
+    async () => {
+      setLoading(true);
+      try {
+        const response = await axios.post(
+          Urls.ProductosConDescuento.guardarVenta,
+          ventasParaGuardar
+        );
+        const { count, message } = response.data;
+
+        if (count > 0) {
+          sweetAlert.success(`✅ ${count} ventas con descuento registradas.`);
+        } else {
+          sweetAlert.info(
+            `ℹ️ ${message || "No se registraron nuevas ventas."}`
+          );
+        }
+      } catch (error) {
+        console.error("Error al registrar ventas:", error);
+        sweetAlert.error("Error al registrar las ventas con descuento.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  );
+};
 
   // ✅ Función actualizada: ahora incluye "cuenta"
   const handleFetchOrders = async () => {
