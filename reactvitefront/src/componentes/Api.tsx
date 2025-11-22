@@ -34,10 +34,17 @@ const CUENTAS = [
   { id: "2", nombre: "Blow" },
 ];
 
-const kitsConDescuento: Record<string, { skuDescuento: string }> = {
+const kitsConDescuento: Record<string, { skuDescuento: string | string[] }> = {
   "KIT GI190 345ML": { skuDescuento: "GI190 N 135ML" },
   "KIT EP544 280ML": { skuDescuento: "EP544 N 70ML" },
-  "KIT EP664 400ML": { skuDescuento: "EP664-EP673 N 100ML" },
+  "KIT EP664 400ML": {
+    skuDescuento: [
+      "EP664-EP673 N 100ML",
+      "EP664-EP673 C 100ML",
+      "EP664-EP673 M 100ML",
+      "EP664-EP673 A 100ML",
+    ],
+  },
   "KIT EP544-EP664 4L": { skuDescuento: "EP544-EP664-EP673 N" },
 };
 
@@ -294,7 +301,10 @@ export const Api = () => {
         // 2. Si el ítem es un kit, agregar su producto con descuento
         const kitInfo = kitsConDescuento[sku];
         if (kitInfo) {
-          acumular(kitInfo.skuDescuento, quantity);
+          const skus = Array.isArray(kitInfo.skuDescuento)
+            ? kitInfo.skuDescuento
+            : [kitInfo.skuDescuento];
+          skus.forEach((s) => acumular(s, quantity));
         }
       }
     }
