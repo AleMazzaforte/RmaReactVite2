@@ -55,7 +55,8 @@ export const productosConDescuentoController = {
   let connection;
   try {
     const ventas = Array.isArray(req.body) ? req.body : [req.body];
-
+    console.log(ventas);
+    
     if (ventas.length === 0) {
       return res.status(400).json({ error: "No se enviaron ventas" });
     }
@@ -71,6 +72,7 @@ export const productosConDescuentoController = {
     connection = await conn.getConnection();
 
     const numerosOperacion = [...new Set(ventas.map(v => v.numeroOperacion))]; // Evitar repetidos innecesarios
+//console.log(numerosOperacion);
 
     if (numerosOperacion.length > 0) {
       const placeholders = numerosOperacion.map(() => '?').join(',');
@@ -125,6 +127,47 @@ export const productosConDescuentoController = {
     if (connection) connection.release();
   }
 },
-};
+
+verificarExistencia : async (req, res) => {
+  const { numerosOperacion } = req.body;
+
+  if (!Array.isArray(numerosOperacion) || numerosOperacion.length === 0) {
+    return res.status(400).json({ existentes: [] });
+  }
+
+  try {
+    const placeholders = numerosOperacion.map(() => '?').join(',');
+    const [rows] = await conn.query(
+      `SELECT DISTINCT numeroOperacion FROM ventasConDescuento WHERE numeroOperacion IN (${placeholders})`,
+      numerosOperacion
+    );
+    const existentes = rows.map(row => row.numeroOperacion);
+    res.json({ existentes });
+  } catch (error) {
+    console.error("Error al verificar existencia:", error);
+    res.status(500).json({ existentes: [] });
+  }
+
+},
+eliminarOrdenes : async (req, res) => {
+  const { numerosOperacion } = req.body;
+
+  if (!Array.isArray(numerosOperacion) || numerosOperacion.length === 0) {
+    return res.status(400).json({ success: false, message: "Lista vacía" });
+  }
+
+  try {
+    const placeholders = numerosOperacion.map(() => '?').join(',');
+    const [result] = await conn.query(
+      `DELETE FROM ventasConDescuento WHERE numeroOperacion IN (${placeholders})`,
+      numerosOperacion
+    );
+    res.json({ success: true, deletedCount: result.affectedRows });
+  } catch (error) {
+    console.error("Error al eliminar órdenes:", error);
+    res.status(500).json({ success: false, message: "Error al eliminar" });
+  }
+}
+}
 
 export default productosConDescuentoController;

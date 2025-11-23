@@ -4,7 +4,7 @@ import { ProductosConDescuento } from "../ProductosConDescuento";
 
 const isLocalhost = window.location.hostname === "localhost";
 const base = isLocalhost ? "http://localhost:8080" : "https://rma-back.vercel.app";
-                                                   //https://rma-back.vercel.app/actualizarProductoInventario
+
 const Urls = {
   usuarios: {
     cargar: `${base}/cargarUsuario`
@@ -24,7 +24,7 @@ const Urls = {
   },
   productos: {
     cargar: `${base}/cargarProducto`,
-    listar: `${base}/listarproductos`,/////////////////////////////////////////
+    listar: `${base}/listarproductos`,
     listarMarcas: `${base}/listarMarcas`,
     actualizarCantidadPorBulto: `${base}/actualizarCantidadPorBulto`,
     getSku: `${base}/getSku`,
@@ -90,7 +90,9 @@ const Urls = {
   ProductosConDescuento: {
     listar: `${base}/getProductosConDescuento`,
     ListarVendidos: `${base}/getProductosConDescuentoVendidos`, 
-    guardarVenta: `${base}/postGuardarVentasConDescuento`
+    guardarVenta: `${base}/postGuardarVentasConDescuento`,
+    eliminarOrdenes: `${base}/eliminarOrdenes`,
+    verificarExistencia: `${base}/verificarExistenciaProductoDescuento`
   },
   apiMeli: {
     getVentas: `${base}/ventas?dias=`,

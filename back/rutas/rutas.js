@@ -123,4 +123,6 @@ router.post('/tokens', apiController.saveTokens);
 router.get('/getProductosConDescuento', productosConDescuentoController.getProductosConDescuento);
 router.get('/getProductosConDescuentoVendidos', productosConDescuentoController.getProductosConDescuentoVendidos);
 router.post('/postGuardarVentasConDescuento', productosConDescuentoController.postGuardarVentasConDescuento);
+router.post('/eliminarOrdenes', productosConDescuentoController.eliminarOrdenes);
+router.post('/verificarExistenciaProductoDescuento', productosConDescuentoController.verificarExistencia);
 export default router;

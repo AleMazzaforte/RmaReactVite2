@@ -122,7 +122,8 @@ const getOrderDetails = async (orderId, accessToken) => {
 
 
 
-const getVentas = async (req, res) => {
+const getVentas = async (req, res) => { 
+
   try {
     const dias = parseInt(req.query.dias) || 7;
     if (dias < 1 || dias > 21) {
@@ -174,9 +175,9 @@ const getVentas = async (req, res) => {
       const fullOrder = await getOrderDetails(order.id, accessToken);
       if (!fullOrder) continue;
 
-      const mainOrderId = fullOrder.pack_id || fullOrder.id;
+      const numeroOperacion = fullOrder.pack_id || fullOrder.id;
 
-      if (!ordersByPack[mainOrderId]) {
+      if (!ordersByPack[numeroOperacion]) {
         let tipo_envio = "desconocido";
         let etiqueta_impresa = false;
 
@@ -248,8 +249,8 @@ const getVentas = async (req, res) => {
           [process.env.ML_USER_ID_2]: "BLOW INK"
         };
 
-        ordersByPack[mainOrderId] = {
-          id: mainOrderId,
+        ordersByPack[numeroOperacion] = {
+          numeroOperacion: numeroOperacion,
           buyer_nickname: fullOrder.buyer?.nickname || "",
           seller_nickname: sellerNicknameMap[mlUserId] || "Desconocido",
           date_created: fullOrder.date_created, // ISO string
@@ -262,7 +263,7 @@ const getVentas = async (req, res) => {
 
       // Agregar ítems
       for (const item of fullOrder.order_items || []) {
-        ordersByPack[mainOrderId].items.push({
+        ordersByPack[numeroOperacion].items.push({
           sku: item.item.seller_sku || item.item.id,
           quantity: item.quantity,
           description: item.item.title,

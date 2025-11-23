@@ -13,7 +13,7 @@ interface OrderItem {
 }
 
 export interface Order {
-  id: number;
+  numeroOperacion: string;
   buyer_nickname: string;
   seller_nickname: string;
   date_created: string;
@@ -86,7 +86,7 @@ export const Api = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedOrders, setSelectedOrders] = useState<Set<number>>(new Set());
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [productosConDescuento, setProductosConDescuento] = useState<
     Record<string, number>
   >({});
@@ -96,6 +96,8 @@ export const Api = () => {
 
   const urlGetVentas = Urls.apiMeli.getVentas;
 
+
+  
   // Cargar productos con descuento (sin cambios)
   useEffect(() => {
     const fetchProductosConDescuento = async () => {
@@ -122,7 +124,7 @@ export const Api = () => {
   }, []);
 
   // Toggle selección de una orden (sin cambios)
-  const toggleOrderSelection = (orderId: number) => {
+  const toggleOrderSelection = (orderId: string) => {
     const newSelected = new Set(selectedOrders);
     if (newSelected.has(orderId)) {
       newSelected.delete(orderId);
@@ -137,14 +139,14 @@ export const Api = () => {
     if (selectedOrders.size === orders.length) {
       setSelectedOrders(new Set());
     } else {
-      const allIds = new Set(orders.map((o) => o.id));
+      const allIds = new Set(orders.map((o) => o.numeroOperacion));
       setSelectedOrders(allIds);
     }
   };
 
   // Generar PDF (con fecha formateada en 24h y tipo de envío)
   const generatePDF = () => {
-    const selectedOrdersList = orders.filter((o) => selectedOrders.has(o.id));
+    const selectedOrdersList = orders.filter((o) => selectedOrders.has(o.numeroOperacion));
 
     if (selectedOrdersList.length === 0) {
       alert("Por favor, selecciona al menos una orden.");
@@ -172,7 +174,7 @@ export const Api = () => {
       // ✅ "Orden #" y "Tipo: ..." en la misma línea (y = yPos + 10)
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text(`Orden #${order.id}`, margin + 5, yPos + 10);
+      doc.text(`Orden #${order.numeroOperacion}`, margin + 5, yPos + 10);
 
       const tipoEnvioLabel = getTipoEnvioLabel(order.tipo_envio);
       doc.setFont("helvetica", "normal");
@@ -248,104 +250,144 @@ export const Api = () => {
     window.open(pdfUrl, '_blank');
   };
 
-  // Registrar ventas con descuento (sin cambios)
-  const registrarVentasConDescuento = async () => {
-    if (selectedOrders.size === 0) {
-      sweetAlert.warning("Selecciona al menos una orden.");
-      return;
-    }
+  // Registrar ventas con descuento /////////////////////////////////////////////////////////
+const registrarVentasConDescuento = async () => {
+  if (selectedOrders.size === 0) {
+    sweetAlert.warning("Selecciona al menos una orden.");
+    return;
+  }
 
-    const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.id));
+  const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.numeroOperacion));
 
-    // Acumulador: clave única = numeroOperacion + idSku
-    const acumulador: Record<string, {
-      idSku: number;
-      canalVenta: string;
-      numeroOperacion: string;
-      fecha: string;
-      cantidad: number;
-    }> = {};
+  // ✅ Paso previo: manejo opcional de órdenes canceladas existentes
+  const ordenesCanceladasSeleccionadas = ordenesSeleccionadas.filter(o => o.tipo_envio === "cancelada");
+  if (ordenesCanceladasSeleccionadas.length > 0) {
+    setLoading(true);
+    try {
+      const numerosOperacionCanceladas = ordenesCanceladasSeleccionadas.map(o => o.numeroOperacion);
+      const response = await axios.post(Urls.ProductosConDescuento.verificarExistencia, {
+        numerosOperacion: numerosOperacionCanceladas
+      });
+      const { existentes } = response.data;
 
-    for (const orden of ordenesSeleccionadas) {
-      const fechaISO = new Date(orden.date_created).toISOString().split("T")[0];
-      const numeroOperacion = orden.id.toString();
-      const canalVenta = orden.seller_nickname;
-
-      for (const item of orden.items) {
-        const { sku, quantity } = item;
-
-        // Función auxiliar para acumular
-        const acumular = (skuDescuento: string, qty: number) => {
-          const idSku = productosConDescuento[skuDescuento];
-          if (idSku == null) return;
-
-          const clave = `${numeroOperacion}-${idSku}`;
-          if (acumulador[clave]) {
-            acumulador[clave].cantidad += qty;
-          } else {
-            acumulador[clave] = {
-              idSku,
-              canalVenta,
-              numeroOperacion,
-              fecha: fechaISO,
-              cantidad: qty,
-            };
+      if (existentes.length > 0) {
+        setLoading(false);
+        const result = await sweetAlert.fire({
+          title: "¿Eliminar órdenes canceladas?",
+          html: `Hay <strong>${existentes.length}</strong> órdenes canceladas ya registradas.<br/>¿Deseas eliminarlas?`,
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: "Sí, eliminar",
+          cancelButtonText: "No",
+          reverseButtons: true,
+          customClass: {
+            popup: "animate-swal-shake !border !border-blue-500",
+            confirmButton: "bg-red-600 text-white",
+            cancelButton: "bg-gray-300 text-black",
           }
-        };
+        });
 
-        // 1. Si el ítem es directamente un producto con descuento
-        if (productosConDescuento[sku] !== undefined) {
-          acumular(sku, quantity);
-        }
-
-        // 2. Si el ítem es un kit, agregar su producto con descuento
-        const kitInfo = kitsConDescuento[sku];
-        if (kitInfo) {
-          const skus = Array.isArray(kitInfo.skuDescuento)
-            ? kitInfo.skuDescuento
-            : [kitInfo.skuDescuento];
-          skus.forEach((s) => acumular(s, quantity));
+        if (result.isConfirmed) {
+          setLoading(true);
+          await axios.post(Urls.ProductosConDescuento.eliminarOrdenes, {
+            numerosOperacion: existentes
+          });
+          sweetAlert.success(`✅ ${existentes.length} órdenes eliminadas.`);
         }
       }
-    }
-
-    // Convertir acumulador a array
-    const ventasParaGuardar = Object.values(acumulador);
-
-    if (ventasParaGuardar.length === 0) {
-      sweetAlert.info(
-        "Ninguna de las órdenes seleccionadas contiene productos con descuento ni kits que los incluyan."
-      );
+    } catch (error) {
+      console.error("Error en verificación/borrado:", error);
+      sweetAlert.error("Error al procesar órdenes canceladas.");
+      setLoading(false);
       return;
     }
+    setLoading(false);
+  }
 
-    sweetAlert.confirm(
-      `¿Registrar ${ventasParaGuardar.length} items con descuento en ${ordenesSeleccionadas.length} órdenes (Cuenta ${cuentaSeleccionada})?`,
-      async () => {
-        setLoading(true);
-        try {
-          const response = await axios.post(
-            Urls.ProductosConDescuento.guardarVenta,
-            ventasParaGuardar
-          );
-          const { count, message } = response.data;
+  // ✅ A PARTIR DE AQUÍ: TU LÓGICA ACTUAL (con filtro de canceladas)
+  const acumulador: Record<string, {
+    idSku: number;
+    canalVenta: string;
+    numeroOperacion: string;
+    fecha: string;
+    cantidad: number;
+  }> = {};
 
-          if (count > 0) {
-            sweetAlert.success(`✅ ${count} ventas con descuento registradas.`);
-          } else {
-            sweetAlert.info(
-              `ℹ️ ${message || "No se registraron nuevas ventas."}`
-            );
-          }
-        } catch (error) {
-          console.error("Error al registrar ventas:", error);
-          sweetAlert.error("Error al registrar las ventas con descuento.");
-        } finally {
-          setLoading(false);
+  for (const orden of ordenesSeleccionadas) {
+    const fechaISO = new Date(orden.date_created).toISOString().split("T")[0];
+    const numeroOperacion = orden.numeroOperacion;
+    const canalVenta = orden.seller_nickname;
+
+    for (const item of orden.items) {
+      const { sku, quantity } = item;
+
+      const acumular = (skuDescuento: string, qty: number) => {
+        const idSku = productosConDescuento[skuDescuento];
+        if (idSku == null) return;
+        if (orden.tipo_envio === "cancelada") return; // ✅ omitir canceladas
+
+        const clave = `${numeroOperacion}-${idSku}`;
+        if (acumulador[clave]) {
+          acumulador[clave].cantidad += qty;
+        } else {
+          acumulador[clave] = {
+            idSku,
+            canalVenta,
+            numeroOperacion,
+            fecha: fechaISO,
+            cantidad: qty,
+          };
         }
+      };
+
+      if (productosConDescuento[sku] !== undefined) {
+        acumular(sku, quantity);
       }
-    );
-  };
+
+      const kitInfo = kitsConDescuento[sku];
+      if (kitInfo) {
+        const skus = Array.isArray(kitInfo.skuDescuento)
+          ? kitInfo.skuDescuento
+          : [kitInfo.skuDescuento];
+        skus.forEach((s) => acumular(s, quantity));
+      }
+    }
+  }
+
+  const ventasParaGuardar = Object.values(acumulador);
+console.log(ventasParaGuardar);
+
+  if (ventasParaGuardar.length === 0) {
+    sweetAlert.info("Ninguna orden seleccionada tiene productos con descuento.");
+    return;
+  }
+
+   const ventasParaGuardarComoString = ventasParaGuardar.map(venta => ({
+    ...venta,
+    numeroOperacion: String(venta.numeroOperacion) // ✅ ¡esto es crucial!
+  }));
+
+  // ✅ Aquí se envían al backend, que FILTRA DUPLICADOS
+  sweetAlert.confirm(
+    `¿Registrar ${ventasParaGuardar.length} items con descuento?`,
+    async () => {
+      setLoading(true);
+      try {
+        const response = await axios.post(Urls.ProductosConDescuento.guardarVenta, ventasParaGuardarComoString);
+        const { count, message } = response.data;
+        if (count > 0) {
+          sweetAlert.success(`✅ ${count} ventas registradas.`);
+        } else {
+          sweetAlert.info(`ℹ️ ${message || "Ya estaban registradas."}`);
+        }
+      } catch (error) {
+        sweetAlert.error("Error al registrar ventas.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  );
+};
 
   // ✅ Función actualizada: ahora incluye "cuenta"
   const handleFetchOrders = async () => {
@@ -382,6 +424,7 @@ export const Api = () => {
     }
   };
 
+ 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {loading && <Loader />}
@@ -480,7 +523,7 @@ export const Api = () => {
           <div className="space-y-5">
             {orders.map((order) => (
               <div
-                key={order.id}
+                key={order.numeroOperacion}
                 className={`rounded-lg p-5 shadow-sm relative border ${order.tipo_envio === "cancelada"
                   ? "bg-gray-100 border-gray-300"
                   : order.tipo_envio === "retiro_local"
@@ -491,8 +534,8 @@ export const Api = () => {
                 <div className="absolute top-3 right-3">
                   <input
                     type="checkbox"
-                    checked={selectedOrders.has(order.id)}
-                    onChange={() => toggleOrderSelection(order.id)}
+                    checked={selectedOrders.has(order.numeroOperacion)}
+                    onChange={() => toggleOrderSelection(order.numeroOperacion)}
                     className="w-5 h-5"
                   />
                 </div>
@@ -500,7 +543,7 @@ export const Api = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      Orden #{order.id}
+                      Orden #{order.numeroOperacion}
                     </h3>
 
                   </div>
