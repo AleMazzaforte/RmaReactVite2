@@ -91,6 +91,7 @@ export const GestionarRMA = (): JSX.Element => {
   };
 
   const handleActualizar = async (rmaActualizada: Rma) => {
+
     setRmas(
       rmas.map((rma) =>
         rma.idRma === rmaActualizada.idRma ? rmaActualizada : rma
@@ -98,6 +99,7 @@ export const GestionarRMA = (): JSX.Element => {
     );
 
     try {
+      setLoading(true);
       const response = await fetch(
         `${Urls.rma.actualizarProducto}/${rmaActualizada.idRma}`,
         {
@@ -129,7 +131,10 @@ export const GestionarRMA = (): JSX.Element => {
       }
     } catch (error) {
       console.error("Error al actualizar el RMA:", error);
+    }finally {
+      setLoading(false);
     }
+
   };
 
   const handleEliminar = async (idRma: string | undefined) => {
@@ -154,6 +159,7 @@ export const GestionarRMA = (): JSX.Element => {
     if (!result.isConfirmed) return;
 
     try {
+      setLoading(true);
       const response = await fetch(`${Urls.rma.eliminar}/${idRma}`, {
         method: "DELETE",
       });
@@ -189,6 +195,8 @@ export const GestionarRMA = (): JSX.Element => {
         icon: "error",
         confirmButtonColor: "#d33",
       });
+    }finally {
+      setLoading(false);
     }
   };
 
@@ -253,9 +261,7 @@ export const GestionarRMA = (): JSX.Element => {
           ),
         }))
       );
-
-      // 3. Opcional: también actualizar rmas si el cliente coincide (avanzado)
-      // Pero para simplificar, lo dejamos así.
+      // 3. Mostrar alerta de éxito
 
       sweetAlert.fire({
         title: "Éxito",
