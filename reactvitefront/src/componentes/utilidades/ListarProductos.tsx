@@ -1,4 +1,4 @@
-import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
+import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 

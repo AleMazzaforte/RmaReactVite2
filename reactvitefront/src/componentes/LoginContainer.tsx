@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, ChangeEvent, FormEvent } from 'react';
 import {sweetAlert}  from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
 import { useAuth } from '../rutas/AuthContext';
 import { useNavigate } from 'react-router-dom';

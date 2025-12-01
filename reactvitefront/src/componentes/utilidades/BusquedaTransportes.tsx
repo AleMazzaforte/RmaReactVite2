@@ -1,4 +1,4 @@
-import React, { useState, useRef, ChangeEvent, useCallback } from 'react';
+import { useState, useRef, ChangeEvent, useCallback } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 
@@ -13,7 +13,7 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceTimeout = useRef< number | null>(null); // Para manejar el timeout
+  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null); // Para manejar el timeout
 
   const handleInputChange = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
@@ -26,14 +26,15 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
       }
 
       if (value) {
-        
+
 
         // Retrasar la búsqueda por 500 ms
         debounceTimeout.current = setTimeout(async () => {
-          try {setLoading(true);
+          try {
+            setLoading(true);
             const response = await fetch(`${endpoint}?query=${value}`);
             const data = await response.json();
-            const filtrados = data.filter((transporte: any) => 
+            const filtrados = data.filter((transporte: any) =>
               transporte.nombre.toLowerCase().includes(value.toLowerCase())
             );
             setResultados(filtrados);

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ListarProductos } from "./utilidades/ListarProductos";
 import { Contenedor } from "./utilidades/Contenedor";
 import Urls from "./utilidades/Urls";

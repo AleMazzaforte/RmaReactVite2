@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
 import Loader from "./utilidades/Loader"; // Importar el componente Loader
 import { ListarMarcas } from "./utilidades/ListarMarcas"; // Importar el componente ListarMarcas

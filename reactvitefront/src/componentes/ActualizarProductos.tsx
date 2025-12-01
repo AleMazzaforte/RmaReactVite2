@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import Loader from "./utilidades/Loader"; // Importar el componente Loader
 import { ListarMarcas } from "./utilidades/ListarMarcas"; // Importar el componente ListarMarcas
 import { ListarProductos } from "./utilidades/ListarProductos"; // Importar el componente ListarProductos

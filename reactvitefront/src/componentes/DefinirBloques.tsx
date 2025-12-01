@@ -1,5 +1,5 @@
 // DefinirBloques.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Urls from './utilidades/Urls';
 import {sweetAlert} from "./utilidades/SweetAlertWrapper";
 import Loader from "./utilidades/Loader";

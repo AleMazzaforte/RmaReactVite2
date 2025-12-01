@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Calculator } from "./Calculator";
 import { sweetAlert } from "./SweetAlertWrapper";
 import Urls from "./Urls"

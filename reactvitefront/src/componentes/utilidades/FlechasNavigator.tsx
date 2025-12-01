@@ -1,6 +1,6 @@
 // FlechasNavigator.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface FlechasNavigatorProps<T> {
   resultados: T[];

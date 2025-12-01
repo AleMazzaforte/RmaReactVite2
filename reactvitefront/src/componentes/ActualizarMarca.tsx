@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ListarMarcas } from './utilidades/ListarMarcas';  // Importar el componente ListarMarcas
 import { Contenedor } from './utilidades/Contenedor'; // Importar el componente Contenedor
 import Urls from "./utilidades/Urls";

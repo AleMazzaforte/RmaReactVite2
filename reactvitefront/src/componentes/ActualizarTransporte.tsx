@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import Loader from "./utilidades/Loader";
 import { BusquedaTransportes } from "./utilidades/BusquedaTransportes";
 import { Contenedor } from "./utilidades/Contenedor";

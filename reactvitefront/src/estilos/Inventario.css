@@ -131,7 +131,7 @@
   padding: 0.5rem;
   border: 1px solid #d1d5db;
   background-color: #f3f4f6;
-  border-bottom: 1px solid #d1d5d;
+  border-bottom: 1px solid #d1d5db;
 }
 
 .td-body {
@@ -157,6 +157,7 @@
   background-color: #f3f4f6;
   border-bottom: 1px solid #d1d5db;
 }
+
 .td-diferencia {
   padding: 0.5rem;
   border: 1px solid #d1d5db;
@@ -165,11 +166,13 @@
 }
 
 .td-diferencia.positivo {
-  color: #1d4ed8; /* Color cuando diferencia > 0 */
+  color: #1d4ed8;
+  /* Color cuando diferencia > 0 */
 }
 
 .td-diferencia.negativo {
-  color: #dc2626; /* Color cuando diferencia < 0 */
+  color: #dc2626;
+  /* Color cuando diferencia < 0 */
 }
 
 .producto-reposicion-lista {
@@ -190,7 +193,8 @@
 
 /* Fondo para filas impares (gris más oscuro) */
 .producto-reposicion-lista.fila-impar {
-  background-color: #f3f4f6; /* Gris más oscuro que el original #f9fafb */
+  background-color: #f3f4f6;
+  /* Gris más oscuro que el original #f9fafb */
 }
 
 /* Resumen */
@@ -232,11 +236,13 @@
   padding: 0.5rem;
   cursor: pointer;
 }
+
 .modal-coincidencias-list {
   max-height: 15rem;
   overflow-y: auto;
   margin-bottom: 1rem;
 }
+
 .modal-overlay {
   position: fixed;
   inset: 0;

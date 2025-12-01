@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { StockManager } from "./utilidades/StockManager";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";

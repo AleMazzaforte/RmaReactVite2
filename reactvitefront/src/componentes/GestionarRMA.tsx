@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import { TablaListarRmas } from "./TablaListarRmas";
 import { BusquedaClientes } from "./utilidades/BusquedaClientes";

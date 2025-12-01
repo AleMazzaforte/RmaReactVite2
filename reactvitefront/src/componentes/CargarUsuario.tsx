@@ -1,4 +1,4 @@
-import React, { useState, FormEvent, ChangeEvent } from 'react';
+import { useState, FormEvent, ChangeEvent } from 'react';
 import {sweetAlert} from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
 import { Contenedor } from './utilidades/Contenedor';
 import Urls from './utilidades/Urls';

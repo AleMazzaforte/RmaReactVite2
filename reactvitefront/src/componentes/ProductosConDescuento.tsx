@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { sweetAlert } from "../componentes/utilidades/SweetAlertWrapper";
 import Urls from "../componentes/utilidades/Urls";

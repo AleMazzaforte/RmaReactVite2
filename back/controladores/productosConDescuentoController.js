@@ -55,7 +55,7 @@ export const productosConDescuentoController = {
   let connection;
   try {
     const ventas = Array.isArray(req.body) ? req.body : [req.body];
-    console.log(ventas);
+  
     
     if (ventas.length === 0) {
       return res.status(400).json({ error: "No se enviaron ventas" });
@@ -72,7 +72,7 @@ export const productosConDescuentoController = {
     connection = await conn.getConnection();
 
     const numerosOperacion = [...new Set(ventas.map(v => v.numeroOperacion))]; // Evitar repetidos innecesarios
-//console.log(numerosOperacion);
+
 
     if (numerosOperacion.length > 0) {
       const placeholders = numerosOperacion.map(() => '?').join(',');

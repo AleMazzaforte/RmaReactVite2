@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { BusquedaClientes } from "./utilidades/BusquedaClientes";
 import { ListarProductos } from "./utilidades/ListarProductos";
 import { ListarMarcas } from "./utilidades/ListarMarcas";

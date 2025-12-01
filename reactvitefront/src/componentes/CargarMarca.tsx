@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Loader from "./utilidades/Loader"; // Importar el componente Loader
 import { Contenedor } from "./utilidades/Contenedor";
 import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert

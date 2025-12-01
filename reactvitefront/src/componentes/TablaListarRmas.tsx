@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ListarOp } from './utilidades/ListarOp';
 import Urls from './utilidades/Urls';
 
