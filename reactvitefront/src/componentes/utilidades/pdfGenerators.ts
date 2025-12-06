@@ -87,7 +87,7 @@ export const generateEnviosPDF = (orders: Order[], selectedOrders: Set<string>) 
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Comprador: ${order.buyer_nickname}`, margin + 5, currentY);
+    doc.text(`Comprador: ${order.buyer_full_name} (${order.buyer_nickname})`, margin + 5, currentY);
     currentY += 6;
     doc.text(`Vendedor: ${order.seller_nickname}`, margin + 5, currentY);
     currentY += 6;
