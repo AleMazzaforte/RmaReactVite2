@@ -111,6 +111,8 @@ const getOrderDetails = async (orderId, accessToken) => {
     );
 
     return response.data;
+    
+    
   } catch (error) {
     console.warn(
       `⚠️ No se pudo obtener detalles de la orden ${orderId}:`,
@@ -176,6 +178,7 @@ const getVentas = async (req, res) => {
       if (!fullOrder) continue;
 
       const numeroOperacion = fullOrder.pack_id || fullOrder.id;
+      const buyer_full_name = `${fullOrder.buyer?.first_name || ''} ${fullOrder.buyer?.last_name || ''}`.trim();
 
       if (!ordersByPack[numeroOperacion]) {
         let tipo_envio = "desconocido";
@@ -253,6 +256,7 @@ const getVentas = async (req, res) => {
           numeroOperacion: numeroOperacion,
           buyer_nickname: fullOrder.buyer?.nickname || "",
           seller_nickname: sellerNicknameMap[mlUserId] || "Desconocido",
+          buyer_full_name,
           date_created: fullOrder.date_created, // ISO string
           etiqueta_impresa,
           tipo_envio,

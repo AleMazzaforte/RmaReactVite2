@@ -4,6 +4,8 @@ import jsPDF from "jspdf";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Urls from "./utilidades/Urls";
 import Loader from "./utilidades/Loader";
+// Al inicio del archivo, después de otros imports
+import { generateEnviosPDF, generateRetiroLocalPDF } from "./utilidades/pdfGenerators";
 
 // Tipos actualizados
 interface OrderItem {
@@ -20,6 +22,7 @@ export interface Order {
   etiqueta_impresa: boolean;
   tipo_envio: string; // ✅ añadido
   items: OrderItem[];
+  buyer_full_name?: string;
 }
 
 interface ApiResponse {
@@ -96,8 +99,6 @@ export const Api = () => {
 
   const urlGetVentas = Urls.apiMeli.getVentas;
 
-
-  
   // Cargar productos con descuento (sin cambios)
   useEffect(() => {
     const fetchProductosConDescuento = async () => {
@@ -145,110 +146,7 @@ export const Api = () => {
   };
 
   // Generar PDF (con fecha formateada en 24h y tipo de envío)
-  const generatePDF = () => {
-    const selectedOrdersList = orders.filter((o) => selectedOrders.has(o.numeroOperacion));
-
-    if (selectedOrdersList.length === 0) {
-      alert("Por favor, selecciona al menos una orden.");
-      return;
-    }
-
-    const doc = new jsPDF("p", "mm", "a4");
-    const margin = 10;
-    const pageWidth = 210;
-    const cardWidth = pageWidth - 2 * margin;
-    let yPos = margin;
-
-    const controllers = ["Javi", "Ro", "Lu", "Rodri"];
-    const checkboxSize = 3.5;
-    const checkboxSpacing = 15;
-
-    selectedOrdersList.forEach((order, index) => {
-      if (index > 0 && index % 3 === 0) {
-        doc.addPage();
-        yPos = margin;
-      }
-
-      const startY = yPos;
-
-      // ✅ "Orden #" y "Tipo: ..." en la misma línea (y = yPos + 10)
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(`Orden #${order.numeroOperacion}`, margin + 5, yPos + 10);
-
-      const tipoEnvioLabel = getTipoEnvioLabel(order.tipo_envio);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Tipo: ${tipoEnvioLabel}`, margin + 76, yPos + 10); // mismo Y
-
-      // Badge de etiqueta (ligera subida si era +6 antes)
-      const badgeText = order.etiqueta_impresa
-        ? "Etiqueta generada"
-        : "Sin etiqueta";
-      const badgeWidth = doc.getTextWidth(badgeText) + 6;
-      const badgeX = margin + cardWidth - badgeWidth - 3;
-      const badgeY = yPos + 6; // sigue igual (arriba del título, no cambia)
-      doc.setFillColor(
-        order.etiqueta_impresa ? 220 : 255,
-        order.etiqueta_impresa ? 255 : 255,
-        220
-      );
-      doc.rect(badgeX, badgeY, badgeWidth, 8, "F");
-      doc.setTextColor(0);
-      doc.setFontSize(10);
-      doc.text(badgeText, badgeX + 3, badgeY + 5);
-
-      // ✅ Todo sube: ahora currentY empieza en yPos + 18 (en lugar de +22)
-      let currentY = yPos + 18;
-
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Comprador: ${order.buyer_nickname}`, margin + 5, currentY);
-      currentY += 6;
-      doc.text(`Vendedor: ${order.seller_nickname}`, margin + 5, currentY);
-      currentY += 6;
-      const formattedDate = formatDateToDisplay(order.date_created);
-      doc.text(`Fecha: ${formattedDate}`, margin + 5, currentY);
-      currentY += 8;
-
-      doc.setFont("helvetica", "normal");
-      doc.text("", margin + 5, currentY);
-      currentY += 4;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      order.items.forEach((item) => {
-        doc.rect(margin + 5, currentY - 3, checkboxSize, checkboxSize);
-        doc.text(`${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 11, currentY);
-        currentY += 5;
-      });
-
-      currentY += 4;
-      doc.setFont("helvetica", "normal");
-      doc.text("Controló:", margin + 5, currentY);
-
-      let ctrlX = margin + 25;
-      controllers.forEach((name) => {
-        doc.rect(ctrlX, currentY - 2, checkboxSize, checkboxSize);
-        doc.setFont("helvetica", "normal");
-        doc.text(name, ctrlX + checkboxSize + 2, currentY);
-        ctrlX += checkboxSize + 2 + doc.getTextWidth(name) + checkboxSpacing;
-      });
-
-      const cardHeight = currentY - startY + 6;
-
-      if (startY + cardHeight > 297 - margin) {
-        doc.addPage();
-        yPos = margin;
-      }
-
-      doc.setDrawColor(0, 0, 0);
-      doc.rect(margin, startY, cardWidth, cardHeight);
-      yPos = startY + cardHeight + 8;
-    });
-
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    window.open(pdfUrl, '_blank');
-  };
+  
 
   // Registrar ventas con descuento /////////////////////////////////////////////////////////
 const registrarVentasConDescuento = async () => {
@@ -355,7 +253,7 @@ const registrarVentasConDescuento = async () => {
   }
 
   const ventasParaGuardar = Object.values(acumulador);
-console.log(ventasParaGuardar);
+
 
   if (ventasParaGuardar.length === 0) {
     sweetAlert.info("Ninguna orden seleccionada tiene productos con descuento.");
@@ -471,16 +369,21 @@ console.log(ventasParaGuardar);
           {loading ? "Cargando..." : "Obtener órdenes"}
         </button>
 
-        <button
-          onClick={generatePDF}
-          disabled={selectedOrders.size === 0}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-green-600 hover:bg-green-700"
-            }`}
-        >
-          Imprimir {selectedOrders.size} seleccionadas
-        </button>
+       <button
+  onClick={() => generateEnviosPDF(orders, selectedOrders)}
+  disabled={!orders.some(o => selectedOrders.has(o.numeroOperacion) && o.tipo_envio !== "retiro_local")}
+  className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
+>
+  Imprimir envíos
+</button>
+
+<button
+  onClick={() => generateRetiroLocalPDF(orders, selectedOrders)}
+  disabled={!orders.some(o => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local")}
+  className="ml-2 px-4 py-2 bg-amber-600 text-white rounded disabled:bg-gray-400"
+>
+  Imprimir constancias (retiro en local)
+</button>
 
         <button
           onClick={registrarVentasConDescuento}
@@ -566,7 +469,7 @@ console.log(ventasParaGuardar);
 
                 <p className="text-sm text-gray-600 mt-2">
                   <span className="font-medium">Comprador:</span>{" "}
-                  {order.buyer_nickname}
+                  {order.buyer_full_name}{" "} ({order.buyer_nickname})
                 </p>
                 <p className="text-sm text-gray-600">
                   <span className="font-medium">Vendedor:</span>{" "}
