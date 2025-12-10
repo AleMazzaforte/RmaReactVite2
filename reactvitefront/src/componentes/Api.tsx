@@ -6,6 +6,7 @@ import Urls from "./utilidades/Urls";
 import Loader from "./utilidades/Loader";
 // Al inicio del archivo, después de otros imports
 import { generateEnviosPDF, generateRetiroLocalPDF } from "./utilidades/pdfGenerators";
+import { printRetiroLocalHTML } from "./utilidades/printUtils";
 
 // Tipos actualizados
 interface OrderItem {
@@ -378,7 +379,7 @@ const registrarVentasConDescuento = async () => {
 </button>
 
 <button
-  onClick={() => generateRetiroLocalPDF(orders, selectedOrders)}
+  onClick={() => printRetiroLocalHTML(orders, selectedOrders)}
   disabled={!orders.some(o => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local")}
   className="ml-2 px-4 py-2 bg-amber-600 text-white rounded disabled:bg-gray-400"
 >
