@@ -38,6 +38,7 @@ const Urls = {
     listarOp: `${base}/listarOp`,
     actualizarOp: `${base}/actualizarOp`,
     listarOpProductos: `${base}/listarOpProductos`,
+    getOpProductosRaw: `${base}/getOpProductosRaw`,
     buscar: `${base}/buscarRMA`,
     eliminar: `${base}/eliminarRma`,
     actualizarProducto: `${base}/actualizarProductoRma`,
@@ -58,13 +59,13 @@ const Urls = {
     guardarProductos: `${base}/guardarOpProductos`,
   },
   inventario: {
-  preparar: `${base}/prepararInventario`,
-  guardar: `${base}/guardarInventario`,
-  actualizar: `${base}/actualizarBloques`,
-  actualizarProducto: `${base}/actualizarProductoInventario`,
-  resetearConteos: `${base}/resetearConteos`,
-  productosInactivos: `${base}/productosInactivos`,
-  actualizarcantidadPorBulto: `${base}/actualizarcantidadPorBulto`
+    preparar: `${base}/prepararInventario`,
+    guardar: `${base}/guardarInventario`,
+    actualizar: `${base}/actualizarBloques`,
+    actualizarProducto: `${base}/actualizarProductoInventario`,
+    resetearConteos: `${base}/resetearConteos`,
+    productosInactivos: `${base}/productosInactivos`,
+    actualizarcantidadPorBulto: `${base}/actualizarcantidadPorBulto`
   },
   devolucion: {
     agregar: `${base}/agregarDevolucion`,
@@ -76,7 +77,7 @@ const Urls = {
     guardar: `${base}/guardarReposicion`,
     obtener: `${base}/obtenerReposiciones`,
     limpiar: `${base}/limpiarReposiciones`,
-  }, 
+  },
   stock: {
     obtener: `${base}/obtenerStock`,
     actualizarOp: `${base}/actualizarOp`
@@ -89,7 +90,7 @@ const Urls = {
   },
   ProductosConDescuento: {
     listar: `${base}/getProductosConDescuento`,
-    ListarVendidos: `${base}/getProductosConDescuentoVendidos`, 
+    ListarVendidos: `${base}/getProductosConDescuentoVendidos`,
     guardarVenta: `${base}/postGuardarVentasConDescuento`,
     eliminarOrdenes: `${base}/eliminarOrdenes`,
     verificarExistencia: `${base}/verificarExistenciaProductoDescuento`

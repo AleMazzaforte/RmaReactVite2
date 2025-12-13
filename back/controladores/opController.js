@@ -33,11 +33,35 @@ const listarOp = {
         return res.status(404).json({ message: "No se encontraron OPs." });
       }
 
-      // Convertir el campo 'skus' de string JSON a array (si usás JSON_ARRAYAGG, ya es JSON)
+      // Convertir el campo 'skus' de string JSON a array
       const opsConSkus = results.map(row => ({
         ...row,
         skus: Array.isArray(row.skus) ? row.skus : JSON.parse(row.skus || '[]')
       }));
+
+      // Expandir componentes de kits para cada OP
+      for (const op of opsConSkus) {
+        if (op.skus.length === 0) continue;
+
+        // Obtener componentes de los kits que están en esta OP
+        const [kitsComponentes] = await connection.query(
+          `SELECT idSku1, idSku2, idSku3, idSku4 
+           FROM kits 
+           WHERE idSkuKit IN (?)`,
+          [op.skus]
+        );
+
+        // Expandir todos los componentes (ignorar nulls)
+        const componentesDeKits = kitsComponentes.flatMap(kit => [
+          kit.idSku1,
+          kit.idSku2,
+          kit.idSku3,
+          kit.idSku4
+        ]).filter(id => id !== null && id !== undefined);
+
+        // Combinar productos directos + componentes de kits (sin duplicados)
+        op.skus = [...new Set([...op.skus, ...componentesDeKits])];
+      }
 
       res.json(opsConSkus);
     } catch (error) {
@@ -217,59 +241,59 @@ const listarOp = {
   },
   // controllers/rmaController.js
 
-getListarOpProductos: async (req, res) => {
-  const { idOp } = req.params;
-  let connection;
-  try {
-    connection = await conn.getConnection();
+  getListarOpProductos: async (req, res) => {
+    const { idOp } = req.params;
+    let connection;
+    try {
+      connection = await conn.getConnection();
 
-    // 1. Obtener productos directos + kits de la OP
-    const [productosOp] = await connection.query(
-      `SELECT idSku FROM opProductos WHERE idOp = ?`,
-      [idOp]
-    );
+      // 1. Obtener productos directos + kits de la OP
+      const [productosOp] = await connection.query(
+        `SELECT idSku FROM opProductos WHERE idOp = ?`,
+        [idOp]
+      );
 
-    const idsProductosEnOp = productosOp.map(p => p.idSku);
+      const idsProductosEnOp = productosOp.map(p => p.idSku);
 
-    // 2. Si hay kits, obtener sus componentes
-    const [kitsComponentes] = await connection.query(
-      `SELECT idSku1, idSku2, idSku3, idSku4 
+      // 2. Si hay kits, obtener sus componentes
+      const [kitsComponentes] = await connection.query(
+        `SELECT idSku1, idSku2, idSku3, idSku4 
        FROM kits 
        WHERE idSkuKit IN (?)`,
-      [idsProductosEnOp]
-    );
+        [idsProductosEnOp]
+      );
 
-    // 3. Expandir todos los componentes (ignorar nulls)
-    const componentesDeKits = kitsComponentes.flatMap(kit => [
-      kit.idSku1,
-      kit.idSku2,
-      kit.idSku3,
-      kit.idSku4
-    ]).filter(id => id !== null && id !== undefined);
+      // 3. Expandir todos los componentes (ignorar nulls)
+      const componentesDeKits = kitsComponentes.flatMap(kit => [
+        kit.idSku1,
+        kit.idSku2,
+        kit.idSku3,
+        kit.idSku4
+      ]).filter(id => id !== null && id !== undefined);
 
-    // 4. Unir productos directos + componentes de kits
-    const todosLosIds = [...new Set([...idsProductosEnOp, ...componentesDeKits])];
+      // 4. Unir productos directos + componentes de kits
+      const todosLosIds = [...new Set([...idsProductosEnOp, ...componentesDeKits])];
 
-    // 5. Obtener los SKUs reales para devolver
-    const [productosConSku] = await connection.query(
-      `SELECT id, sku FROM productos WHERE id IN (?) ORDER BY sku`,
-      [todosLosIds]
-    );
+      // 5. Obtener los SKUs reales para devolver
+      const [productosConSku] = await connection.query(
+        `SELECT id, sku FROM productos WHERE id IN (?) ORDER BY sku`,
+        [todosLosIds]
+      );
 
-    // Formato esperado por el frontend: { id, nombre: sku }
-    const resultado = productosConSku.map(p => ({
-      id: p.id,
-      nombre: p.sku
-    }));
+      // Formato esperado por el frontend: { id, nombre: sku }
+      const resultado = productosConSku.map(p => ({
+        id: p.id,
+        nombre: p.sku
+      }));
 
-    res.json(resultado);
-  } catch (error) {
-    console.error("Error al obtener los productos de la OP:", error);
-    res.status(500).json({ message: "Error al obtener los productos de la OP" });
-  } finally {
-    if (connection) connection.release();
-  }
-},
+      res.json(resultado);
+    } catch (error) {
+      console.error("Error al obtener los productos de la OP:", error);
+      res.status(500).json({ message: "Error al obtener los productos de la OP" });
+    } finally {
+      if (connection) connection.release();
+    }
+  },
 
   getSku: async (req, res) => {
     const { idsProductos } = req.params;
@@ -419,6 +443,30 @@ getListarOpProductos: async (req, res) => {
       });
     } finally {
       connection.release();
+    }
+  },
+
+  // Get raw opProductos data for updating
+  getOpProductosRaw: async (req, res) => {
+    const { idOp } = req.params;
+    let connection;
+    try {
+      connection = await conn.getConnection();
+
+      const [results] = await connection.query(
+        `SELECT id, idOp, idSku, cantidad 
+         FROM opProductos 
+         WHERE idOp = ?
+         ORDER BY id`,
+        [idOp]
+      );
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error al obtener opProductos:", error);
+      res.status(500).json({ message: "Error al obtener opProductos" });
+    } finally {
+      if (connection) connection.release();
     }
   },
 

@@ -33,7 +33,7 @@ interface ProductoConEstado extends Producto {
 
 export const ActualizarImpo = () => {
   const [opSeleccionada, setOpSeleccionada] = useState<Op | null>(null);
-  const [productos, setProductos] = useState<Producto[]>([]);
+  // const [productos, setProductos] = useState<Producto[]>([]);
   const [productosOp, setProductosOp] = useState<ProductoConEstado[]>([]);
   const [nuevoProducto, setNuevoProducto] = useState<Producto | null>(null);
   const [nuevaCantidad, setNuevaCantidad] = useState<number>(0);
@@ -72,14 +72,22 @@ export const ActualizarImpo = () => {
     setLoading(true);
 
     try {
-      // 1. Obtener los productos de la OP
-      const resOpProductos = await fetch(`${urlOpProductos}/${op.id}`);
+      // 1. Obtener los productos de la OP usando el nuevo endpoint
+      const resOpProductos = await fetch(`${Urls.rma.getOpProductosRaw}/${op.id}`);
       const opProductosData: OpProducto[] = await resOpProductos.json();
 
       // 2. Obtener los SKUs de los productos
       const idsProductos = opProductosData
         .map((opProd) => opProd.idSku)
+        .filter((id) => id !== null && id !== undefined) // Filter out null/undefined
         .join(",");
+
+      if (!idsProductos) {
+        // No hay productos en esta OP
+        setProductosOp([]);
+        return;
+      }
+
       const resProductos = await fetch(`${urlGetSku}/${idsProductos}`);
       const productosData: Producto[] = await resProductos.json();
 
@@ -96,7 +104,7 @@ export const ActualizarImpo = () => {
       });
 
       setProductosOp(productosConEstado);
-      setProductos(productosData);
+
     } catch (error) {
       console.error("Error cargando datos:", error);
       sweetAlert.fire({
@@ -145,13 +153,13 @@ export const ActualizarImpo = () => {
       );
 
       sweetAlert.fire({
-        icon: "success",  
+        icon: "success",
         title: "Producto eliminado",
         text: "El producto se ha eliminado correctamente de la operación.",
       });
     } catch (error) {
       console.error("Error eliminando producto:", error);
-     sweetAlert.fire({
+      sweetAlert.fire({
         icon: "error",
         title: "Error al eliminar producto",
         text: "No se pudo eliminar el producto de la operación.",
@@ -168,18 +176,18 @@ export const ActualizarImpo = () => {
         title: "Error",
         text: "Debes seleccionar un producto para agregar.",
       });
-     
+
       return;
     }
 
     // Verificar si el producto ya está en la lista
-    if (productosOp.some((p) => p.id === nuevoProducto.id)) { 
+    if (productosOp.some((p) => p.id === nuevoProducto.id)) {
       sweetAlert.fire({
         icon: "error",
         title: "Error",
         text: "Este producto ya está en la lista.",
       });
-     
+
       return;
     }
 
@@ -210,7 +218,7 @@ export const ActualizarImpo = () => {
           title: "No hay cambios",
           text: "No se han realizado cambios en los productos.",
         });
-      
+
         return;
       }
 
@@ -229,7 +237,7 @@ export const ActualizarImpo = () => {
           title: "Error",
           text: "No hay productos para actualizar.",
         });
-      
+
         return;
       }
       if (payload.productos.some((p) => p.cantidad <= 0)) {
@@ -238,7 +246,7 @@ export const ActualizarImpo = () => {
           title: "Error",
           text: "Todos los productos deben tener una cantidad mayor a cero.",
         });
-    
+
         return;
       }
       const response = await fetch(`${urlActualizarSelectivoOp}`, {
@@ -256,15 +264,15 @@ export const ActualizarImpo = () => {
         title: "Éxito",
         text: "Los cambios se han guardado correctamente.",
       });
-      
+
     } catch (error) {
-      console.error("Error al guardar:", error);  
+      console.error("Error al guardar:", error);
       sweetAlert.fire({
         icon: "error",
         title: "Error",
         text: "No se pudieron guardar los cambios.",
       });
-      
+
     }
   };
 
@@ -344,8 +352,8 @@ export const ActualizarImpo = () => {
                               }
                               disabled={eliminando === item.idOpProducto}
                               className={`px-3 py-0.5 rounded text-sm ${eliminando === item.idOpProducto
-                                  ? "bg-gray-400 text-white cursor-wait"
-                                  : "bg-red-600 text-white hover:bg-red-700"
+                                ? "bg-gray-400 text-white cursor-wait"
+                                : "bg-red-600 text-white hover:bg-red-700"
                                 }`}
                             >
                               {eliminando === item.idOpProducto

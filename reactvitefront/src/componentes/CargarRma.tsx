@@ -133,7 +133,7 @@ export const CargarRma: React.FC = () => {
         sweetAlert.fire({
           icon: "error",
           title: "Producto no encontrado en OP",
-          text: `El producto ${productoSeleccionado.sku} no está incluido en la OP ${op.nombre}.`,
+          text: `El producto ${productoSeleccionado.sku} no está incluido en "${op.nombre}".`,
         });
         setOpLoteSeleccionado(null);
         if (opLoteInputRef.current) {

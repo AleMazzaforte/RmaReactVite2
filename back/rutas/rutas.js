@@ -1,14 +1,14 @@
 import express from 'express';
-import { 
-    clienteController, 
-    productosGeneralController,  
-    cargarRma, 
-    gestionarRma,  
+import {
+    clienteController,
+    productosGeneralController,
+    cargarRma,
+    gestionarRma,
 } from '../controladores/rmaController.js';
 
 import { postLogin } from '../controladores/loginController.js';
-import {getLogo} from '../controladores/logoController.js';
-import  usuario  from '../controladores/usuarioController.js';
+import { getLogo } from '../controladores/logoController.js';
+import usuario from '../controladores/usuarioController.js';
 import gestionClientes from '../controladores/clienteController.js';
 import listarOp from '../controladores/opController.js';
 import productosController from '../controladores/productosController.js';
@@ -42,6 +42,7 @@ router.get('/listarOp/:query', listarOp.getListarOp);
 router.post('/guardarOp', listarOp.postGuardarOp);
 router.post('/guardarOpProductos', listarOp.postGuardarOpProductos);
 router.get('/listarOpProductos/:idOp', listarOp.getListarOpProductos);
+router.get('/getOpProductosRaw/:idOp', listarOp.getOpProductosRaw);
 router.get('/getSku/:idsProductos', listarOp.getSku);
 router.post('/actualizarOp', listarOp.postActualizarOp);
 router.post('/agregarProductoOp', listarOp.postAgregarProductoOp);
@@ -64,9 +65,9 @@ router.post('/actualizarMarca', marcas.postActualizarMarca);
 router.post('/eliminarMarca', marcas.postEliminarMarca);
 
 // Ruta para RMA
-router.post('/agregarRma',  cargarRma.postAgregarRma);
+router.post('/agregarRma', cargarRma.postAgregarRma);
 router.get('/getRmaCLiente/:idCliente', gestionarRma.getListarProductosRma);
-router.post('/actualizarProductoRma/:idRma', gestionarRma.postActualizarCliente); 
+router.post('/actualizarProductoRma/:idRma', gestionarRma.postActualizarCliente);
 router.delete('/eliminarRma/:idRma', gestionarRma.deleteRma);
 router.get('/getUltimoNIngreso', cargarRma.getUltimoNum);
 router.get('/cargarRmaNoEntregados', gestionarRma.getRmaNoEntregados);
