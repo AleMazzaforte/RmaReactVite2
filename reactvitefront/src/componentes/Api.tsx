@@ -50,6 +50,8 @@ const kitsConDescuento: Record<string, { skuDescuento: string | string[] }> = {
     ],
   },
   "KIT EP544-EP664 4L": { skuDescuento: "EP544-EP664-EP673 N" },
+  "KIT EP73-EP115": { skuDescuento: "EP115 N" },
+   "KIT EP73-EP90": { skuDescuento: "EP90 N" },
 };
 
 // ✅ Función para formatear fecha en 24h (solo para visualización)
