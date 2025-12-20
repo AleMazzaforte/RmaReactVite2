@@ -80,7 +80,11 @@ const Urls = {
   },
   stock: {
     obtener: `${base}/obtenerStock`,
-    actualizarOp: `${base}/actualizarOp`
+    actualizarOp: `${base}/actualizarOp`,
+    crearLote: `${base}/crearLoteDescarga`,
+    confirmarLote: `${base}/confirmarLote`,
+    revertirLote: `${base}/revertirLote`,
+    listarLotes: `${base}/listarLotes`
   },
   kits: {
     guardarKit: `${base}/guardarKit`

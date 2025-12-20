@@ -4,6 +4,7 @@ import {
     productosGeneralController,
     cargarRma,
     gestionarRma,
+    lotesController,
 } from '../controladores/rmaController.js';
 
 import { postLogin } from '../controladores/loginController.js';
@@ -76,6 +77,12 @@ router.get('/cargarRmaNoEntregados', gestionarRma.getRmaNoEntregados);
 //Ruta para Stock
 router.get('/obtenerStock', gestionarRma.getStockRMA);
 router.post('/actualizarOp/:idRma', gestionarRma.postActualizarOpPorSku);
+
+//Rutas para Lotes de descarga
+router.post('/crearLoteDescarga', lotesController.postCrearLoteDescarga);
+router.post('/confirmarLote', lotesController.postConfirmarLote);
+router.post('/revertirLote', lotesController.postRevertirLote);
+router.get('/listarLotes', lotesController.getLotes);
 
 
 //Ruta para agregar devoluciones

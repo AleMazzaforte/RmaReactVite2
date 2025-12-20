@@ -162,8 +162,6 @@ export const CargarRma: React.FC = () => {
 
     if (!productoSeleccionado) {
       const skuInput = document.getElementById("skuInput") as HTMLInputElement;
-
-      skuInput.focus();
       // Mostrar alerta si el campo SKU está vacío
       sweetAlert.fire({
         icon: "warning",
@@ -194,7 +192,6 @@ export const CargarRma: React.FC = () => {
 
     if (!marcaSeleccionada) {
       const marcaInput = document.getElementById("marca") as HTMLInputElement;
-      marcaInput.focus();
       // Mostrar alerta si la marca no está seleccionada
       sweetAlert.fire({
         icon: "warning",
@@ -206,14 +203,12 @@ export const CargarRma: React.FC = () => {
     }
     if (!opLoteSeleccionado) {
       const opLoteInput = document.getElementById("opLote") as HTMLInputElement;
-      opLoteInput.focus();
       // Mostrar alerta si la OP/Lote no está seleccionada
       sweetAlert.fire({
         icon: "warning",
         title: "Campo vacío",
         text: "Debe seleccionar una OP/Lote",
       });
-
       opLoteInput.focus();
       return;
     }
@@ -226,13 +221,12 @@ export const CargarRma: React.FC = () => {
       cantidad: formData.get("cantidad") || "",
       marca: marcaSeleccionada.id,
       nombreMarca: marcaSeleccionada.nombre,
-      opLote: opLoteSeleccionado ? opLoteSeleccionado.id : null, // Guardar el ID de la OP
+      opLote: opLoteSeleccionado ? opLoteSeleccionado.id : null,
       observaciones: formData.get("observaciones") || null,
       vencimiento,
       seRecibe,
       seEntrega,
       nEgreso,
-      enExistencia: true,
     };
 
     setProductosAgregados([...productosAgregados, producto]);
@@ -305,13 +299,12 @@ export const CargarRma: React.FC = () => {
         modelo: producto.modelo,
         cantidad: producto.cantidad,
         marca: producto.marca,
-        opLote: producto.opLote, // Enviar el ID de la OP
+        opLote: producto.opLote,
         observaciones: producto.observaciones,
         vencimiento: producto.vencimiento,
         seEntrega: producto.seEntrega,
         seRecibe: producto.seRecibe,
         nEgreso: producto.nEgreso,
-        enExistencia: producto.enExistencia,
       })),
     };
 
@@ -577,13 +570,7 @@ export const CargarRma: React.FC = () => {
                   Agregar Producto
                 </button>
 
-                <button
-                  type="button"
-                  onClick={enviarFormulario}
-                  className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-blue-300"
-                >
-                  {loading ? "Cargando..." : "Guardar RMA"}
-                </button>
+
               </>
             )}
           </form>

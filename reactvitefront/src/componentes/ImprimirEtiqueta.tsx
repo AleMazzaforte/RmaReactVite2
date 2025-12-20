@@ -65,14 +65,7 @@ export const ImprimirEtiqueta = () => {
             title: "RMA Pendiente",
             text: `El cliente "${clienteSeleccionado.nombre}" tiene RMA pendiente.`,
           });
-        } else {
-          // Si no hay RMA pendiente, mostrar alerta y permitir editar datos
-          sweetAlert.fire({
-            icon: "success",
-            title: "No hay RMA Pendiente",
-            text: `El cliente "${clienteSeleccionado.nombre}" no tiene RMA pendiente.`,
-          });
-        }
+        } 
 
         setDatosEditables(clienteSeleccionado);
         setMostrarInput(true);
@@ -150,7 +143,7 @@ export const ImprimirEtiqueta = () => {
 
     // === Generación automática de renglones desde 520, cada 50 ===
     const renglones: Record<string, number> = {};
-    let y = 520; // Empezamos aquí
+    let y = 520; 
     for (let i = 1; i <= 20; i++) {
       renglones[`renglon${i}`] = y;
       y += 50;
@@ -163,7 +156,8 @@ export const ImprimirEtiqueta = () => {
     if (datosEditables.nombre.length > 18) {
       offsetX = Math.min(datosEditables.nombre.length - 18, 5);
     }
-
+    if (datosEditables.transporte === null) datosEditables.transporte = '';
+    if (datosEditables.seguro === null) datosEditables.seguro = '';
     const [domicilioLinea1, domicilioLinea2] = dividirDomicilio(datosEditables.domicilio);
 
     // === Generar una etiqueta por cada bulto ===
