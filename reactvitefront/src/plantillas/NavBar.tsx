@@ -40,7 +40,7 @@ export const NavBar: React.FC = () => {
 
   const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    
+
     if (value === 'logout') {
       logout();
     } else if (value === 'backup') {
@@ -56,11 +56,11 @@ export const NavBar: React.FC = () => {
   return (
     <header className="h-32 mb-6 bg-gradient-to-b from-blue-500 to-green-500 text-white flex flex-col sm:flex-row items-center justify-between p-4 relative">
       <h1 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-0">Bienvenido al Sistema</h1>
-      
+
       <div className="w-full sm:w-auto flex justify-center sm:block sm:relative sm:right-0">
-        <select 
-          defaultValue="" 
-          onChange={handleSelectChange} 
+        <select
+          defaultValue=""
+          onChange={handleSelectChange}
           className="w-full sm:w-auto p-2 rounded bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-300"
         >
           <option value="" disabled>Selecciona una opción</option>
@@ -86,6 +86,7 @@ export const NavBar: React.FC = () => {
           <option value="/inventario">Inventario</option>
           <option value="/bloques">Bloques</option>
           <option value="/stock">Stock</option>
+          <option value="/informeRma">Informe RMA</option>
           <option value="/api">Api</option>
           <option value="/productosConDescuento">Productos Con Descuento</option>
           <option value="/pokemon">Pokemon</option>

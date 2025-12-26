@@ -15,6 +15,7 @@ interface BusquedaOpLoteProps {
   campos: string[];
   value?: string;
   inputRef?: React.RefObject<HTMLInputElement>;
+  onClose?: () => void;
 }
 
 export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
@@ -23,18 +24,36 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
   campos,
   value = '',
   inputRef,
+  onClose,
 }) => {
   const [query, setQuery] = useState<string>(value);
   const [resultados, setResultados] = useState<Op[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
-
 
   useEffect(() => {
     setQuery(value);
   }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (onClose && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose, timer]);
 
   const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -45,7 +64,6 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
     }
 
     if (value) {
-
       const newTimer = setTimeout(async () => {
         try {
           setLoading(true);
@@ -57,8 +75,6 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
           }
 
           const data: Op[] = await response.json();
-
-          // Almacenar TODAS las OPs en resultados (para usarlas en el filtrado luego)
           setResultados(data);
         } catch (error) {
           console.error('Error buscando OP/Lote:', error);
@@ -77,10 +93,9 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
 
   const handleSeleccionado = (opLote: Op) => {
     if (opLote) {
-      // Filtrar todas las filas de la OP seleccionada
       const opCompleta = resultados.filter((item) => item.nombre === opLote.nombre);
       onSeleccionado(opCompleta);
-      setResultados([]); // Vaciar sugerencias
+      setResultados([]);
       setQuery(opLote.nombre);
       if (localInputRef.current && localInputRef.current.nextElementSibling) {
         (localInputRef.current.nextElementSibling as HTMLElement).focus();
@@ -88,13 +103,12 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
     }
   };
 
-  // Obtener solo OPs únicas para las sugerencias
   const sugerenciasUnicas = Array.from(
     new Map(resultados.map((item) => [item.nombre, item])).values()
   );
 
   return (
-    <div>
+    <div ref={containerRef}>
       <input
         id='opLote'
         autoComplete="off"
@@ -109,7 +123,7 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
         <Loader />
       ) : (
         <FlechasNavigator
-          resultados={sugerenciasUnicas} // Mostrar solo nombres únicos en el listado
+          resultados={sugerenciasUnicas}
           onSeleccionado={handleSeleccionado}
           campos={campos}
           useUniqueKey={true}
@@ -118,3 +132,4 @@ export const ListarOp: React.FC<BusquedaOpLoteProps> = ({
     </div>
   );
 };
+

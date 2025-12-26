@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ListarOp } from './utilidades/ListarOp';
+import { ListarProductos } from './utilidades/ListarProductos';
 import Urls from './utilidades/Urls';
 
 // Definición de la interfaz Rma para tipar los datos
@@ -34,6 +35,8 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
   const [editableRmas, setEditableRmas] = useState<Rma[]>(rmas);
   // Controla si el selector de OP (ListarOp) está visible y en qué fila
   const [showOpSelector, setShowOpSelector] = useState<number | null>(null);
+  // Controla si el selector de Modelo (ListarProductos) está visible y en qué fila
+  const [showModeloSelector, setShowModeloSelector] = useState<number | null>(null);
 
   // Efecto que actualiza el estado interno si cambian los props
   useEffect(() => {
@@ -55,18 +58,27 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
     setShowOpSelector(null); // Oculta el selector
   };
 
+  // Cuando se selecciona o edita el Modelo
+  const handleModeloChange = (index: number, value: string) => {
+    const updatedRmas = [...editableRmas];
+    updatedRmas[index] = { ...updatedRmas[index], modelo: value };
+    setEditableRmas(updatedRmas);
+    setShowModeloSelector(null);
+  };
+
   // Renderiza el campo OP, mostrando ListarOp si el campo está enfocado
   const renderOpField = (rma: Rma, index: number) => {
     if (showOpSelector === index) {
       return (
         <div className="absolute z-10 -mt-5 bg-white shadow-lg text-left">
-          <ListarOp          
+          <ListarOp
             endpoint={`${url}`} // Endpoint para obtener lista de OPs
             onSeleccionado={(ops) => {
               handleOpChange(index, ops[0].nombre); //  Asigna solo el nombre de la OP seleccionada
             }}
             campos={['nombre']}
             value={rma.opLote}
+            onClose={() => setShowOpSelector(null)}
           />
         </div>
       );
@@ -78,7 +90,43 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
           value={rma.opLote}
           className="block w-full py-1 text-sm rounded-lg text-center"
           onChange={(e) => handleOpChange(index, e.target.value)}
-          onFocus={() => setShowOpSelector(index)} // Muestra ListarOp al enfocar
+          onFocus={() => {
+            setShowOpSelector(index);
+            setShowModeloSelector(null);
+          }} // Muestra ListarOp al enfocar
+        />
+      </div>
+    );
+  };
+
+  // Renderiza el campo Modelo, mostrando ListarProductos si el campo está enfocado
+  const renderModeloField = (rma: Rma, index: number) => {
+    if (showModeloSelector === index) {
+      return (
+        <div className="absolute z-10 max-w-[300px] -mt-5 bg-white shadow-lg text-left">
+          <ListarProductos
+            endpoint={Urls.productos.listar}
+            onProductoSeleccionado={(producto) => {
+              handleModeloChange(index, producto.sku);
+            }}
+            campos={['sku']}
+            value={rma.modelo}
+            onClose={() => setShowModeloSelector(null)}
+          />
+        </div>
+      );
+    }
+    return (
+      <div className="relative">
+        <input
+          type="text"
+          value={rma.modelo}
+          className="block w-full py-1 text-sm rounded-lg text-center"
+          onChange={(e) => handleModeloChange(index, e.target.value)}
+          onFocus={() => {
+            setShowModeloSelector(index);
+            setShowOpSelector(null);
+          }}
         />
       </div>
     );
@@ -87,13 +135,11 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
   // Llama a la función pasada por props para actualizar un RMA
   const handleSave = (rma: Rma) => {
     handleActualizar(rma);
-
   };
 
   // Llama a la función pasada por props para eliminar un RMA
   const handleDelete = (rma: Rma) => {
     handleEliminar(rma.idRma);
-
   };
 
   // Render del componente
@@ -118,15 +164,10 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
         <tbody>
           {editableRmas.length > 0 ? (
             editableRmas.map((rma, index) => (
-               // Condición para pintar la fila con fondo rojo si seEntrega o nEgreso están vacíos
+              // Condición para pintar la fila con fondo rojo si seEntrega o nEgreso están vacíos
               <tr key={rma.idRma || index} className={(rma.seEntrega.trim() && rma.nEgreso.trim()) === '' ? 'bg-red-200 ' : ''}>
                 <td className="border py-1 text-sm text-center">
-                  <input
-                    type="text"
-                    value={rma.modelo}
-                    className="block w-full py-1 text-sm rounded-lg text-center"
-                    onChange={(e) => handleChange(index, 'modelo', e.target.value)}
-                  />
+                  {renderModeloField(rma, index)}
                 </td>
                 <td className="border py-1 text-sm text-center">
                   <input
@@ -187,7 +228,7 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
                     onChange={(e) => handleChange(index, 'observaciones', e.target.value)}
                   />
                 </td>
-                
+
                 <td className="border py-1 text-sm text-center">
                   <input
                     type="text"

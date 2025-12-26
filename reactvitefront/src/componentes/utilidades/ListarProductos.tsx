@@ -9,6 +9,7 @@ interface ListarProductosProps {
   inputRef?: React.RefObject<HTMLInputElement>;
   limpiarQuery?: () => void;
   value?: string;
+  onClose?: () => void;
 }
 
 export const ListarProductos: React.FC<ListarProductosProps> = ({
@@ -18,11 +19,13 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
   inputRef,
   limpiarQuery,
   value = '',
+  onClose,
 }) => {
   const [query, setQuery] = useState<string>(value);
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // Usar useRef en lugar de useState
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
 
@@ -31,13 +34,21 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
   }, [value]);
 
   useEffect(() => {
-    // Limpiar el timer cuando el componente se desmonta
+    const handleClickOutside = (event: MouseEvent) => {
+      if (onClose && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [onClose]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -50,8 +61,6 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
 
     // Si hay valor en el input, proceder con el retraso
     if (value) {
-      
-
       // Establecer un nuevo timeout para la búsqueda
       timerRef.current = setTimeout(async () => {
         try {
@@ -83,7 +92,7 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
   };
 
   return (
-    <div>
+    <div ref={containerRef}>
       <input
         id="skuInput"
         autoComplete='off'

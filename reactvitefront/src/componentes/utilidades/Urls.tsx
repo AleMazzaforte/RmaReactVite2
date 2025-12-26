@@ -84,7 +84,8 @@ const Urls = {
     crearLote: `${base}/crearLoteDescarga`,
     confirmarLote: `${base}/confirmarLote`,
     revertirLote: `${base}/revertirLote`,
-    listarLotes: `${base}/listarLotes`
+    listarLotes: `${base}/listarLotes`,
+    eliminarLote: `${base}/eliminarLote`
   },
   kits: {
     guardarKit: `${base}/guardarKit`

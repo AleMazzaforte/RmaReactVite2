@@ -25,6 +25,7 @@ import { Contenedor } from "../componentes/utilidades/Contenedor";
 import { Inventario } from "../componentes/Inventario";
 import { DefinirBloques } from "../componentes/DefinirBloques";
 import { Stock } from "../componentes/Stock";
+import { InformeRMA } from "../componentes/InformeRMA";
 import { CargarKits } from "../componentes/CargarKits";
 import { Api } from "../componentes/Api";
 import { ProductosConDescuento } from "../componentes/ProductosConDescuento";
@@ -57,6 +58,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/inventario" element={<Inventario />} />
         <Route path="/bloques" element={<DefinirBloques />} />
         <Route path="/stock" element={<Stock />} />
+        <Route path="/informeRma" element={<InformeRMA />} />
         <Route path="/api" element={<Api />} />
         <Route path="/productosConDescuento" element={<ProductosConDescuento />} />
       </Route>
