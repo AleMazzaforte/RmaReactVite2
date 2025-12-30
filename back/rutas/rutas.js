@@ -24,6 +24,7 @@ import kitsController from '../controladores/kitController.js'
 import backupController from '../controladores/backupController.js'
 import apiController from '../controladores/apiController.js'
 import { productosConDescuentoController } from '../controladores/productosConDescuentoController.js';
+import { cargarMagia } from '../controladores/magiaController.js';
 
 
 const router = express.Router();
@@ -135,4 +136,10 @@ router.get('/getProductosConDescuentoVendidos', productosConDescuentoController.
 router.post('/postGuardarVentasConDescuento', productosConDescuentoController.postGuardarVentasConDescuento);
 router.post('/eliminarOrdenes', productosConDescuentoController.eliminarOrdenes);
 router.post('/verificarExistenciaProductoDescuento', productosConDescuentoController.verificarExistencia);
+
+// Rutas para Magia
+router.post('/agregarMagia', cargarMagia.postAgregarMagia);
+router.post('/agregarFacturaMagia', cargarMagia.postAgregarFacturaMagia);
+router.get('/obtenerStockMagia', cargarMagia.getStockMagia);
+
 export default router;

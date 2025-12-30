@@ -29,6 +29,7 @@ import { InformeRMA } from "../componentes/InformeRMA";
 import { CargarKits } from "../componentes/CargarKits";
 import { Api } from "../componentes/Api";
 import { ProductosConDescuento } from "../componentes/ProductosConDescuento";
+import { Magia } from "../componentes/Magia";
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -60,6 +61,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/stock" element={<Stock />} />
         <Route path="/informeRma" element={<InformeRMA />} />
         <Route path="/api" element={<Api />} />
+        <Route path="/magia" element={<Magia />} />
         <Route path="/productosConDescuento" element={<ProductosConDescuento />} />
       </Route>
       <Route path="*" element={<NotFound />} />{" "}

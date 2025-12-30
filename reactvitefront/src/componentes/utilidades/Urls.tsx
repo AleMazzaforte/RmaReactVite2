@@ -102,6 +102,11 @@ const Urls = {
   },
   apiMeli: {
     getVentas: `${base}/ventas?dias=`,
+  },
+  magia: {
+    agregar: `${base}/agregarMagia`,
+    agregarFactura: `${base}/agregarFacturaMagia`,
+    obtenerStock: `${base}/obtenerStockMagia`,
   }
 
 };

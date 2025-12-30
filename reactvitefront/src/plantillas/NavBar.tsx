@@ -88,6 +88,7 @@ export const NavBar: React.FC = () => {
           <option value="/stock">Stock</option>
           <option value="/informeRma">Informe RMA</option>
           <option value="/api">Api</option>
+          <option value="/magia">Magia</option>
           <option value="/productosConDescuento">Productos Con Descuento</option>
           <option value="/pokemon">Pokemon</option>
 
