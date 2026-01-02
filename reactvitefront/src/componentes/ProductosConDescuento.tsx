@@ -15,6 +15,8 @@ interface ProductoConDescuentoVendidos extends ProductoConDescuento {
   idSku: number;
   fecha: string;
   cantidad: number;
+  numeroOperacion: number;
+  canalVenta: string;
 }
 
 interface OptionType {
@@ -74,6 +76,10 @@ export const ProductosConDescuento: React.FC = () => {
     []
   );
 
+  //Busqueda de numeros ya cargados
+  const [busquedaOperacion, setBusquedaOperacion] = useState("");
+  const [operacionesFiltradas, setOperacionesFiltradas] = useState<ProductoConDescuentoVendidos[]>([]);
+
   // Fetch inicial
   useEffect(() => {
     axios
@@ -100,10 +106,27 @@ export const ProductosConDescuento: React.FC = () => {
       });
   }, []);
 
+
+  useEffect(() => {
+  if (!busquedaOperacion.trim()) {
+    setOperacionesFiltradas([]);
+    return;
+  }
+
+  const query = busquedaOperacion.trim().toLowerCase();
+  const filtradas = productoConDescuentoVendidos.filter((venta) =>
+    venta.numeroOperacion.toString().toLowerCase().includes(query)
+  );
+
+  setOperacionesFiltradas(filtradas);
+}, [busquedaOperacion, productoConDescuentoVendidos]);
+
   const options = listadoProductosConDescuento.map((producto) => ({
     value: producto.id,
     label: producto.sku,
   }));
+
+  
 
   const handleAgregar = () => {
     if (!selectedOption) {
@@ -298,7 +321,57 @@ export const ProductosConDescuento: React.FC = () => {
             )}
           </Contenedor>
         </div>
+        <div className="mb-6">
+          <label htmlFor="buscarOperacion" className="block mb-1">
+            Buscar número de operación
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              id="buscarOperacion"
+              value={busquedaOperacion}
+              onChange={(e) => setBusquedaOperacion(e.target.value)}
+              placeholder="Ingrese número de operación"
+              className="px-4 py-2 border border-gray-300 rounded-lg flex-1"
+              onKeyDown={(e) => e.key === "Enter" }
+            />
+           
+          </div>
 
+          {busquedaOperacion.trim() && (
+  <div className="mt-3">
+    <h3 className="text-sm font-semibold mb-1">
+      Resultados ({operacionesFiltradas.length}):
+    </h3>
+    {operacionesFiltradas.length === 0 ? (
+      <p className="text-gray-500 text-sm">No se encontraron operaciones.</p>
+    ) : (
+      <div className="overflow-x-auto max-h-60 overflow-y-auto border rounded">
+        <table className="min-w-full bg-white text-sm">
+          <thead className="bg-gray-100 sticky top-0">
+            <tr>
+              <th className="px-2 py-1">Operación</th>
+              <th className="px-2 py-1">SKU</th>
+              <th className="px-2 py-1">Cantidad</th>
+              <th className="px-2 py-1">Canal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {operacionesFiltradas.map((venta, index) => (
+              <tr key={`${venta.numeroOperacion}-${venta.idSku}-${index}`} className="border-t text-center">
+                <td className="px-2 py-1 font-mono">{venta.numeroOperacion}</td>
+                <td className="px-2 py-1">{venta.sku}</td>
+                <td className="px-2 py-1 text-center">{venta.cantidad}</td>
+                <td className="px-2 py-1">{venta.canalVenta}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+)}
+        </div>
         {/* Tabla de resumen */}
         <div className="w-full md:w-1/2">
           <h2 className="text-xl font-bold mb-2">
