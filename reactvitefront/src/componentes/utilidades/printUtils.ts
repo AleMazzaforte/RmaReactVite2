@@ -153,7 +153,6 @@ export const printRetiroLocalHTML = (orders: Order[], selectedOrders: Set<string
             <br><br>
             <fieldset id="campoDeControl">
                 <legend style="text-align: left;">Controló</legend>
-                <div><input type="checkbox" class="check"><label>César</label></div>
                 <div><input type="checkbox" class="check"><label>Javi</label></div>
                 <div><input type="checkbox" class="check"><label>Lu</label></div>
                 <div><input type="checkbox" class="check"><label>Rodri</label></div>

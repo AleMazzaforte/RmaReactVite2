@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import jsPDF from "jspdf";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Urls from "./utilidades/Urls";
 import Loader from "./utilidades/Loader";
 // Al inicio del archivo, después de otros imports
-import { generateEnviosPDF, generateRetiroLocalPDF } from "./utilidades/pdfGenerators";
+import { generateEnviosPDF } from "./utilidades/pdfGenerators";
 import { printRetiroLocalHTML } from "./utilidades/printUtils";
 
 // Tipos actualizados
