@@ -141,5 +141,6 @@ router.post('/verificarExistenciaProductoDescuento', productosConDescuentoContro
 router.post('/agregarMagia', cargarMagia.postAgregarMagia);
 router.post('/agregarFacturaMagia', cargarMagia.postAgregarFacturaMagia);
 router.get('/obtenerStockMagia', cargarMagia.getStockMagia);
+router.get('/obtenerFacturadosMagia', cargarMagia.getFacturadosMagia);
 
 export default router;

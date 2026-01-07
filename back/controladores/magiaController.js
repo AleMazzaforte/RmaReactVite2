@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { conn } from "../bd/bd.js";
 import events from "events";
+import { log } from "console";
 
 events.EventEmitter.defaultMaxListeners = 15;
 
@@ -93,6 +94,31 @@ const cargarMagia = {
             }
         }
     },
+
+    getFacturadosMagia: async (req, res) =>{
+    
+        let connection;
+        try {
+            connection = await conn.getConnection();
+            const query = `
+                SELECT * FROM facturacionMagia
+                ORDER BY numFactura DESC
+            `
+            const [rows] = await connection.query(query);
+            
+            res.json(rows)
+        }
+        catch (error) {
+                console.error("Error al obtener stock:", error);
+            res.status(500).json({ message: "Error al obtener stock" });
+        } finally {
+            if (connection) {
+                connection.release();
+            }
+        } 
+        
+
+    }
 };
 
 export { cargarMagia };

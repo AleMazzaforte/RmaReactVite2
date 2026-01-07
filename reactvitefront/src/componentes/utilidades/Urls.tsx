@@ -107,6 +107,7 @@ const Urls = {
     agregar: `${base}/agregarMagia`,
     agregarFactura: `${base}/agregarFacturaMagia`,
     obtenerStock: `${base}/obtenerStockMagia`,
+    obtenerFacturados: `${base}/obtenerFacturadosMagia`
   }
 
 };
