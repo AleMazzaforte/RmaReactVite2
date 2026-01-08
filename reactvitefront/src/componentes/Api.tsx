@@ -48,6 +48,16 @@ const kitsConDescuento: Record<string, { skuDescuento: string | string[] }> = {
       "EP664-EP673 A 100ML",
     ],
   },
+  "KIT EP673 600ML": {
+    skuDescuento: [
+      "EP664-EP673 N 100ML",
+      "EP664-EP673 C 100ML",
+      "EP664-EP673 M 100ML",
+      "EP664-EP673 A 100ML",
+      "EP673 LC 100ML",
+      "EP673 LM 100ML",
+    ],
+  },
   "KIT EP544-EP664 4L": { skuDescuento: "EP544-EP664-EP673 N" },
   "KIT EP73-EP115": { skuDescuento: "EP115 N" },
    "KIT EP73-EP90": { skuDescuento: "EP90 N" },
@@ -145,10 +155,7 @@ export const Api = () => {
       const allIds = new Set(orders.map((o) => o.numeroOperacion));
       setSelectedOrders(allIds);
     }
-  };
-
-  // Generar PDF (con fecha formateada en 24h y tipo de envío)
-  
+  };  
 
   // Registrar ventas con descuento /////////////////////////////////////////////////////////
 const registrarVentasConDescuento = async () => {
