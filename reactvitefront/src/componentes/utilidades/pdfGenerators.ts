@@ -106,10 +106,19 @@ export const generateEnviosPDF = (orders: Order[], selectedOrders: Set<string>) 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     order.items.forEach((item) => {
-      doc.rect(margin + 5, currentY - 3, checkboxSize, checkboxSize);
-      doc.text(`${item.sku} — ${item.quantity} Un. ${item.description}`, margin + 11, currentY);
-      currentY += 5;
-    });
+  doc.rect(margin + 5, currentY - 3, checkboxSize, checkboxSize);
+
+  const skuPart = `${item.quantity} Un. — ${item.sku} `;
+  const maxDescLength = Math.max(0, 80 - skuPart.length);
+  let descPart = item.description;
+  if (descPart.length > maxDescLength) {
+    descPart = descPart.substring(0, maxDescLength);
+  }
+
+  const fullLine = skuPart + descPart;
+  doc.text(fullLine, margin + 11, currentY);
+  currentY += 5;
+});
 
     currentY += 4;
     doc.setFont("helvetica", "normal");
@@ -186,7 +195,7 @@ export const generateRetiroLocalPDF = (orders: Order[], selectedOrders: Set<stri
     doc.setFont("helvetica", "normal");
 
     order.items.forEach((item) => {
-      const line = `• ${item.sku} — ${item.quantity} un. ${item.description}`;
+      const line = `• ${item.quantity} — ${item.sku} un. ${item.description}`;
       doc.text(line, margin + 5, yPos);
       yPos += 7;
     });

@@ -170,7 +170,7 @@ const getVentas = async (req, res) => {
     const filteredOrders = orders.filter(
       (order) => new Date(order.date_created) >= startDate
     );
-    console.log(orders);
+  
     
     const ordersByPack = {};
 
