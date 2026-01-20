@@ -44,7 +44,7 @@ interface ProductoReposicion {
 let urlPrepararInventario = Urls.inventario.preparar;
 let urlActualizarInventario = Urls.inventario.actualizarProducto;
 let urlGuardarInventario = Urls.inventario.guardar;
-//let urlGuardarReposicion = Urls.reposicion.guardar;
+
 let urlObtenerReposicion = Urls.reposicion.obtener;
 let urlLimpiarReposicion = Urls.reposicion.limpiar;
 let urlResetearConteos = Urls.inventario.resetearConteos;
@@ -429,19 +429,19 @@ export const Inventario: React.FC = () => {
 
     worksheet.columns = [
       { header: "SKU", key: "sku", width: 20 },
-      { header: "Bloque", key: "bloque", width: 10 },
-      { header: "Stock Sistema Total", key: "stockSistema", width: 20 },
+      { header: "Stock Femex", key: "stockFemex", width: 13 },
+      { header: "Stock Blow", key: "stockBlow", width: 13 },
       { header: "Conteo Físico", key: "conteoFisico", width: 15 },
-      { header: "Diferencia", key: "diferencia", width: 15 },
+      { header: "Dif.", key: "diferencia", width: 10 },
     ];
 
     productosParaExportar.forEach((producto) => {
       worksheet.addRow({
         sku: producto.sku,
-        bloque: producto.idBloque,
-        stockSistema: producto.cantSistemaFemex + producto.cantSistemaBlow,
+        stockFemex: producto.cantSistemaFemex,
+        stockBlow: producto.cantSistemaBlow,
         conteoFisico:
-          producto.conteoFisico !== null ? producto.conteoFisico : "No Contado",
+          producto.conteoFisico !== null ? producto.conteoFisico : 0,
         diferencia: calcularDiferencia(producto),
       });
     });

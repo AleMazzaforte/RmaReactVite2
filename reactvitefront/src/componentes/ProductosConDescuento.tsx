@@ -173,6 +173,7 @@ export const ProductosConDescuento: React.FC = () => {
 
     // Resetear formulario, mantener el producto seleccionado
     setCanalVenta("");
+    setSelectedOption(null)
     setNumeroOperacion("");
     setCantidad("");
     setFecha(formatDateToInput(new Date()));

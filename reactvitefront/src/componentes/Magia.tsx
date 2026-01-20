@@ -471,10 +471,19 @@ export const Magia: React.FC = () => {
       setLoadingFactura(false);
     }
   };
-let mostrarFacturados: boolean = false
+  let mostrarFacturados: boolean = false
   if (facturadosData.length > 0) {
-   mostrarFacturados = true
+    mostrarFacturados = true
   }
+
+  //hardcoced de sku de wm
+  const skuIdToCode: Record<number, string> = {
+  887: "WMBB - Grande",
+  836: "WMPB - Chica",
+  841: "WMMB - Mediana",
+};
+
+
 
   return (
     <div className="absolute justify-end w-full h-full p-4">
@@ -609,38 +618,38 @@ let mostrarFacturados: boolean = false
                 Número de Factura<span className="text-red-500">*</span>:
               </label>
               <input
-  type="text"
-  id="numeroFactura"
-  name="numeroFactura"
-  value={numeroFactura}
-  onChange={(e) => {
-    const valor = e.target.value.trim();
-    setNumeroFactura(valor);
+                type="text"
+                id="numeroFactura"
+                name="numeroFactura"
+                value={numeroFactura}
+                onChange={(e) => {
+                  const valor = e.target.value.trim();
+                  setNumeroFactura(valor);
 
-    // Si el campo no está vacío, validamos duplicado
-    if (valor !== "") {
-      const numIngresado = parseInt(valor, 10);
-      if (!isNaN(numIngresado)) {
-        const yaExiste = facturadosData.some(
-          (f) => f.numFactura === numIngresado
-        );
-        if (yaExiste) {
-          sweetAlert.fire({
-            icon: "error",
-            title: "Factura duplicada",
-            text: `El número ${numIngresado} ya fue cargado. Use otro número.`,
-          }).then(() => {
-            setNumeroFactura(""); // limpiar
-            const input = document.getElementById("numeroFactura") as HTMLInputElement;
-            input?.focus();
-          });
-        }
-      }
-    }
-  }}
-  required
-  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
-/>
+                  // Si el campo no está vacío, validamos duplicado
+                  if (valor !== "") {
+                    const numIngresado = parseInt(valor, 10);
+                    if (!isNaN(numIngresado)) {
+                      const yaExiste = facturadosData.some(
+                        (f) => f.numFactura === numIngresado
+                      );
+                      if (yaExiste) {
+                        sweetAlert.fire({
+                          icon: "error",
+                          title: "Factura duplicada",
+                          text: `El número ${numIngresado} ya fue cargado. Use otro número.`,
+                        }).then(() => {
+                          setNumeroFactura(""); // limpiar
+                          const input = document.getElementById("numeroFactura") as HTMLInputElement;
+                          input?.focus();
+                        });
+                      }
+                    }
+                  }
+                }}
+                required
+                className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+              />
             </div>
             <div>
               <label
@@ -691,11 +700,10 @@ let mostrarFacturados: boolean = false
               type="button"
               onClick={guardarFactura}
               disabled={loadingFactura}
-              className={`w-full py-2 px-4 font-semibold rounded-lg focus:outline-black ${
-                loadingFactura
+              className={`w-full py-2 px-4 font-semibold rounded-lg focus:outline-black ${loadingFactura
                   ? "bg-gray-400 cursor-not-allowed text-gray-200"
                   : "bg-green-600 text-white hover:bg-green-700"
-              }`}
+                }`}
             >
               {loadingFactura ? "Guardando..." : "Guardar Factura"}
             </button>
@@ -704,49 +712,49 @@ let mostrarFacturados: boolean = false
         </div>
       </Contenedor>
       {mostrarFacturados && (
-  <Contenedor>
-    <div>
-      <h2 className="text-2xl font-semibold text-gray-700 text-center mb-4">
-        Facturas Cargadas
-      </h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-300">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-700">
-                SKU
-              </th>
-              <th className="px-4 py-2 border-b text-center text-sm font-semibold text-gray-700">
-                Cantidad
-              </th>
-              <th className="px-4 py-2 border-b text-center text-sm font-semibold text-gray-700">
-                Número de Factura
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {facturadosData.map((item, index) => (
-              <tr
-                key={item.id || index} // usa `item.id` si es único, sino `index`
-                className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-              >
-                <td className="px-4 py-2 border-b text-sm text-gray-700">
-                  {item.idSku}
-                </td>
-                <td className="px-4 py-2 border-b text-center text-sm text-gray-700">
-                  {item.cantidad}
-                </td>
-                <td className="px-4 py-2 border-b text-center text-sm text-gray-700">
-                  {item.numFactura}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </Contenedor>
-)}
+        <Contenedor>
+          <div>
+            <h2 className="text-2xl font-semibold text-gray-700 text-center mb-4">
+              Facturas Cargadas
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-300">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-700">
+                      SKU
+                    </th>
+                    <th className="px-4 py-2 border-b text-center text-sm font-semibold text-gray-700">
+                      Cantidad
+                    </th>
+                    <th className="px-4 py-2 border-b text-center text-sm font-semibold text-gray-700">
+                      Número de Factura
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {facturadosData.map((item, index) => (
+                    <tr
+                      key={item.id || index} // usa `item.id` si es único, sino `index`
+                      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                    >
+                      <td className="px-4 py-2 border-b text-sm text-gray-700">
+  {skuIdToCode[item.idSku] || `ID ${item.idSku}`}
+</td>
+                      <td className="px-4 py-2 border-b text-center text-sm text-gray-700">
+                        {item.cantidad}
+                      </td>
+                      <td className="px-4 py-2 border-b text-center text-sm text-gray-700">
+                        {item.numFactura}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Contenedor>
+      )}
 
       {/* Tabla de Stock */}
       <Contenedor>
@@ -807,13 +815,12 @@ let mostrarFacturados: boolean = false
                           {item.totalFacturado}
                         </td>
                         <td
-                          className={`px-4 py-2 border-b text-center text-sm font-semibold ${
-                            item.diferencia > 0
+                          className={`px-4 py-2 border-b text-center text-sm font-semibold ${item.diferencia > 0
                               ? "text-green-600"
                               : item.diferencia < 0
-                              ? "text-red-600"
-                              : "text-gray-700"
-                          }`}
+                                ? "text-red-600"
+                                : "text-gray-700"
+                            }`}
                         >
                           {item.diferencia}
                         </td>
@@ -828,11 +835,10 @@ let mostrarFacturados: boolean = false
             <button
               onClick={handleReposicionStock}
               disabled={loadingStock || stockData.length === 0}
-              className={`py-2 px-6 rounded-lg font-semibold text-white transition-colors ${
-                loadingStock || stockData.length === 0
+              className={`py-2 px-6 rounded-lg font-semibold text-white transition-colors ${loadingStock || stockData.length === 0
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"
-              }`}
+                }`}
             >
               {loadingStock ? "Procesando..." : "Reposición Stock"}
             </button>
