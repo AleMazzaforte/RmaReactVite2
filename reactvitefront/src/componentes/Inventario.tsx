@@ -24,6 +24,8 @@ interface Producto {
   idBloque: string;
   cantSistemaFemex: number;
   cantSistemaBlow: number;
+  cantFullFemex?: number;      
+  cantFullBlow?: number;
   conteoFisico: number | null;
   fechaConteo: string | null;
   cantidadPorBulto: number;
@@ -67,6 +69,7 @@ export const Inventario: React.FC = () => {
   const [productosReposicion, setProductosReposicion] = useState<
     ProductoReposicion[]
   >([]);
+ 
   const [skuReposicionABuscar, setSkuReposicionABuscar] = useState("");
   const [nuevaCantidadReposicion, setNuevaCantidadReposicion] = useState("");
   const [
@@ -433,6 +436,8 @@ export const Inventario: React.FC = () => {
       { header: "Stock Blow", key: "stockBlow", width: 13 },
       { header: "Conteo Físico", key: "conteoFisico", width: 15 },
       { header: "Dif.", key: "diferencia", width: 10 },
+      { header: "Full Femex", key: "fullFemex", width: 15 },
+      { header: "Full Blow", key: "fullBlow", width: 15 },
     ];
 
     productosParaExportar.forEach((producto) => {
@@ -443,6 +448,8 @@ export const Inventario: React.FC = () => {
         conteoFisico:
           producto.conteoFisico !== null ? producto.conteoFisico : 0,
         diferencia: calcularDiferencia(producto),
+        fullFemex: producto.cantFullFemex,
+        fullBlow: producto.cantFullBlow,
       });
     });
 
@@ -595,85 +602,7 @@ export const Inventario: React.FC = () => {
     await handleFileUpload(file, empresa);
   };
 
-  const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
-    setLoading(true);
-    try {
-      const datosExcelParaCargar = await readExcelFile(file);
-      const skuCantidadMap = extractSkuCantidad(datosExcelParaCargar);
-      const productosParaGuardar: ProductoReposicion[] = Array.from(
-        skuCantidadMap.entries()
-      ).map(([sku, cantidad]) => ({ sku, cantidad }));
-      const skusArchivo = productosParaGuardar.map((p) => p.sku);
-      const validacion = validarSkus(skusArchivo);
-      if (!validacion.valido) {
-        sweetAlert.error(
-          "SKUs no válidos",
-          `Los siguientes SKUs no existen: <br><strong>${validacion.skusInvalidos.join(
-            ", "
-          )}</strong>`
-        );
-        return;
-      }
-      const response = await fetch(urlActualizarInventario, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productos: productosParaGuardar,
-          tipoArchivo: empresa,
-        }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-
-        // Si el error es por SKUs inactivos con stock
-        if (errorData.skusInactivos) {
-          const listaSkus = errorData.skusInactivos.join(", ");
-          sweetAlert.fire({
-            icon: "error",
-            title: "Productos inactivos con stock",
-            html: `Los siguientes SKUs están <strong>inactivos</strong> pero tienen stock en ${empresa}:<br>
-         <strong>${listaSkus}</strong><br><br>
-         Actualice en <a href="/actualizarProductos" target="_blank" style="color:#3b82f6; text-decoration:underline;">Actualizar productos</a> antes de cargar el inventario.`,
-            confirmButtonText: "Entendido",
-          });
-          return;
-        }
-
-        // Otros errores
-        throw new Error(
-          errorData.message || "Error en la respuesta del servidor"
-        );
-      }
-
-      const result = await response.json();
-      setProductos((prev: Producto[]) =>
-        prev.map((producto) => {
-          if (skuCantidadMap.has(producto.sku)) {
-            const cantidad = skuCantidadMap.get(producto.sku)!;
-            return {
-              ...producto,
-              [empresa === "Femex" ? "cantSistemaFemex" : "cantSistemaBlow"]:
-                cantidad,
-              fechaConteo: new Date().toISOString(),
-            };
-          }
-          return producto;
-        })
-      );
-      sweetAlert.success(
-        "Archivo procesado",
-        `Archivo de ${empresa} procesado correctamente. ${result.updatedCount} productos actualizados.`
-      );
-    } catch (error) {
-      console.error(`Error al procesar archivo de ${empresa}:`, error);
-      sweetAlert.error(
-        "Error al guardar",
-        `Error al procesar archivo de ${empresa}`
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+ 
 
   const handleBorrarDatos = async (tipoArchivo: "Femex" | "Blow") => {
     const { isConfirmed } = await sweetAlert.fire({
@@ -757,6 +686,7 @@ export const Inventario: React.FC = () => {
             jsonData.push(rowData);
           });
 
+
           resolve(jsonData);
         } catch (error) {
           reject(error);
@@ -767,17 +697,107 @@ export const Inventario: React.FC = () => {
     });
   };
 
-  const extractSkuCantidad = (data: any[]): Map<string, number> => {
-    const map = new Map<string, number>();
-    data.forEach((row) => {
-      const sku = row["SKU"];
-      const cantidad = row["Cantidad"];
-      if (sku) {
-        map.set(sku.toString(), Number(cantidad));
-      }
+const extractSkuDepositoCantidad = (data: any[]): {
+  deposito: Map<string, number>;
+  full: Map<string, number>;
+} => {
+  const deposito = new Map<string, number>();
+  const full = new Map<string, number>();
+
+  data.forEach((row) => {
+    const sku = row["SKU"];
+    const cantidad = Number(row["Cantidad"]);
+    const depositoNombre = row["Nombre depósito"];
+
+    if (!sku || isNaN(cantidad)) return;
+
+    const skuStr = sku.toString();
+    if (depositoNombre === "DEPOSITO") {
+      deposito.set(skuStr, cantidad);
+    } else if (depositoNombre === "FULL") {
+      full.set(skuStr, cantidad);
+    }
+  });
+
+  return { deposito, full };
+};
+
+const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
+  setLoading(true);
+  try {
+    const datosExcel = await readExcelFile(file);
+    const { deposito, full } = extractSkuDepositoCantidad(datosExcel);
+
+    const productosDeposito: ProductoReposicion[] = Array.from(deposito.entries()).map(([sku, cantidad]) => ({ sku, cantidad }));
+    const productosFull: ProductoReposicion[] = Array.from(full.entries()).map(([sku, cantidad]) => ({ sku, cantidad }));
+
+
+    // Validar todos los SKUs juntos
+    const skusTodos = [...productosDeposito.map(p => p.sku), ...productosFull.map(p => p.sku)];
+    const validacion = validarSkus(skusTodos);
+    if (!validacion.valido) return;
+
+    // Enviar al backend
+    const response = await fetch(urlActualizarInventario, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productosDeposito,
+        productosFull,
+        tipoArchivo: empresa,
+      }),
     });
-    return map;
-  };
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      if (errorData.skusInactivos) {
+        const listaSkus = errorData.skusInactivos.join(", ");
+        sweetAlert.fire({
+          icon: "error",
+          title: "Productos inactivos con stock",
+          html: `Los siguientes SKUs están <strong>inactivos</strong> pero tienen stock en ${empresa}:<br>
+            <strong>${listaSkus}</strong><br><br>
+            Actualice en <a href="/actualizarProductos" target="_blank" style="color:#3b82f6; text-decoration:underline;">Actualizar productos</a> antes de cargar el inventario.`,
+          confirmButtonText: "Entendido",
+        });
+        return;
+      }
+      throw new Error(errorData.message || "Error en la respuesta del servidor");
+    }
+
+    const result = await response.json();
+
+    // Actualizar estado local
+    setProductos((prev: Producto[]) =>
+      prev.map((producto) => {
+        const cantDeposito = deposito.get(producto.sku);
+        const cantFull = full.get(producto.sku);
+        const updates: Partial<Producto> = {};
+        if (cantDeposito !== undefined) {
+          updates[empresa === "Femex" ? "cantSistemaFemex" : "cantSistemaBlow"] = cantDeposito;
+        }
+        if (cantFull !== undefined) {
+          updates[empresa === "Femex" ? "cantFullFemex" : "cantFullBlow"] = cantFull;
+        }
+        if (Object.keys(updates).length > 0) {
+          return { ...producto, ...updates, fechaConteo: new Date().toISOString() };
+        }
+        return producto;
+      })
+    );
+
+    sweetAlert.success(
+      "Archivo procesado",
+      `${result.updatedCount} productos actualizados (${empresa}).`
+    );
+
+  } catch (error) {
+    console.error(`Error al procesar archivo de ${empresa}:`, error);
+    sweetAlert.error("Error al guardar", `Error al procesar archivo de ${empresa}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const productosFiltrados = productos
     .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))

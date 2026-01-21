@@ -14,7 +14,9 @@ export const inventarioController = {
                     sku, 
                     idBloque, 
                     cantSistemaFemex, 
-                    cantSistemaBlow, 
+                    cantSistemaBlow,
+                    cantFullFemex,
+                    cantFullBlow, 
                     conteoFisico, 
                     DATE_FORMAT(fechaConteo, '%Y-%m-%d %H:%i:%s') as fechaConteo,
                     cantidadPorBulto                     
@@ -27,9 +29,11 @@ export const inventarioController = {
         id: item.id,
         sku: item.sku,
         idBloque: item.idBloque,
-        cantSistemaFemex: item.cantSistemaFemex || 0, // Solo para cantidades
-        cantSistemaBlow: item.cantSistemaBlow || 0, // Solo para cantidades
-        conteoFisico: item.conteoFisico, // Puede ser NULL
+        cantSistemaFemex: item.cantSistemaFemex || 0, 
+        cantSistemaBlow: item.cantSistemaBlow || 0, 
+        conteoFisico: item.conteoFisico, 
+        cantFullFemex: item.cantFullFemex,
+        cantFullBlow: item.cantFullBlow,
         fechaConteo: item.fechaConteo,
         cantidadPorBulto: item.cantidadPorBulto || 0,
       }));
@@ -153,131 +157,132 @@ getProductosInactivos: async (req, res) => {
     }
   },
 
-  putActualizarProductoInventario: async (req, res) => {
-    let connection;
-    try {
-      const { productos, tipoArchivo, accion } = req.body;
+ putActualizarProductoInventario: async (req, res) => {
+ 
+  let connection;
+  try {
+    const { productosDeposito, productosFull, tipoArchivo } = req.body;
+    
 
-      // Validaciones básicas
-      if (!['Femex', 'Blow'].includes(tipoArchivo)) {
-        return res.status(400).json({ error: "Tipo de archivo no válido" });
-      }
+    if (!['Femex', 'Blow'].includes(tipoArchivo)) {
+      return res.status(400).json({ error: "Tipo de archivo no válido" });
+    }
 
-      connection = await conn.getConnection();
+    if ((!Array.isArray(productosDeposito) || productosDeposito.length === 0) &&
+        (!Array.isArray(productosFull) || productosFull.length === 0)) {
+      return res.status(400).json({ error: "No se proporcionaron productos para actualizar" });
+    }
 
-          // === VALIDACIÓN: asegurar que SKUs con stock > 0 estén activos ===
-    if (accion !== 'borrar' && Array.isArray(productos)) {
-      // Filtrar SKUs con stock > 0
-      const skusConStock = productos
-        .filter(p => p.cantidad > 0)
-        .map(p => p.sku);
+    connection = await conn.getConnection();
 
-      if (skusConStock.length > 0) {
-        const [inactivos] = await connection.query(
-          `SELECT sku FROM productos 
-           WHERE sku IN (?) AND (isActive = 0 OR isActive IS NULL)`,
-          [skusConStock]
-        );
+    // === VALIDACIÓN: asegurar que SKUs con stock > 0 estén activos ===
+    const skusConStock = [];
+    if (Array.isArray(productosDeposito)) {
+      skusConStock.push(...productosDeposito.filter(p => p.cantidad > 0).map(p => p.sku));
+    }
+    if (Array.isArray(productosFull)) {
+      skusConStock.push(...productosFull.filter(p => p.cantidad > 0).map(p => p.sku));
+    }
 
-        if (inactivos.length > 0) {
-          const listaSkus = inactivos.map(p => p.sku).join(', ');
-          return res.status(400).json({
-            error: "SKUs inactivos con stock detectados",
-            message: `Los siguientes SKUs están inactivos pero tienen stock en sistema: ${listaSkus}. Actívelos antes de cargar.`,
-            skusInactivos: inactivos.map(p => p.sku)
-          });
-        }
+    if (skusConStock.length > 0) {
+      const [inactivos] = await connection.query(
+        `SELECT sku FROM productos 
+         WHERE sku IN (?) AND (isActive = 0 OR isActive IS NULL)`,
+        [skusConStock]
+      );
+
+      if (inactivos.length > 0) {
+        const listaSkus = inactivos.map(p => p.sku).join(', ');
+        return res.status(400).json({
+          error: "SKUs inactivos con stock detectados",
+          message: `Los siguientes SKUs están inactivos pero tienen stock en sistema: ${listaSkus}. Actívelos antes de cargar.`,
+          skusInactivos: inactivos.map(p => p.sku)
+        });
       }
     }
-      let updatedCount = 0;
-      const fechaActual = new Date();
 
-      if (accion === 'borrar') {
-        // Borrado masivo: rápido y eficiente
-        await connection.beginTransaction();
-        const [result] = await connection.query(
-          `UPDATE productos SET 
-                ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} = 0,
-                fechaConteo = ?
-                WHERE ${tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow'} IS NOT NULL`,
-          [fechaActual]
-        );
-        updatedCount = result.affectedRows;
-        await connection.commit();
-      } else {
-        if (!Array.isArray(productos) || productos.length === 0) {
-          return res.status(400).json({ error: "Se esperaba un array no vacío de productos" });
-        }
+    const fechaActual = new Date();
+    let updatedCount = 0;
 
-        // Usar una sola columna dependiendo del tipo
-        const columnaCantidad = tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow';
+    // === ACTUALIZAR DEPÓSITO ===
+    if (Array.isArray(productosDeposito) && productosDeposito.length > 0) {
+      const columnaDeposito = tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow';
+      const skus = productosDeposito.map(p => p.sku);
+      const cantidades = productosDeposito.reduce((acc, p) => {
+        acc[p.sku] = p.cantidad;
+        return acc;
+      }, {});
 
-        const batchSize = 100; // Ajusta según rendimiento (100-500)
-        for (let i = 0; i < productos.length; i += batchSize) {
-          const batch = productos.slice(i, i + batchSize);
+      const skuPlaceholders = skus.map(() => '?').join(',');
+      const caseParts = skus.map(sku => `WHEN ? THEN ?`).join(' ');
+      const caseValues = skus.flatMap(sku => [sku, cantidades[sku]]);
 
-          // Construir condiciones y valores
-          const skus = batch.map(p => p.sku);
-          const cantidades = batch.reduce((acc, p) => {
-            acc[p.sku] = p.cantidad;
-            return acc;
-          }, {});
-
-          // Generar condiciones: WHERE sku IN (?, ?, ?)
-          const skuPlaceholders = skus.map(() => '?').join(',');
-
-          // Generar el CASE para asignar cantidades por SKU
-          const caseParts = skus.map(sku => `WHEN ? THEN ?`).join(' ');
-          const caseValues = skus.flatMap(sku => [sku, cantidades[sku]]);
-
-          // Valores para la consulta: [cantidad1, fecha, cantidad2, fecha, ...]
-          const updateValues = [];
-          for (const p of batch) {
-            updateValues.push(p.cantidad, fechaActual);
-          }
-
-          await connection.beginTransaction();
-
-          // Opción 1: UPDATE con CASE (más eficiente)
-          const [result] = await connection.query(
-            `
-                    UPDATE productos 
-                    SET 
-                        ${columnaCantidad} = CASE sku 
-                            ${caseParts}
-                        END,
-                        fechaConteo = ?
-                    WHERE sku IN (${skuPlaceholders})
-                    `,
-            [...caseValues, fechaActual, ...skus]
-          );
-
-          updatedCount += result.affectedRows;
-          await connection.commit();
-        }
-      }
-
-      res.status(200).json({
-        success: true,
-        updatedCount,
-        message: accion === 'borrar'
-          ? `Todos los valores de ${tipoArchivo} fueron reseteados a 0 (${updatedCount} registros)`
-          : `${updatedCount} productos actualizados correctamente (${tipoArchivo})`
-      });
-
-    } catch (error) {
-      if (connection) {
-        await connection.rollback().catch(console.error);
-      }
-      console.error("Error al actualizar inventario:", error);
-      res.status(500).json({
-        error: "Error al actualizar el inventario",
-        details: error.message
-      });
-    } finally {
-      if (connection) connection.release();
+      await connection.beginTransaction();
+      const [resultDeposito] = await connection.query(
+        `
+        UPDATE productos 
+        SET 
+          ${columnaDeposito} = CASE sku 
+            ${caseParts}
+          END,
+          fechaConteo = ?
+        WHERE sku IN (${skuPlaceholders})
+        `,
+        [...caseValues, fechaActual, ...skus]
+      );
+      updatedCount += resultDeposito.affectedRows;
+      await connection.commit();
     }
-  },
+
+    // === ACTUALIZAR FULL ===
+    if (Array.isArray(productosFull) && productosFull.length > 0) {
+      const columnaFull = tipoArchivo === 'Femex' ? 'cantFullFemex' : 'cantFullBlow';
+      const skus = productosFull.map(p => p.sku);
+      const cantidades = productosFull.reduce((acc, p) => {
+        acc[p.sku] = p.cantidad;
+        return acc;
+      }, {});
+
+      const skuPlaceholders = skus.map(() => '?').join(',');
+      const caseParts = skus.map(sku => `WHEN ? THEN ?`).join(' ');
+      const caseValues = skus.flatMap(sku => [sku, cantidades[sku]]);
+
+      await connection.beginTransaction();
+      const [resultFull] = await connection.query(
+        `
+        UPDATE productos 
+        SET 
+          ${columnaFull} = CASE sku 
+            ${caseParts}
+          END,
+          fechaConteo = ?
+        WHERE sku IN (${skuPlaceholders})
+        `,
+        [...caseValues, fechaActual, ...skus]
+      );
+      updatedCount += resultFull.affectedRows;
+      await connection.commit();
+    }
+
+    res.status(200).json({
+      success: true,
+      updatedCount,
+      message: `${updatedCount} productos actualizados correctamente (${tipoArchivo})`
+    });
+
+  } catch (error) {
+    if (connection) {
+      await connection.rollback().catch(console.error);
+    }
+    console.error("Error al actualizar inventario:", error);
+    res.status(500).json({
+      error: "Error al actualizar el inventario",
+      details: error.message
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+},
 
   putGuardarInventario: async (req, res) => {
     let connection;

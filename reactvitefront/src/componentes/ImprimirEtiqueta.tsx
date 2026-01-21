@@ -209,6 +209,7 @@ export const ImprimirEtiqueta = () => {
 
     return zplCodes.join('\n\n');
   }
+
   const generarPDF = () => {
     try {
       if (!datosEditables || cantidadBultos === null || cantidadBultos <= 0) {
@@ -368,7 +369,7 @@ export const ImprimirEtiqueta = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `etiqueta_${datosEditables?.nombre.replace(
+      a.download = `${datosEditables?.nombre.replace(
         /\s+/g,
         "_"
       )}_${new Date().toISOString().slice(0, 10)}.txt`;
