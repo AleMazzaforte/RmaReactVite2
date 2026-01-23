@@ -15,7 +15,7 @@ export const NavBar: React.FC = () => {
       const response = await fetch(urlBackup, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`, // Si usas autenticación JWT
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -45,13 +45,46 @@ export const NavBar: React.FC = () => {
       logout();
     } else if (value === 'backup') {
       handleBackupDownload();
-      // Resetear el select para que vuelva a "Selecciona una opción"
       e.target.value = '';
     } else {
       window.location.href = value;
     }
   };
 
+  // Definimos las opciones como un array de objetos
+  const opciones = [
+    { label: 'Cargar Usuario', value: '/cargarUsuario' },
+    { label: 'Cargar cliente', value: '/cargarCliente' },
+    { label: 'Actualizar clientes', value: '/actualizarCliente' },
+    { label: 'Cargar marca', value: '/cargarMarcas' },
+    { label: 'Actualizar marca', value: '/actualizarMarca' },
+    { label: 'Cargar Productos', value: '/cargarProductos' },
+    { label: 'Actualizar Productos', value: '/actualizarProductos' },
+    { label: 'Cargar RMA', value: '/' },
+    { label: 'Devolución a góndola', value: '/devolucionAGondola' },
+    { label: 'Gestionar RMA', value: '/gestionarRma' },
+    { label: 'Imprimir etiqueta', value: '/imprimirEtiqueta' },
+    { label: 'Cargar transportes', value: '/cargarTransporte' },
+    { label: 'Actualizar transportes', value: '/actualizarTransporte' },
+    { label: 'Consultar Stock', value: '/stock' },
+    { label: 'Cargar Impo', value: '/cargarOp' },
+    { label: 'Actualizar Impo', value: '/actualizarOp' },
+    { label: 'Estadísticas', value: '/estadisticas' },
+    { label: 'Cargar KIT', value: '/cargarKits' },
+    { label: 'Contador de tintas', value: '/cargarTintas' },
+    { label: 'Inventario', value: '/inventario' },
+    { label: 'Bloques', value: '/bloques' },
+    { label: 'Stock', value: '/stock' },
+    { label: 'Informe RMA', value: '/informeRma' },
+    { label: 'MercadoLibre', value: '/mercadoLibre' },
+    { label: 'Magia', value: '/magia' },
+    { label: 'Productos Con Descuento', value: '/productosConDescuento' },
+  ];
+
+  // Ordenamos alfabéticamente por el label (ignorando mayúsculas/minúsculas)
+  const opcionesOrdenadas = [...opciones].sort((a, b) =>
+    a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
+  );
 
   return (
     <header className="h-32 mb-6 bg-gradient-to-b from-blue-500 to-green-500 text-white flex flex-col sm:flex-row items-center justify-between p-4 relative">
@@ -63,39 +96,19 @@ export const NavBar: React.FC = () => {
           onChange={handleSelectChange}
           className="w-full sm:w-auto p-2 rounded bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-300"
         >
-          <option value="" disabled>Selecciona una opción</option>
-          <option value="/cargarUsuario">Cargar Usuario</option>
-          <option value="/cargarCliente">Cargar cliente</option>
-          <option value="/actualizarCliente">Actualizar clientes</option>
-          <option value="/cargarMarcas">Cargar marca</option>
-          <option value="/actualizarMarca">Actualizar marca</option>
-          <option value="/cargarProductos">Cargar Productos</option>
-          <option value="/actualizarProductos">Actualizar Productos</option>
-          <option value="/">Cargar RMA</option>
-          <option value="/devolucionAGondola">Devolución a góndola</option>
-          <option value="/gestionarRma">Gestionar RMA</option>
-          <option value="/imprimirEtiqueta">Imprimir etiqueta</option>
-          <option value="/cargarTransporte">Cargar transportes</option>
-          <option value="/actualizarTransporte">Actualizar transportes</option>
-          <option value="/stock">Consultar Stock</option>
-          <option value="/cargarOp">Cargar Impo</option>
-          <option value="/actualizarOp">Actualizar Impo</option>
-          <option value="/estadisticas">Estadísticas</option>
-          <option value="/cargarKits">Cargar KIT</option>
-          <option value="/cargarTintas">Contador de tintas</option>
-          <option value="/inventario">Inventario</option>
-          <option value="/bloques">Bloques</option>
-          <option value="/stock">Stock</option>
-          <option value="/informeRma">Informe RMA</option>
-          <option value="/api">Api</option>
-          <option value="/magia">Magia</option>
-          <option value="/productosConDescuento">Productos Con Descuento</option>
+          <option value="" disabled>
+            Selecciona una opción
+          </option>
+          {opcionesOrdenadas.map((opcion) => (
+            <option key={opcion.value} value={opcion.value}>
+              {opcion.label}
+            </option>
+          ))}
           <option value="/pokemon">Pokemon</option>
-
           <option value="backup">Descargar Backup</option>
           <option value="logout">Logout</option>
         </select>
       </div>
     </header>
   );
-}
+};

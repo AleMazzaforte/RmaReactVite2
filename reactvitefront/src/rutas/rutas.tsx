@@ -27,7 +27,7 @@ import { DefinirBloques } from "../componentes/DefinirBloques";
 import { Stock } from "../componentes/Stock";
 import { InformeRMA } from "../componentes/InformeRMA";
 import { CargarKits } from "../componentes/CargarKits";
-import { Api } from "../componentes/Api";
+import { MercadoLibre } from "../componentes/MercadoLibre";
 import { ProductosConDescuento } from "../componentes/ProductosConDescuento";
 import { Magia } from "../componentes/Magia";
 
@@ -60,7 +60,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/bloques" element={<DefinirBloques />} />
         <Route path="/stock" element={<Stock />} />
         <Route path="/informeRma" element={<InformeRMA />} />
-        <Route path="/api" element={<Api />} />
+        <Route path="/mercadoLibre" element={<MercadoLibre />} />
         <Route path="/magia" element={<Magia />} />
         <Route path="/productosConDescuento" element={<ProductosConDescuento />} />
       </Route>

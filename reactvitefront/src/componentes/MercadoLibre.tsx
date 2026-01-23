@@ -95,7 +95,7 @@ const getTipoEnvioLabel = (tipo: string): string => {
   return labels[tipo] || tipo;
 };
 
-export const Api = () => {
+export const MercadoLibre = () => {
   const [dias, setDias] = useState<number>(3);
   const [cuentaSeleccionada, setCuentaSeleccionada] = useState<string>("1");
   const [orders, setOrders] = useState<Order[]>([]);
