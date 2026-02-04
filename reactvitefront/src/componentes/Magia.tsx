@@ -45,6 +45,9 @@ export const Magia: React.FC = () => {
   const [loadingStock, setLoadingStock] = useState(false);
   const [facturadosData, setFacturadosData] = useState<StockFacturado[]>([]);
 
+   const [facturadosMostrados, setFacturadosMostrados] = useState(15);
+  const [loadingFacturados, setLoadingFacturados] = useState(false);
+
   const urlProductos = Urls.productos.listar;
   const urlAgregarMagia = Urls.magia.agregar;
   const urlAgregarFactura = Urls.magia.agregarFactura;
@@ -81,21 +84,34 @@ export const Magia: React.FC = () => {
 
   const cargarFacturados = async () => {
     try {
-      setLoadingStock(true);
+      setLoadingFacturados(true);
       const response = await fetch(urlObtenerFacturados);
       if (response.ok) {
         const data = await response.json();
-
         setFacturadosData(data);
       } else {
-        console.error("Error al cargar stock");
+        console.error("Error al cargar facturados");
       }
     } catch (error) {
-      console.error("Error al cargar stock:", error);
+      console.error("Error al cargar facturados:", error);
     } finally {
-      setLoadingStock(false);
+      setLoadingFacturados(false);
     }
   };
+
+    // Función para cargar más registros
+  const cargarMasFacturados = () => {
+    setFacturadosMostrados(prev => prev + 15);
+  };
+
+  // Función para reiniciar la paginación
+  const reiniciarPaginacion = () => {
+    setFacturadosMostrados(15);
+  };
+
+    // Calcular los datos paginados
+  const facturadosPaginados = facturadosData.slice(0, facturadosMostrados);
+  const hayMasFacturados = facturadosMostrados < facturadosData.length;
 
   const handleReposicionStock = async () => {
     const productosAReponer = stockData
@@ -712,11 +728,25 @@ export const Magia: React.FC = () => {
         </div>
       </Contenedor>
       {mostrarFacturados && (
-        <Contenedor>
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-700 text-center mb-4">
-              Facturas Cargadas
+      <Contenedor>
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold text-gray-700">
+              Facturas Cargadas ({facturadosPaginados.length} de {facturadosData.length})
             </h2>
+            {facturadosMostrados >15 && (
+              <button
+                onClick={reiniciarPaginacion}
+                className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+              >
+                Ver primeros 15
+              </button>
+            )}
+          </div>
+          
+          {loadingFacturados ? (
+            <Loader />
+          ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white border border-gray-300">
                 <thead className="bg-gray-100">
@@ -733,14 +763,14 @@ export const Magia: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {facturadosData.map((item, index) => (
+                  {facturadosPaginados.map((item, index) => (
                     <tr
-                      key={item.id || index} // usa `item.id` si es único, sino `index`
+                      key={item.id || index}
                       className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                     >
                       <td className="px-4 py-2 border-b text-sm text-gray-700">
-  {skuIdToCode[item.idSku] || `ID ${item.idSku}`}
-</td>
+                        {skuIdToCode[item.idSku] || `ID ${item.idSku}`}
+                      </td>
                       <td className="px-4 py-2 border-b text-center text-sm text-gray-700">
                         {item.cantidad}
                       </td>
@@ -752,9 +782,30 @@ export const Magia: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
-        </Contenedor>
-      )}
+          )}
+
+          {/* Botón para cargar más */}
+          {hayMasFacturados && (
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={cargarMasFacturados}
+                disabled={loadingFacturados}
+                className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors ${loadingFacturados ? 'bg-gray-400 cursor-not-allowed' : ''}`}
+              >
+                {loadingFacturados ? "Cargando..." : `Ver más (${facturadosMostrados + 15 > facturadosData.length ? facturadosData.length - facturadosMostrados : 15} más)`}
+              </button>
+            </div>
+          )}
+
+          {/* Mensaje cuando se muestran todos */}
+          {!hayMasFacturados && facturadosData.length > 15 && (
+            <div className="mt-4 text-center text-sm text-gray-600">
+              Mostrando todos los {facturadosData.length} registros
+            </div>
+          )}
+        </div>
+      </Contenedor>
+    )}
 
       {/* Tabla de Stock */}
       <Contenedor>

@@ -66,7 +66,6 @@ export const NavBar: React.FC = () => {
     { label: 'Imprimir etiqueta', value: '/imprimirEtiqueta' },
     { label: 'Cargar transportes', value: '/cargarTransporte' },
     { label: 'Actualizar transportes', value: '/actualizarTransporte' },
-    { label: 'Consultar Stock', value: '/stock' },
     { label: 'Cargar Impo', value: '/cargarOp' },
     { label: 'Actualizar Impo', value: '/actualizarOp' },
     { label: 'Estadísticas', value: '/estadisticas' },

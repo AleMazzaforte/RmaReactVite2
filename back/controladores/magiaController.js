@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 import { conn } from "../bd/bd.js";
 import events from "events";
-import { log } from "console";
 
 events.EventEmitter.defaultMaxListeners = 15;
 
@@ -68,20 +67,27 @@ const cargarMagia = {
             connection = await conn.getConnection();
 
             const query = `
-                SELECT 
-                    p.sku,
-                    p.descripcion,
-                    COALESCE(SUM(s.cantidad), 0) AS totalEntregado,
-                    COALESCE(SUM(f.cantidad), 0) AS totalFacturado,
-                    COALESCE(SUM(s.cantidad), 0) - COALESCE(SUM(f.cantidad), 0) AS diferencia
-                FROM productos p
-                LEFT JOIN stockMagia s ON p.id = s.idSku
-                LEFT JOIN facturacionMagia f ON p.id = f.idSku
-                WHERE p.sku LIKE 'wm%' OR p.sku LIKE 'WM%'
-                GROUP BY p.id, p.sku, p.descripcion
-                HAVING totalEntregado > 0 OR totalFacturado > 0
-                ORDER BY p.sku ASC
-            `;
+            SELECT 
+                p.sku,
+                p.descripcion,
+                COALESCE(s.totalEntregado, 0) AS totalEntregado,
+                COALESCE(f.totalFacturado, 0) AS totalFacturado,
+                COALESCE(s.totalEntregado, 0) - COALESCE(f.totalFacturado, 0) AS diferencia
+            FROM productos p
+            LEFT JOIN (
+                SELECT idSku, SUM(cantidad) AS totalEntregado
+                FROM stockMagia
+                GROUP BY idSku
+            ) s ON p.id = s.idSku
+            LEFT JOIN (
+                SELECT idSku, SUM(cantidad) AS totalFacturado
+                FROM facturacionMagia
+                GROUP BY idSku
+            ) f ON p.id = f.idSku
+            WHERE p.sku LIKE 'wm%' OR p.sku LIKE 'WM%'
+            HAVING totalEntregado > 0 OR totalFacturado > 0
+            ORDER BY p.sku ASC
+        `;
 
             const [rows] = await connection.query(query);
             res.json(rows);
@@ -95,8 +101,8 @@ const cargarMagia = {
         }
     },
 
-    getFacturadosMagia: async (req, res) =>{
-    
+    getFacturadosMagia: async (req, res) => {
+
         let connection;
         try {
             connection = await conn.getConnection();
@@ -105,18 +111,18 @@ const cargarMagia = {
                 ORDER BY numFactura DESC
             `
             const [rows] = await connection.query(query);
-            
+
             res.json(rows)
         }
         catch (error) {
-                console.error("Error al obtener stock:", error);
+            console.error("Error al obtener stock:", error);
             res.status(500).json({ message: "Error al obtener stock" });
         } finally {
             if (connection) {
                 connection.release();
             }
-        } 
-        
+        }
+
 
     }
 };

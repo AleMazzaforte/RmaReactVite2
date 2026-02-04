@@ -108,7 +108,7 @@ export const generateEnviosPDF = (orders: Order[], selectedOrders: Set<string>) 
     order.items.forEach((item) => {
   doc.rect(margin + 5, currentY - 3, checkboxSize, checkboxSize);
 
-  const skuPart = `${item.quantity} Un. — ${item.sku} `;
+  const skuPart = `${item.quantity} Un. — ${item.sku} — `;
   const maxDescLength = Math.max(0, 80 - skuPart.length);
   let descPart = item.description;
   if (descPart.length > maxDescLength) {
