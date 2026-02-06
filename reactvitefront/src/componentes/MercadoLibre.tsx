@@ -38,7 +38,14 @@ const CUENTAS = [
 ];
 
 const kitsConDescuento: Record<string, { skuDescuento: string | string[] }> = {
-  "KIT GI190 345ML": { skuDescuento: "GI190 N 135ML" },
+  "KIT GI190 345ML": { 
+    skuDescuento: [
+      "GI190 N 135ML", 
+      "GI190 C 70ML", 
+      "GI190 M 70ML", 
+      "GI190 A 70ML"
+    ] 
+  },
   "KIT EP544 280ML": { skuDescuento: "EP544 N 70ML" },
   "KIT EP664 400ML": {
     skuDescuento: [
@@ -56,11 +63,18 @@ const kitsConDescuento: Record<string, { skuDescuento: string | string[] }> = {
       "EP664-EP673 A 100ML",
       "EP673 LC 100ML",
       "EP673 LM 100ML",
+    ],    
+  },
+  "KIT H901XL": {
+    skuDescuento:[
+      "H901XL N", 
+      "H901XL C"
     ],
   },
+  "KIT EP73-EP117": {skuDescuento:["EP117 N"]},  
   "KIT EP544-EP664 4L": { skuDescuento: "EP544-EP664-EP673 N" },
   "KIT EP73-EP115": { skuDescuento: "EP115 N" },
-   "KIT EP73-EP90": { skuDescuento: "EP90 N" },
+  "KIT EP73-EP90": { skuDescuento: "EP90 N" },
 };
 
 // ✅ Función para formatear fecha en 24h (solo para visualización)
