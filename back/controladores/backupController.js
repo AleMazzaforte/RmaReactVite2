@@ -8,186 +8,75 @@ import { promisify } from 'util';
 
 const finishedAsync = promisify(finished);
 
-// ✅ SCHEMA LIMPIO (solo CREATE TABLE, sin comentarios ni SET)
-const SCHEMA_SQL = `
-CREATE TABLE \`clientes\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`nombre\` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`cuit\` bigint DEFAULT NULL,
-  \`provincia\` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`ciudad\` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`domicilio\` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`telefono\` bigint DEFAULT NULL,
-  \`transporte\` varchar(50) COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`seguro\` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`condicionDeEntrega\` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`condicionDePago\` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  PRIMARY KEY (\`id\`),
-  UNIQUE KEY \`nombre\` (\`nombre\`),
-  UNIQUE KEY \`cuit\` (\`cuit\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
+// Función para obtener todas las tablas y sus dependencias
+const getTablesInfo = async (connection) => {
+  // Obtener todas las tablas de la base de datos actual
+  const [tables] = await connection.query(`
+    SELECT TABLE_NAME 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_TYPE = 'BASE TABLE'
+    ORDER BY TABLE_NAME
+  `);
 
-CREATE TABLE \`configuracionDeImpresion\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`config\` varchar(100) COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  \`bool1\` tinyint(1) NOT NULL,
-  \`bool2\` tinyint(1) NOT NULL,
-  \`bool3\` tinyint(1) NOT NULL,
-  \`bool4\` tinyint(1) NOT NULL,
-  \`bool5\` tinyint(1) NOT NULL,
-  PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
+  const tableNames = tables.map(t => t.TABLE_NAME);
 
-CREATE TABLE \`devoluciones\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`idCliente\` int NOT NULL,
-  \`fechaIngreso\` date NOT NULL,
-  \`sku\` varchar(50) COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  \`cantidad\` int NOT NULL,
-  \`marca\` varchar(20) COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  \`motivo\` varchar(100) COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  \`ventaMeli\` bigint DEFAULT NULL,
-  PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
+  // Obtener dependencias de claves foráneas para ordenar correctamente
+  const [foreignKeys] = await connection.query(`
+    SELECT 
+      TABLE_NAME,
+      REFERENCED_TABLE_NAME
+    FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND REFERENCED_TABLE_NAME IS NOT NULL
+  `);
 
-CREATE TABLE \`kits\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`idSkuKit\` int NOT NULL,
-  \`idSku1\` int DEFAULT NULL,
-  \`idSku2\` int DEFAULT NULL,
-  \`idSku3\` int DEFAULT NULL,
-  \`idSku4\` int DEFAULT NULL,
-  PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
+  // Crear un mapa de dependencias
+  const dependencies = new Map();
+  foreignKeys.forEach(fk => {
+    if (!dependencies.has(fk.TABLE_NAME)) {
+      dependencies.set(fk.TABLE_NAME, new Set());
+    }
+    dependencies.get(fk.TABLE_NAME).add(fk.REFERENCED_TABLE_NAME);
+  });
 
-CREATE TABLE \`logo\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`nombre\` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`imagen\` longblob,
-  PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
+  // Ordenar tablas topológicamente (respetando dependencias)
+  const sortedTables = [];
+  const visited = new Set();
+  const tempMark = new Set();
 
-CREATE TABLE \`marcas\` (
-  \`id\` smallint NOT NULL AUTO_INCREMENT,
-  \`nombre\` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  PRIMARY KEY (\`id\`),
-  UNIQUE KEY \`nombre\` (\`nombre\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
+  const visit = (tableName) => {
+    if (tempMark.has(tableName)) {
+      throw new Error('Ciclo detectado en dependencias de tablas');
+    }
+    if (!visited.has(tableName)) {
+      tempMark.add(tableName);
+      const deps = dependencies.get(tableName) || new Set();
+      deps.forEach(dep => {
+        if (tableNames.includes(dep)) {
+          visit(dep);
+        }
+      });
+      tempMark.delete(tableName);
+      visited.add(tableName);
+      sortedTables.push(tableName);
+    }
+  };
 
-CREATE TABLE \`OP\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`nombre\` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  \`fechaIngreso\` date NOT NULL,
-  PRIMARY KEY (\`id\`),
-  UNIQUE KEY \`op\` (\`nombre\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
+  tableNames.forEach(tableName => {
+    if (!visited.has(tableName)) {
+      visit(tableName);
+    }
+  });
 
-CREATE TABLE \`opProductos\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`idOp\` int NOT NULL,
-  \`cantidad\` int NOT NULL,
-  \`idSku\` int NOT NULL,
-  PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
+  return sortedTables;
+};
 
-CREATE TABLE \`productos\` (
-  \`id\` smallint NOT NULL AUTO_INCREMENT,
-  \`sku\` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  \`marca\` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`descripcion\` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`rubro\` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`idBloque\` int DEFAULT NULL,
-  \`cantSistemaFemex\` int DEFAULT NULL,
-  \`cantSistemaBlow\` int DEFAULT NULL,
-  \`conteoFisico\` int DEFAULT NULL,
-  \`fechaConteo\` datetime DEFAULT NULL,
-  \`cantidadPorBulto\` int DEFAULT NULL,
-  \`isActive\` tinyint(1) DEFAULT '1',
-  \`bolean2\` tinyint(1) DEFAULT NULL,
-  UNIQUE KEY \`id\` (\`id\`),
-  UNIQUE KEY \`sku\` (\`sku\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
-
-CREATE TABLE \`productosViejos\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`sku\` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  \`cantidad\` int NOT NULL,
-  \`idSku\` int DEFAULT NULL,
-  PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
-
-CREATE TABLE \`reposicion\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`sku\` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`cantidad\` bigint DEFAULT NULL,
-  \`bool1\` tinyint(1) DEFAULT NULL,
-  \`bool2\` tinyint(1) DEFAULT NULL,
-  \`bool3\` tinyint(1) DEFAULT NULL,
-  \`bool4\` tinyint(1) DEFAULT NULL,
-  \`bool5\` tinyint(1) DEFAULT NULL,
-  \`bool6\` tinyint(1) DEFAULT NULL,
-  \`bool7\` tinyint(1) DEFAULT NULL,
-  \`bool8\` tinyint(1) DEFAULT NULL,
-  PRIMARY KEY (\`id\`),
-  UNIQUE KEY \`nombre\` (\`sku\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
-
-CREATE TABLE \`r_m_a\` (
-  \`idRma\` int NOT NULL AUTO_INCREMENT,
-  \`modelo\` smallint NOT NULL,
-  \`cantidad\` int NOT NULL,
-  \`marca\` smallint NOT NULL,
-  \`solicita\` date NOT NULL,
-  \`opLote\` int DEFAULT NULL,
-  \`vencimiento\` date DEFAULT NULL,
-  \`seEntrega\` date DEFAULT NULL,
-  \`seRecibe\` date DEFAULT NULL,
-  \`observaciones\` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`nIngreso\` int DEFAULT NULL,
-  \`nEgreso\` varchar(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`idCliente\` int DEFAULT NULL,
-  \`numVenta\` bigint DEFAULT NULL,
-  \`enExistencia\` tinyint(1) DEFAULT NULL,
-  \`bool2\` tinyint(1) DEFAULT NULL,
-  PRIMARY KEY (\`idRma\`),
-  KEY \`fk_marca\` (\`marca\`),
-  CONSTRAINT \`fk_marca\` FOREIGN KEY (\`marca\`) REFERENCES \`marcas\` (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
-
-CREATE TABLE \`transportes\` (
-  \`nombre\` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  \`idTransporte\` int NOT NULL AUTO_INCREMENT,
-  \`direccionLocal\` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs DEFAULT NULL,
-  \`telefono\` bigint DEFAULT NULL,
-  PRIMARY KEY (\`idTransporte\`),
-  UNIQUE KEY \`nombre\` (\`nombre\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
-
-CREATE TABLE \`usuarios\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`nombre\` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  \`password\` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_as_cs NOT NULL,
-  PRIMARY KEY (\`id\`),
-  UNIQUE KEY \`idx_nombre\` (\`nombre\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_tr_0900_as_cs;
-`.trim();
-
-const TABLES_IN_ORDER = [
-  'marcas',
-  'clientes',
-  'configuracionDeImpresion',
-  'devoluciones',
-  'kits',
-  'logo',
-  'OP',
-  'opProductos',
-  'productos',
-  'productosViejos',
-  'reposicion',
-  'r_m_a',
-  'transportes',
-  'usuarios'
-];
+// Función para obtener el CREATE TABLE de una tabla específica
+const getCreateTable = async (connection, tableName) => {
+  const [result] = await connection.query(`SHOW CREATE TABLE \`${tableName}\``);
+  return result[0]['Create Table'];
+};
 
 const escapeSqlValue = (val) => {
   if (val === null) return 'NULL';
@@ -209,11 +98,21 @@ const backupController = {
       tempFile = join(tmpdir(), filename);
       const writeStream = createWriteStream(tempFile);
 
-      writeStream.write(`-- Backup generado el ${new Date().toISOString()}\n\n`);
+      writeStream.write(`-- Backup generado el ${new Date().toISOString()}\n`);
+      writeStream.write(`-- Base de datos: ${await connection.query('SELECT DATABASE()')}\n\n`);
       writeStream.write(`SET FOREIGN_KEY_CHECKS = 0;\n\n`);
-      writeStream.write(SCHEMA_SQL + '\n\n');
 
-      for (const tableName of TABLES_IN_ORDER) {
+      // Obtener tablas ordenadas dinámicamente
+      const tableNames = await getTablesInfo(connection);
+
+      // Escribir esquema de todas las tablas
+      for (const tableName of tableNames) {
+        const createTable = await getCreateTable(connection, tableName);
+        writeStream.write(`${createTable};\n\n`);
+      }
+
+      // Escribir datos de todas las tablas
+      for (const tableName of tableNames) {
         const [rows] = await connection.query(`SELECT * FROM \`${tableName}\``);
         if (rows.length > 0) {
           const columns = Object.keys(rows[0]);
@@ -229,6 +128,7 @@ const backupController = {
       }
 
       writeStream.write(`SET FOREIGN_KEY_CHECKS = 1;\n`);
+      writeStream.write(`-- Backup completado exitosamente\n`);
       writeStream.end();
       await finishedAsync(writeStream);
 
