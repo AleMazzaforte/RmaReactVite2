@@ -6,6 +6,7 @@ import { Contenedor } from "./utilidades/Contenedor";
 import Loader from "./utilidades/Loader";
 import Urls from "./utilidades/Urls";
 import Axios from "axios";
+import ExcelJS from "exceljs";
 
 interface Cliente {
   id: string;
@@ -36,6 +37,12 @@ interface Rma {
   nEgreso: string;
 }
 
+interface RmaInforme {
+  idRma: string
+  cantidad: number
+  marca: string
+}
+
 interface RmaAgrupado {
   cliente: string;
   rmas: Rma[];
@@ -47,6 +54,7 @@ export const GestionarRMA = (): JSX.Element => {
   const [mostrarFormulario, setMostrarFormulario] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
   const [rmasNoEntregados, setRmasNoEntregados] = useState<RmaAgrupado[]>([]);
+  const [rmaInforme, setRmaTnfornme] = useState<RmaInforme[]>([])
 
   const handleClienteSeleccionado = (cliente: Cliente) => {
     setLoading(true);
@@ -238,6 +246,149 @@ export const GestionarRMA = (): JSX.Element => {
     }
   };
 
+  const handleInformeMensual = async () => {
+  setLoading(true);
+  try {
+    // 1. Calcular fechas: primer día del mes actual hasta hoy
+    const hoy = new Date();
+    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    
+    // Formatear a YYYY-MM-DD para enviar a la API
+    const formatoFecha = (fecha: Date) => {
+      const year = fecha.getFullYear();
+      const month = String(fecha.getMonth() + 1).padStart(2, '0');
+      const day = String(fecha.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const desde = formatoFecha(primerDiaMes);
+    const hasta = formatoFecha(hoy);
+
+    // 2. Petición al backend con las fechas como query params
+    const response = await Axios.get<RmaInforme[]>(
+      `${Urls.rma.informeMensual}?desde=${desde}&hasta=${hasta}`
+    );
+
+    // 3. Validar y guardar la respuesta
+    if (response.status === 200 && response.data.length > 0) {
+      setRmaTnfornme(response.data);
+      sweetAlert.fire({
+        title: "Informe listo",
+        text: `Se encontraron ${response.data.length} SKUs en el período.`,
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+      });
+    } else {
+      // Si la respuesta está vacía
+      setRmaTnfornme([]);
+      sweetAlert.fire({
+        title: "Sin datos",
+        text: "No hay RMA registrados en el período seleccionado.",
+        icon: "info",
+        confirmButtonColor: "#3085d6",
+      });
+    }
+  } catch (error) {
+    console.error("Error al generar informe mensual:", error);
+    setRmaTnfornme([]);
+    sweetAlert.fire({
+      title: "Error",
+      text: "No se pudo generar el informe. Verificá la conexión o intentá más tarde.",
+      icon: "error",
+      confirmButtonColor: "#d33",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleExportarExcel = async (marcaFiltro?: string) => {
+  // Filtrar por marca si se especifica, sino usar todos
+  const datosFiltrados = marcaFiltro 
+    ? rmaInforme.filter(item => item.marca === marcaFiltro)
+    : rmaInforme;
+
+  if (datosFiltrados.length === 0) {
+    return sweetAlert.fire({
+      title: "Sin datos",
+      text: marcaFiltro 
+        ? `No hay RMA de la marca "${marcaFiltro}" para exportar.`
+        : "No hay información para exportar.",
+      icon: "info",
+      confirmButtonColor: "#3085d6",
+    });
+  }
+
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("RMA Mensual");
+
+    worksheet.columns = [
+      { header: "SKU", key: "sku", width: 25 },
+      { header: "Marca", key: "marca", width: 20 },
+      { header: "Cantidad", key: "cantidad", width: 15 }
+    ];
+
+    datosFiltrados.forEach(item => {
+      worksheet.addRow({
+        sku: item.idRma,
+        marca: item.marca,
+        cantidad: Number(item.cantidad)
+      });
+    });
+
+    // Estilos
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" }
+    };
+    worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.getCell(3).alignment = { horizontal: "right" };
+      }
+    });
+
+    // Nombre del archivo con la marca
+    const hoy = new Date();
+    const nombreMarca = marcaFiltro ? `-${marcaFiltro.toLowerCase().replace(/\s+/g, '-')}` : '';
+    const nombreArchivo = `informe-rma${nombreMarca}-${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}.xlsx`;
+
+    await workbook.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { 
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nombreArchivo;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    sweetAlert.fire({
+      title: "Exportado",
+      text: `Archivo "${nombreArchivo}" generado correctamente.`,
+      icon: "success",
+      confirmButtonColor: "#3085d6",
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+  } catch (error) {
+    console.error("Error al exportar Excel:", error);
+    sweetAlert.fire({
+      title: "Error",
+      text: "No se pudo generar el archivo Excel.",
+      icon: "error",
+      confirmButtonColor: "#d33",
+    });
+  }
+};
+
   const handleActualizarGlobal = async (rmaActualizada: Rma) => {
     // 1. Actualizar en el backend (igual que antes)
     try {
@@ -320,6 +471,19 @@ export const GestionarRMA = (): JSX.Element => {
               {loading ? "Cargando..." : "Cargar productos"}
             </button>
           </Contenedor>
+          <Contenedor>
+            <h1 className="text-2xl font-semibold text-gray-700 text-center mb-8">
+              Resumen mensual de RMA
+            </h1>
+            <button
+              type="button"
+              onClick={handleInformeMensual}
+              id="botonResumen"
+              className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-black"
+            >
+              {loading ? "Cargando..." : "Preparar resumen"}
+            </button>
+          </Contenedor>
         </div>
       )}
 
@@ -380,6 +544,51 @@ export const GestionarRMA = (): JSX.Element => {
           )}
         </div>
       )}
+
+      {rmaInforme.length > 0 && (
+  <Contenedor>
+    <h3 className="text-lg font-semibold text-gray-700 mb-4">
+      Resumen del mes ({rmaInforme.length} SKUs)
+    </h3>
+    
+    <div className="overflow-x-auto">
+      <table className="min-w-full bg-white border border-gray-300 rounded-lg">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">SKU</th>
+            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Marca</th>
+            <th className="py-2 px-4 border-b text-right text-sm font-semibold text-gray-700">Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rmaInforme.map((item, index) => (
+            <tr key={index} className="hover:bg-gray-50">
+              <td className="py-2 px-4 border-b text-sm">{item.idRma}</td>
+              <td className="py-2 px-4 border-b text-sm">{item.marca}</td>
+              <td className="py-2 px-4 border-b text-sm text-right font-medium">{item.cantidad}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div className="mt-4 flex justify-end gap-3">
+  <button
+    onClick={() => handleExportarExcel("BLOW INK")}
+    className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-blue-500"
+  >
+    📥 Descargar Blow
+  </button>
+  
+  <button
+    onClick={() => handleExportarExcel("GNEISS")}
+    className="py-2 px-4 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 focus:outline-black focus:ring focus:ring-purple-500"
+  >
+    📥 Descargar Gneiss
+  </button>
+</div>
+  </Contenedor>
+)}
     </>
   );
 };

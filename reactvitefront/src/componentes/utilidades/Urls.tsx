@@ -43,7 +43,8 @@ const Urls = {
     eliminar: `${base}/eliminarRma`,
     actualizarProducto: `${base}/actualizarProductoRma`,
     getPorCliente: `${base}/getRmaCliente`,
-    cargarRmaNoEntregado: `${base}/cargarRmaNoEntregados`
+    cargarRmaNoEntregado: `${base}/cargarRmaNoEntregados`,
+    informeMensual: `${base}/informeMensual`
   },
   remito: {
     getUltimoNumero: `${base}/getUltimoNIngreso`,

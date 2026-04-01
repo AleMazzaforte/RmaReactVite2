@@ -74,6 +74,8 @@ router.post('/actualizarProductoRma/:idRma', gestionarRma.postActualizarCliente)
 router.delete('/eliminarRma/:idRma', gestionarRma.deleteRma);
 router.get('/getUltimoNIngreso', cargarRma.getUltimoNum);
 router.get('/cargarRmaNoEntregados', gestionarRma.getRmaNoEntregados);
+router.get('/informeMensual', gestionarRma.getInformeMensual);
+
 
 
 //Ruta para Stock

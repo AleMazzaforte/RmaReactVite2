@@ -483,11 +483,61 @@ const gestionarRma = {
       }
     }
   },
+
+  // Agregar esta función dentro del objeto `gestionarRma`:
+
+  getInformeMensual: async (req, res) => {
+    const { desde, hasta } = req.query;
+    
+    // Validación básica de fechas
+    if (!desde || !hasta) {
+      return res.status(400).json({ error: "Se requieren los parámetros 'desde' y 'hasta' en formato YYYY-MM-DD" });
+    }
+
+    let connection;
+    try {
+      connection = await conn.getConnection();
+
+      // Consulta: agrupamos por SKU, sumamos cantidades, filtramos por fecha de solicitud
+      const query = `
+        SELECT 
+          p.sku,
+          SUM(rma.cantidad) AS cantidad_total,
+          m.nombre AS marca_nombre
+        FROM r_m_a rma
+        JOIN productos p ON rma.modelo = p.id
+        LEFT JOIN marcas m ON rma.marca = m.id
+        WHERE DATE(rma.solicita) BETWEEN ? AND ?
+          AND p.sku IS NOT NULL 
+          AND p.sku != ''
+        GROUP BY p.sku
+        ORDER BY cantidad_total DESC
+      `;
+
+      const [rows] = await connection.execute(query, [desde, hasta]);
+
+      // Transformamos la respuesta para que coincida con la interfaz del frontend
+      const resultado = rows.map(row => ({
+        idRma: row.sku, // Usamos el SKU como identificador único en el informe
+        cantidad: row.cantidad_total,
+        marca: row.marca_nombre || ''
+      }));
+
+      res.json(resultado);
+    } catch (error) {
+      console.error("Error al generar informe mensual de RMA:", error);
+      res.status(500).json({ error: "Error al generar el informe mensual" });
+    } finally {
+      if (connection) {
+        connection.release();
+      }
+    }
+  },
 };
 
 export {
   clienteController,
   productosGeneralController,
   cargarRma,
-  gestionarRma,
+  gestionarRma
 };
