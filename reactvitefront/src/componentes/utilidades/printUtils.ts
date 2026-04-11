@@ -140,11 +140,10 @@ export const printRetiroLocalHTML = (orders: Order[], selectedOrders: Set<string
                 <input type="date" id="fecha" class="campoDeEntrada" value="${fechaHoy}">
             </label>
             
-            <ul style="list-style: none; padding: 0; margin: 15px 0;">
-                <li style="margin: 15px;"><input type="checkbox" class="check">Tienda IT</li>
-                <li style="margin: 15px;"><input type="checkbox" class="check">Blow SAS</li>
-                <li><input type="checkbox" class="check">Tienda Nube</li>
-            </ul>
+            <div style="border: 2px solid black; padding: 10px; margin: 15px 0; display: inline-block; min-width: 200px;">
+                <strong>Vendedor:</strong> ${order.seller_nickname}
+            </div>
+            
             <div>Observaciones:</div>
             <label>
                 

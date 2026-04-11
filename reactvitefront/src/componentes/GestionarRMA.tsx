@@ -55,6 +55,195 @@ export const GestionarRMA = (): JSX.Element => {
   const [loading, setLoading] = useState<boolean>(false);
   const [rmasNoEntregados, setRmasNoEntregados] = useState<RmaAgrupado[]>([]);
   const [rmaInforme, setRmaTnfornme] = useState<RmaInforme[]>([])
+  // Estados para el reporte
+  const [reporteVisible, setReporteVisible] = useState<boolean>(false);
+  const [reporteResumen, setReporteResumen] = useState<Array<{sku: string, marca: string, cantidad: number}>>([]);
+  const [reporteFechas, setReporteFechas] = useState<{desde: string, hasta: string} | null>(null);
+
+// Helper: parsea "DD/MM/YYYY" → Date (para comparar)
+  const parsearFechaSolicita = (fecha: string): Date | null => {
+  if (!fecha || fecha.length !== 10) return null;
+  const [d, m, y] = fecha.split('/');
+  const parsed = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+  return isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const generarResumen = (desde: string, hasta: string) => {
+  // Convertimos las fechas de input (YYYY-MM-DD) a objetos Date para comparar
+  const fechaDesde = new Date(desde);
+  const fechaHasta = new Date(hasta);
+  // Ajustamos hasta para que incluya todo el día (23:59:59)
+  fechaHasta.setHours(23, 59, 59, 999);
+
+  // Filtramos y agrupamos
+  const agrupado = rmas
+    .filter(rma => {
+      const fecha = parsearFechaSolicita(rma.solicita);
+      return fecha && fecha >= fechaDesde && fecha <= fechaHasta;
+    })
+    .reduce((acc, rma) => {
+      const key = `${rma.modelo}|${rma.marca}`; // Clave única SKU+Marca
+      if (!acc[key]) {
+        acc[key] = { sku: rma.modelo, marca: rma.marca, cantidad: 0 };
+      }
+      acc[key].cantidad += Number(rma.cantidad) || 0;
+      return acc;
+    }, {} as Record<string, {sku: string, marca: string, cantidad: number}>);
+
+  // Convertimos a array y ordenamos por cantidad (desc)
+  const resultado = Object.values(agrupado).sort((a, b) => b.cantidad - a.cantidad);
+  
+  setReporteResumen(resultado);
+  setReporteFechas({ desde, hasta });
+  setReporteVisible(true);
+
+  // Feedback visual
+  sweetAlert.fire({
+    title: "✅ Reporte generado",
+    text: `Se encontraron ${resultado.length} SKUs en el período.`,
+    icon: "success",
+    timer: 1500,
+    showConfirmButton: false
+  });
+};
+
+const abrirModalReporte = () => {
+  sweetAlert.fire({
+    title: "📅 Generar reporte por período",
+    // ✅ Usamos html directamente en lugar de content
+    html: `
+      <div style="text-align: left; margin-top: 10px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Desde:</label>
+        <input type="date" id="fechaDesde" class="swal2-input" style="width: 100%; margin-bottom: 15px;" />
+        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Hasta:</label>
+        <input type="date" id="fechaHasta" class="swal2-input" style="width: 100%;" />
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: "Generar reporte",
+    cancelButtonText: "Cancelar",
+    // ✅ La validación se mantiene igual
+    preConfirm: () => {
+      const desdeInput = document.getElementById('fechaDesde') as HTMLInputElement;
+      const hastaInput = document.getElementById('fechaHasta') as HTMLInputElement;
+      const desde = desdeInput?.value;
+      const hasta = hastaInput?.value;
+      
+      if (!desde || !hasta) {
+        sweetAlert.fire({
+          icon: 'warning',
+          title: 'Faltan datos',
+          text: 'Seleccioná ambas fechas',
+          confirmButtonColor: '#3085d6'
+        });
+        return false;
+      }
+      if (new Date(desde) > new Date(hasta)) {
+        sweetAlert.fire({
+          icon: 'warning',
+          title: 'Fechas inválidas',
+          text: '"Desde" no puede ser mayor que "Hasta"',
+          confirmButtonColor: '#3085d6'
+        });
+        return false;
+      }
+      return { desde, hasta };
+    }
+  }).then((result) => {
+    if (result.isConfirmed && result.value && typeof result.value === 'object') {
+      const { desde, hasta } = result.value as { desde: string; hasta: string };
+      generarResumen(desde, hasta);
+    }
+  });
+};
+
+const exportarResumenExcel = () => {
+  if (reporteResumen.length === 0 || !cliente) {
+    return sweetAlert.fire({
+      title: "Sin datos",
+      text: "No hay información para exportar.",
+      icon: "info",
+      confirmButtonColor: "#3085d6"
+    });
+  }
+
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Resumen RMA");
+
+    // Columnas
+    worksheet.columns = [
+      { header: "SKU", key: "sku", width: 30 },
+      { header: "Cantidad Total", key: "cantidad", width: 20 }
+    ];
+
+    // Datos
+    reporteResumen.forEach(item => {
+      worksheet.addRow({
+        sku: item.sku,
+        cantidad: item.cantidad
+      });
+    });
+
+    // Estilos header
+    worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+    worksheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF4A90E2" }
+    };
+    worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+
+    // Alinear cantidades a la derecha
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.getCell(3).alignment = { horizontal: "right" };
+        row.getCell(3).font = { bold: true };
+      }
+    });
+
+    // Nombre del archivo: resumen-rma-[Cliente]-[fecha].xlsx
+    const nombreCliente = cliente.nombre
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    
+    const hoy = new Date();
+    const fechaArchivo = `${hoy.getFullYear()}${String(hoy.getMonth()+1).padStart(2,'0')}${String(hoy.getDate()).padStart(2,'0')}`;
+    const nombreArchivo = `resumen-rma-${nombreCliente}-${fechaArchivo}.xlsx`;
+
+    // Descargar
+    workbook.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { 
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nombreArchivo;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    sweetAlert.fire({
+      title: "📥 Exportado",
+      text: `Archivo "${nombreArchivo}" generado.`,
+      icon: "success",
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+  } catch (error) {
+    console.error("Error al exportar:", error);
+    sweetAlert.fire({
+      title: "Error",
+      text: "No se pudo generar el Excel.",
+      icon: "error",
+      confirmButtonColor: "#d33"
+    });
+  }
+};
 
   const handleClienteSeleccionado = (cliente: Cliente) => {
     setLoading(true);
@@ -91,6 +280,7 @@ export const GestionarRMA = (): JSX.Element => {
       setLoading(false);
     }
   };
+  
 
   const cambiarCliente = () => {
     setMostrarFormulario(true);
@@ -528,12 +718,22 @@ const handleExportarExcel = async (marcaFiltro?: string) => {
             <h2 className="text-2xl font-semibold text-gray-700">
               Cliente: {cliente?.nombre}
             </h2>
-            <button
-              onClick={cambiarCliente}
-              className="bg-gradient-to-b from-blue-500 to-green-500 text-white px-4 py-2 rounded focus:outline-black focus:ring focus:ring-black"
-            >
-              Cambiar Cliente
-            </button>
+            <div>
+              <button
+                type="button"
+                onClick={abrirModalReporte}
+                className="py-2 px-4 bg-gradient-to-b from-blue-500 to-green-500 mr-4 text-white font-semibold rounded-lg hover:bg-emerald-700 focus:outline-black focus:ring focus:ring-emerald-500"
+              >
+                📊 Reporte
+              </button>
+
+              <button
+                onClick={cambiarCliente}
+                className="bg-gradient-to-b from-blue-500 to-green-500 text-white px-4 py-2 rounded focus:outline-black focus:ring focus:ring-black"
+              >
+                Cambiar Cliente
+              </button>
+            </div>
           </div>
           {!loading && (
             <TablaListarRmas
@@ -544,6 +744,78 @@ const handleExportarExcel = async (marcaFiltro?: string) => {
           )}
         </div>
       )}
+
+      {/* 👇 Sección de resumen de reporte */}
+{reporteVisible && reporteResumen.length > 0 && cliente && (
+  <Contenedor>
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="text-lg font-semibold text-gray-700">
+        📋 Resumen: {cliente.nombre} 
+        <span className="text-sm font-normal text-gray-500 ml-2">
+          ({reporteFechas?.desde} al {reporteFechas?.hasta})
+        </span>
+      </h3>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setReporteVisible(false)}
+          className="py-1 px-3 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+        >
+          ✕ Cerrar
+        </button>
+        <button
+          onClick={exportarResumenExcel}
+          className="py-1 px-3 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          📥 Descargar Excel
+        </button>
+      </div>
+    </div>
+    
+    <div className="overflow-x-auto">
+      <table className="min-w-full bg-white border border-gray-300 rounded-lg">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">SKU</th>
+            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Marca</th>
+            <th className="py-2 px-4 border-b text-right text-sm font-semibold text-gray-700">Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          {reporteResumen.map((item, index) => (
+            <tr key={index} className="hover:bg-gray-50">
+              <td className="py-2 px-4 border-b text-sm font-mono">{item.sku}</td>
+              <td className="py-2 px-4 border-b text-sm">{item.marca}</td>
+              <td className="py-2 px-4 border-b text-sm text-right font-bold">{item.cantidad}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot className="bg-gray-50">
+          <tr>
+            <td colSpan={2} className="py-2 px-4 border-t text-right text-sm font-semibold">Total:</td>
+            <td className="py-2 px-4 border-t text-right text-lg font-bold text-blue-700">
+              {reporteResumen.reduce((sum, item) => sum + item.cantidad, 0)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </Contenedor>
+)}
+
+{/* Caso: reporte generado pero sin resultados */}
+{reporteVisible && reporteResumen.length === 0 && (
+  <Contenedor>
+    <div className="text-center py-8">
+      <p className="text-gray-500">No hay RMA registrados en el período seleccionado.</p>
+      <button
+        onClick={() => setReporteVisible(false)}
+        className="mt-4 py-2 px-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+      >
+        Volver
+      </button>
+    </div>
+  </Contenedor>
+)}
 
       {rmaInforme.length > 0 && (
   <Contenedor>
