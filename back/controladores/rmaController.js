@@ -533,6 +533,50 @@ const gestionarRma = {
       }
     }
   },
+  getReporteGeneral: async (req, res) => {
+  const { desde, hasta } = req.query;
+
+  if (!desde || !hasta) {
+    return res.status(400).json({ 
+      error: "Se requieren los parámetros 'desde' y 'hasta' en formato YYYY-MM-DD" 
+    });
+  }
+
+  let connection;
+  try {
+    connection = await conn.getConnection();
+
+    const query = `
+      SELECT 
+        p.sku,
+        m.nombre AS marca_nombre,
+        SUM(rma.cantidad) AS cantidad_total
+      FROM r_m_a rma
+      JOIN productos p ON rma.modelo = p.id
+      LEFT JOIN marcas m ON rma.marca = m.id
+      WHERE DATE(rma.solicita) BETWEEN ? AND ?
+        AND p.sku IS NOT NULL 
+        AND p.sku != ''
+      GROUP BY p.sku, m.nombre
+      ORDER BY cantidad_total DESC
+    `;
+
+    const [rows] = await connection.execute(query, [desde, hasta]);
+
+    const resultado = rows.map(row => ({
+      sku: row.sku,
+      marca: row.marca_nombre || '',
+      cantidad: row.cantidad_total
+    }));
+
+    res.json(resultado);
+  } catch (error) {
+    console.error("Error al generar reporte general:", error);
+    res.status(500).json({ error: "Error al generar el reporte general" });
+  } finally {
+    if (connection) connection.release();
+  }
+},
 };
 
 export {

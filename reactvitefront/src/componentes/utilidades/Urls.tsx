@@ -44,7 +44,8 @@ const Urls = {
     actualizarProducto: `${base}/actualizarProductoRma`,
     getPorCliente: `${base}/getRmaCliente`,
     cargarRmaNoEntregado: `${base}/cargarRmaNoEntregados`,
-    informeMensual: `${base}/informeMensual`
+    informeMensual: `${base}/informeMensual`,
+    reporteGeneral: `${base}/reporteGeneral`
   },
   remito: {
     getUltimoNumero: `${base}/getUltimoNIngreso`,
