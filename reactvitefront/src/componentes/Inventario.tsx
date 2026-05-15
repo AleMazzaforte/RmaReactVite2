@@ -84,6 +84,9 @@ export const Inventario: React.FC = () => {
   ] = useState<Producto[]>([]);
   const [skusValidos, setSkusValidos] = useState<Set<string>>(new Set());
 
+  const [filtroNoContado, setFiltroNoContado] = useState(false);
+  const [filtroConDiferencia, setFiltroConDiferencia] = useState(false);
+
   // Cargar SKUs válidos
   useEffect(() => {
     const cargarSkusValidos = async () => {
@@ -201,29 +204,7 @@ export const Inventario: React.FC = () => {
       });
   };
 
-  const handleBuscarSku = () => {
-    if (!skuABuscar || skuABuscar.trim() === "") return;
-    const elementoExacto = document.getElementById(`sku-${skuABuscar}`);
-    if (elementoExacto) {
-      elementoExacto.scrollIntoView({ behavior: "smooth", block: "center" });
-      elementoExacto.parentElement?.classList.add("bg-yellow-100");
-      setTimeout(() => {
-        elementoExacto.parentElement?.classList.remove("bg-yellow-100");
-      }, 2000);
-      return;
-    }
-    const coincidencias = encontrarCoincidenciasAproximadas(skuABuscar);
-    if (coincidencias.length > 0) {
-      setCoincidenciasEncontradas(coincidencias);
-      setSkuSeleccionado(coincidencias[0].sku);
-      setMostrarModalCoincidencias(true);
-    } else {
-      sweetAlert.warning(
-        "Sin coincidencias",
-        "No se encontraron coincidencias para el SKU ingresado"
-      );
-    }
-  };
+  
 
   const confirmarSeleccion = () => {
     setSkuABuscar(skuSeleccionado);
@@ -800,16 +781,31 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
 };
 
   const productosFiltrados = productos
-    .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))
-    .filter((p) => {
-      if (bloqueSeleccionado === "") return true;
-      if (bloqueSeleccionado === "No asignado")
-        return !p.idBloque || p.idBloque === "";
-      return p.idBloque == bloqueSeleccionado;
-    })
-    .sort((a, b) =>
-      bloqueSeleccionado !== "" ? a.sku.localeCompare(b.sku) : 0
-    );
+  .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))
+  .filter((p) => {
+    if (bloqueSeleccionado === "") return true;
+    if (bloqueSeleccionado === "No asignado")
+      return !p.idBloque || p.idBloque === "";
+    return p.idBloque == bloqueSeleccionado;
+  })
+  // ➕ FILTRO: Solo no contados
+  .filter((p) => {
+    if (filtroNoContado) {
+      return p.conteoFisico === null;
+    }
+    return true;
+  })
+  // ➕ FILTRO: Solo con diferencia
+  .filter((p) => {
+    if (filtroConDiferencia) {
+      const diferencia = calcularDiferencia(p);
+      return diferencia !== 0;
+    }
+    return true;
+  })
+  .sort((a, b) =>
+    bloqueSeleccionado !== "" ? a.sku.localeCompare(b.sku) : 0
+  );
 
   return (
     <>
@@ -830,15 +826,19 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
 
         <div className="filtros-container">
           <FiltrosInventario
-            filtro={filtro}
-            setFiltro={setFiltro}
-            skuABuscar={skuABuscar}
-            setSkuABuscar={setSkuABuscar}
-            handleBuscarSku={handleBuscarSku}
-            bloqueSeleccionado={bloqueSeleccionado}
-            setBloqueSeleccionado={setBloqueSeleccionado}
-            bloques={bloques}
+              filtro={filtro}
+              setFiltro={setFiltro}
+              skuABuscar={skuABuscar}
+              setSkuABuscar={setSkuABuscar}
+              bloqueSeleccionado={bloqueSeleccionado}
+              setBloqueSeleccionado={setBloqueSeleccionado}
+              bloques={bloques}
+              filtroNoContado={filtroNoContado}
+              setFiltroNoContado={setFiltroNoContado}
+              filtroConDiferencia={filtroConDiferencia}
+              setFiltroConDiferencia={setFiltroConDiferencia}
           />
+          
         </div>
 
         {!modoReposicion && (

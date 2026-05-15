@@ -158,10 +158,40 @@ getProductosInactivos: async (req, res) => {
   },
 
  putActualizarProductoInventario: async (req, res) => {
+  
  
   let connection;
   try {
     const { productosDeposito, productosFull, tipoArchivo } = req.body;
+
+    if (req.body.accion === 'borrar') {
+      if (!['Femex', 'Blow'].includes(tipoArchivo)) {
+        return res.status(400).json({ error: "Tipo de archivo no válido" });
+      }
+
+      connection = await conn.getConnection();
+      
+      const columnaDeposito = tipoArchivo === 'Femex' ? 'cantSistemaFemex' : 'cantSistemaBlow';
+      const columnaFull = tipoArchivo === 'Femex' ? 'cantFullFemex' : 'cantFullBlow';
+      
+      await connection.beginTransaction();
+      
+      const [result] = await connection.query(
+        `UPDATE productos 
+         SET ${columnaDeposito} = 0, 
+             ${columnaFull} = 0,
+             fechaConteo = NOW()
+         WHERE ${columnaDeposito} > 0 OR ${columnaFull} > 0`
+      );
+      
+      await connection.commit();
+      
+      return res.status(200).json({
+        success: true,
+        updatedCount: result.affectedRows,
+        message: `${result.affectedRows} productos actualizados. Datos de ${tipoArchivo} borrados correctamente.`
+      });
+    }
     
 
     if (!['Femex', 'Blow'].includes(tipoArchivo)) {

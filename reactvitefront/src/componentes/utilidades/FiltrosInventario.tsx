@@ -6,10 +6,14 @@ interface FiltrosInventarioProps {
   setFiltro: (value: string) => void;
   skuABuscar: string;
   setSkuABuscar: (value: string) => void;
-  handleBuscarSku: () => void;
   bloqueSeleccionado: string;
   setBloqueSeleccionado: (value: string) => void;
   bloques: string[];
+  // === NUEVAS PROPS PARA FILTROS RÁPIDOS ===
+  filtroNoContado?: boolean;
+  setFiltroNoContado?: (value: boolean) => void;
+  filtroConDiferencia?: boolean;
+  setFiltroConDiferencia?: (value: boolean) => void;
 }
 
 export const FiltrosInventario: React.FC<FiltrosInventarioProps> = ({
@@ -17,163 +21,190 @@ export const FiltrosInventario: React.FC<FiltrosInventarioProps> = ({
   setFiltro,
   skuABuscar,
   setSkuABuscar,
-  handleBuscarSku,
   bloqueSeleccionado,
   setBloqueSeleccionado,
   bloques,
+  filtroNoContado = false,
+  setFiltroNoContado = () => {},
+  filtroConDiferencia = false,
+  setFiltroConDiferencia = () => {},
 }) => {
-  return (
-  <>
-    {/* Contenedor principal para los tres filtros en línea */}
-    <div style={{
-      display: 'flex',
-      gap: '1rem',
-      marginBottom: '1rem'
-    }}>
-      {/* FILTRAR SKU */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '0.75rem',
-        borderRadius: '0.5rem',
-        border: '1px solid #d1d5db',
-        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        flex: 1
-      }}>
-        <label style={{
-          display: 'block',
-          fontSize: '0.875rem',
-          fontWeight: '600',
-          color: '#1f2937',
-          marginBottom: '0.25rem'
-        }}>
-          Filtrar SKU
-        </label>
-        <input
-          type="text"
-          placeholder="Ej: EP504 N PI 130ML"
-          value={filtro}
-          onChange={(e) => setFiltro(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.5rem',
-            backgroundColor: 'white',
-            border: '1px solid #9ca3af',
-            borderRadius: '0.375rem',
-            outline: 'none',
-            boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.5)',
-            fontSize: '0.875rem',
-            color: '#1f2937'
-          }}
-        />
-      </div>
+  const hayFiltrosActivos = filtroNoContado || filtroConDiferencia;
 
-      {/* BUSCAR SKU */}
+  return (
+    <>
+      {/* Fila 1: Filtros existentes */}
       <div style={{
-        backgroundColor: 'white',
-        padding: '0.75rem',
-        borderRadius: '0.5rem',
-        border: '1px solid #d1d5db',
-        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        flex: 1
+        display: 'flex',
+        gap: '1rem',
+        marginBottom: '1rem',
+        flexWrap: 'wrap'
       }}>
-        <label style={{
-          display: 'block',
-          fontSize: '0.875rem',
-          fontWeight: '600',
-          color: '#1f2937',
-          marginBottom: '0.25rem'
+        {/* FILTRAR SKU */}
+        <div style={{
+          backgroundColor: 'white',
+          padding: '0.75rem',
+          borderRadius: '0.5rem',
+          border: '1px solid #d1d5db',
+          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          flex: 1,
+          minWidth: '200px'
         }}>
-          Buscar SKU
-        </label>
-        <div style={{display: 'flex'}}>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            color: '#1f2937',
+            marginBottom: '0.25rem'
+          }}>
+            Filtrar SKU
+          </label>
           <input
             type="text"
             placeholder="Ej: EP504 N PI 130ML"
-            value={skuABuscar}
-            onChange={(e) => setSkuABuscar(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleBuscarSku()}
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
             style={{
-              flex: 1,
+              width: '100%',
               padding: '0.5rem',
               backgroundColor: 'white',
               border: '1px solid #9ca3af',
-              borderRadius: '0.375rem 0 0 0.375rem',
+              borderRadius: '0.375rem',
               outline: 'none',
               boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.5)',
               fontSize: '0.875rem',
               color: '#1f2937'
             }}
           />
-          <button
-            onClick={handleBuscarSku}
+        </div>
+
+
+        {/* BLOQUE */}
+        <div style={{
+          backgroundColor: 'white',
+          padding: '0.75rem',
+          borderRadius: '0.5rem',
+          border: '1px solid #d1d5db',
+          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          flex: 1,
+          minWidth: '200px'
+        }}>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            color: '#1f2937',
+            marginBottom: '0.25rem'
+          }}>
+            Bloque
+          </label>
+          <select
+            value={bloqueSeleccionado}
+            onChange={(e) => setBloqueSeleccionado(e.target.value)}
             style={{
-              backgroundColor: '#2563eb',
-              color: 'white',
-              padding: '0.5rem 1rem',
-              borderRadius: '0 0.375rem 0.375rem 0',
-              
-              transition: 'background-color 0.2s',
-              outline: '2px solid #2563eb'
+              width: '100%',
+              padding: '0.5rem',
+              backgroundColor: 'white',
+              border: '1px solid #9ca3af',
+              borderRadius: '0.375rem',
+              outline: 'none',
+              boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.5)',
+              fontSize: '0.875rem',
+              color: '#1f2937'
             }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              style={{height: '1.25rem', width: '1.25rem'}}
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
+            <option value="">Todos los bloques</option>
+            {bloques.map((bloque) => (
+              <option key={bloque} value={bloque}>
+                {bloque}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* BLOQUE */}
+      {/* Fila 2: Filtros rápidos con checkboxes */}
       <div style={{
-        backgroundColor: 'white',
-        padding: '0.75rem',
+        backgroundColor: '#f9fafb',
+        padding: '0.75rem 1rem',
         borderRadius: '0.5rem',
-        border: '1px solid #d1d5db',
-        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        flex: 1
+        border: '1px solid #e5e7eb',
+        marginBottom: '1rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1.5rem',
+        flexWrap: 'wrap'
       }}>
+        
+        
         <label style={{
-          display: 'block',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          cursor: 'pointer',
           fontSize: '0.875rem',
-          fontWeight: '600',
           color: '#1f2937',
-          marginBottom: '0.25rem'
+          userSelect: 'none'
         }}>
-          Bloque
+          <input
+            type="checkbox"
+            checked={filtroNoContado}
+            onChange={(e) => setFiltroNoContado(e.target.checked)}
+            style={{
+              width: '1rem',
+              height: '1rem',
+              cursor: 'pointer',
+              accentColor: '#f59e0b'
+            }}
+          />
+          <span>📋 No contados</span>
         </label>
-        <select
-          value={bloqueSeleccionado}
-          onChange={(e) => setBloqueSeleccionado(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.5rem',
-            backgroundColor: 'white',
-            border: '1px solid #9ca3af',
-            borderRadius: '0.375rem',
-            outline: 'none',
-            boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.5)',
-            fontSize: '0.875rem',
-            color: '#1f2937'
-          }}
-        >
-          <option value="">Todos los bloques</option>
-          {bloques.map((bloque) => (
-            <option key={bloque} value={bloque}>
-              {bloque}
-            </option>
-          ))}
-        </select>
+
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          cursor: 'pointer',
+          fontSize: '0.875rem',
+          color: '#1f2937',
+          userSelect: 'none'
+        }}>
+          <input
+            type="checkbox"
+            checked={filtroConDiferencia}
+            onChange={(e) => setFiltroConDiferencia(e.target.checked)}
+            style={{
+              width: '1rem',
+              height: '1rem',
+              cursor: 'pointer',
+              accentColor: '#ef4444'
+            }}
+          />
+          <span>⚠️ Con diferencia</span>
+        </label>
+
+        {hayFiltrosActivos && (
+          <button
+            onClick={() => {
+              setFiltroNoContado(false);
+              setFiltroConDiferencia(false);
+            }}
+            style={{
+              backgroundColor: '#ef4444',
+              color: 'white',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '0.375rem',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              fontWeight: '500',
+              marginLeft: 'auto'
+            }}
+          >
+            Limpiar filtros
+          </button>
+        )}
       </div>
-    </div>
-  </>
-);
+    </>
+  );
 };
