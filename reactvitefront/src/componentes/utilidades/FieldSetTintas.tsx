@@ -1,67 +1,108 @@
 import React from 'react';
+import { InputWithCalculator } from './InputWithCalculator';
 
 export interface FieldSetTintasProps {
     legend: string;
     comboId?: string;
-    inputRefs?: React.RefObject<Record<string, HTMLInputElement | null>>;
+    valores: Record<string, number>;
+    onValorChange: (id: string, value: number) => void;
     inputs: {
       label: string;
       id: string;
       name: string;
+      sku?: string;
     }[];
-    onChange?: () => void;
     disableCombo?: boolean; 
-  }
-  
- export const FieldSetTintas: React.FC<FieldSetTintasProps> = ({ 
+    productosReposicion?: {sku: string; cantidad: number}[];
+    onUpdateReposicion?: (sku: string, cantidad: number) => void;
+}
+
+export const FieldSetTintas: React.FC<FieldSetTintasProps> = ({ 
   legend, 
   comboId, 
-  inputRefs, 
-  onChange,
+  valores,
+  onValorChange,
   inputs,
-  disableCombo = false // Valor por defecto false
+  disableCombo = false,
+  productosReposicion = [],
+  onUpdateReposicion = () => {}
 }) => {
+  const fieldsetStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '1rem',
+    border: '1px solid black',
+    borderRadius: '1rem',
+    padding: '2.25rem',
+    backgroundColor: '#eff6ff',
+    marginBottom: '2rem',
+  };
+
+  const legendStyle: React.CSSProperties = {
+    fontSize: '1.125rem',
+    fontWeight: 600,
+    color: '#374151',
+    marginBottom: '1rem',
+    paddingLeft: '0.5rem',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    marginBottom: '0.25rem',
+    fontSize: '1rem',
+    color: '#1f2937',
+  };
+
+  const inputBaseStyle: React.CSSProperties = {
+    width: '10rem',
+    padding: '0.5rem 1rem',
+    border: '1px solid black',
+    borderRadius: '0.5rem',
+    backgroundColor: 'white',
+    fontSize: '1rem',
+    textAlign: 'right',
+  };
+
+  const inputDisabledStyle: React.CSSProperties = {
+    ...inputBaseStyle,
+    backgroundColor: '#f3f4f6',
+    cursor: 'not-allowed',
+  };
+
   return (
-    <fieldset className="grid grid-cols-2 gap-4 border rounded-2xl p-9 bg-blue-50" style={{ border: "black 1px solid", background: "#eff6ff" }}>
-      <legend className="text-lg font-semibold text-gray-700 mb-4">{legend}</legend>
+    <fieldset style={fieldsetStyle}>
+      <legend style={legendStyle}>{legend}</legend>
 
       {comboId && (
-        <div className="col-span-2 flex flex-col" >
-          <label htmlFor={comboId} className="mb-1">Combos</label>
-          <input
-          style={{ border: "black 1px solid" }}
-            type="number"
-            name={comboId}
-            id={comboId}
-            disabled={disableCombo} // Aquí aplicamos la prop
-            className={`w-40 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none hover:outline-1 ${
-              disableCombo ? 'bg-gray-100' : 'bg-white'
-            }`}
-            ref={(el) => {
-                if (inputRefs && inputRefs.current) {
-                  inputRefs.current[comboId || ''] = el;
-                }
-              }}
-              onChange={onChange}
+        <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column' }}>
+          <label htmlFor={comboId} style={labelStyle}>Combos</label>
+          <InputWithCalculator
+            value={valores[comboId] || 0}
+            onChange={(value) => onValorChange(comboId, Number(value) || 0)}
+            cantidadPorBulto={1}
+            idProducto={0}
+            productosReposicion={productosReposicion}
+            sku=""
+            onUpdateReposicion={onUpdateReposicion}
+            disabled={disableCombo}
+            style={disableCombo ? inputDisabledStyle : inputBaseStyle}
+            className="tablet-large-text"
           />
         </div>
       )}
 
       {inputs.map((input) => (
-        <div key={input.id} className="flex flex-col">
-          <label htmlFor={input.id} className="mb-1">{input.label}</label>
-          <input
-          style={{ border: "black 1px solid" }}
-            type="number"
-            name={input.name}
-            id={input.id}
-            className="w-40 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none hover:outline-1 bg-white"
-            ref={(el) => {
-              if (inputRefs && inputRefs.current) {
-                inputRefs.current[input.id] = el;
-              }
-            }}
-            onChange={onChange}
+        <div key={input.id} style={{ display: 'flex', flexDirection: 'column' }}>
+          <label htmlFor={input.id} style={labelStyle}>{input.label}</label>
+          <InputWithCalculator
+            value={valores[input.id] || 0}
+            onChange={(value) => onValorChange(input.id, Number(value) || 0)}
+            cantidadPorBulto={1}
+            idProducto={0}
+            productosReposicion={productosReposicion}
+            sku={input.sku || ""}
+            onUpdateReposicion={onUpdateReposicion}
+            style={inputBaseStyle}
+            className="tablet-large-text"
           />
         </div>
       ))}

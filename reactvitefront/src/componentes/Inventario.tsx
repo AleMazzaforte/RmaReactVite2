@@ -24,7 +24,7 @@ interface Producto {
   idBloque: string;
   cantSistemaFemex: number;
   cantSistemaBlow: number;
-  cantFullFemex?: number;      
+  cantFullFemex?: number;
   cantFullBlow?: number;
   conteoFisico: number | null;
   fechaConteo: string | null;
@@ -69,7 +69,7 @@ export const Inventario: React.FC = () => {
   const [productosReposicion, setProductosReposicion] = useState<
     ProductoReposicion[]
   >([]);
- 
+
   const [skuReposicionABuscar, setSkuReposicionABuscar] = useState("");
   const [nuevaCantidadReposicion, setNuevaCantidadReposicion] = useState("");
   const [
@@ -87,22 +87,88 @@ export const Inventario: React.FC = () => {
   const [filtroNoContado, setFiltroNoContado] = useState(false);
   const [filtroConDiferencia, setFiltroConDiferencia] = useState(false);
 
+  // Estados para editar bloque
+  const [mostrarModalEditarBloque, setMostrarModalEditarBloque] = useState(false);
+  const [productoAEditarBloque, setProductoAEditarBloque] = useState<Producto | null>(null);
+  const [nuevoValorBloque, setNuevoValorBloque] = useState("");
+  const [bloquesDisponibles, setBloquesDisponibles] = useState<string[]>([]);
+
   // Cargar SKUs válidos
   useEffect(() => {
-    const cargarSkusValidos = async () => {
+    const cargarDatosIniciales = async () => {
       try {
-        const response = await fetch(`${Urls.productos.listar}`);
-        if (!response.ok) throw new Error("Error al obtener SKUs válidos");
-        const data: Producto[] = await response.json();
-        const skus = data.map((p) => p.sku).filter(Boolean);
+        // Cargar SKUs válidos
+        const responseSkus = await fetch(`${Urls.productos.listar}`);
+        if (!responseSkus.ok) throw new Error("Error al obtener SKUs válidos");
+        const dataSkus: Producto[] = await responseSkus.json();
+        const skus = dataSkus.map((p) => p.sku).filter(Boolean);
         setSkusValidos(new Set(skus));
+
+        // Cargar bloques disponibles
+        const responseInventario = await fetch(`${urlPrepararInventario}`);
+        if (!responseInventario.ok) throw new Error("Error al obtener inventario");
+        const dataInventario: Producto[] = await responseInventario.json();
+        const bloquesUnicos = [...new Set(dataInventario.map(p => p.idBloque).filter(b => b && b !== ""))] as string[];
+        setBloquesDisponibles(bloquesUnicos.sort((a, b) => parseInt(a) - parseInt(b)));
       } catch (error) {
-        console.error("Error cargando SKUs válidos:", error);
-        sweetAlert.error("Error", "No se pudieron cargar los SKUs válidos");
+        console.error("Error cargando datos iniciales:", error);
+        sweetAlert.error("Error", "No se pudieron cargar los datos iniciales");
       }
     };
-    cargarSkusValidos();
+    cargarDatosIniciales();
   }, []);
+
+  const handleLongPressBloque = (producto: Producto) => {
+    setProductoAEditarBloque(producto);
+    setNuevoValorBloque(producto.idBloque || "");
+    setMostrarModalEditarBloque(true);
+  };
+
+  const guardarNuevoBloque = async () => {
+    if (!productoAEditarBloque) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${Urls.inventario.actualizar}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bloque: nuevoValorBloque,
+          productos: [productoAEditarBloque.id]
+        }),
+      });
+
+      if (response.ok) {
+        // Actualizar estado local
+        setProductos((prev) =>
+          prev.map((p) =>
+            p.id === productoAEditarBloque.id
+              ? { ...p, idBloque: nuevoValorBloque }
+              : p
+          )
+        );
+
+        // Si es un bloque nuevo, agregarlo a la lista
+        if (nuevoValorBloque && !bloquesDisponibles.includes(nuevoValorBloque)) {
+          setBloquesDisponibles((prev) => [...prev, nuevoValorBloque].sort((a, b) => parseInt(a) - parseInt(b)));
+        }
+
+        sweetAlert.success("Éxito", "Bloque actualizado correctamente");
+        setMostrarModalEditarBloque(false);
+        setProductoAEditarBloque(null);
+        setNuevoValorBloque("");
+      } else {
+        throw new Error("Error al guardar");
+      }
+    } catch (error) {
+      console.error("Error al guardar bloque:", error);
+      sweetAlert.error("Error", "No se pudo actualizar el bloque");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Validar SKUs del Excel
   const validarSkus = (
@@ -204,7 +270,7 @@ export const Inventario: React.FC = () => {
       });
   };
 
-  
+
 
   const confirmarSeleccion = () => {
     setSkuABuscar(skuSeleccionado);
@@ -583,7 +649,7 @@ export const Inventario: React.FC = () => {
     await handleFileUpload(file, empresa);
   };
 
- 
+
 
   const handleBorrarDatos = async (tipoArchivo: "Femex" | "Blow") => {
     const { isConfirmed } = await sweetAlert.fire({
@@ -678,134 +744,134 @@ export const Inventario: React.FC = () => {
     });
   };
 
-const extractSkuDepositoCantidad = (data: any[]): {
-  deposito: Map<string, number>;
-  full: Map<string, number>;
-} => {
-  const deposito = new Map<string, number>();
-  const full = new Map<string, number>();
+  const extractSkuDepositoCantidad = (data: any[]): {
+    deposito: Map<string, number>;
+    full: Map<string, number>;
+  } => {
+    const deposito = new Map<string, number>();
+    const full = new Map<string, number>();
 
-  data.forEach((row) => {
-    const sku = row["SKU"];
-    const cantidad = Number(row["Cantidad"]);
-    const depositoNombre = row["Nombre depósito"];
+    data.forEach((row) => {
+      const sku = row["SKU"];
+      const cantidad = Number(row["Cantidad"]);
+      const depositoNombre = row["Nombre depósito"];
 
-    if (!sku || isNaN(cantidad)) return;
+      if (!sku || isNaN(cantidad)) return;
 
-    const skuStr = sku.toString();
-    if (depositoNombre === "DEPOSITO") {
-      deposito.set(skuStr, cantidad);
-    } else if (depositoNombre === "FULL") {
-      full.set(skuStr, cantidad);
-    }
-  });
-
-  return { deposito, full };
-};
-
-const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
-  setLoading(true);
-  try {
-    const datosExcel = await readExcelFile(file);
-    const { deposito, full } = extractSkuDepositoCantidad(datosExcel);
-
-    const productosDeposito: ProductoReposicion[] = Array.from(deposito.entries()).map(([sku, cantidad]) => ({ sku, cantidad }));
-    const productosFull: ProductoReposicion[] = Array.from(full.entries()).map(([sku, cantidad]) => ({ sku, cantidad }));
-
-
-    // Validar todos los SKUs juntos
-    const skusTodos = [...productosDeposito.map(p => p.sku), ...productosFull.map(p => p.sku)];
-    const validacion = validarSkus(skusTodos);
-    if (!validacion.valido) return;
-
-    // Enviar al backend
-    const response = await fetch(urlActualizarInventario, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        productosDeposito,
-        productosFull,
-        tipoArchivo: empresa,
-      }),
+      const skuStr = sku.toString();
+      if (depositoNombre === "DEPOSITO") {
+        deposito.set(skuStr, cantidad);
+      } else if (depositoNombre === "FULL") {
+        full.set(skuStr, cantidad);
+      }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      if (errorData.skusInactivos) {
-        const listaSkus = errorData.skusInactivos.join(", ");
-        sweetAlert.fire({
-          icon: "error",
-          title: "Productos inactivos con stock",
-          html: `Los siguientes SKUs están <strong>inactivos</strong> pero tienen stock en ${empresa}:<br>
+    return { deposito, full };
+  };
+
+  const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
+    setLoading(true);
+    try {
+      const datosExcel = await readExcelFile(file);
+      const { deposito, full } = extractSkuDepositoCantidad(datosExcel);
+
+      const productosDeposito: ProductoReposicion[] = Array.from(deposito.entries()).map(([sku, cantidad]) => ({ sku, cantidad }));
+      const productosFull: ProductoReposicion[] = Array.from(full.entries()).map(([sku, cantidad]) => ({ sku, cantidad }));
+
+
+      // Validar todos los SKUs juntos
+      const skusTodos = [...productosDeposito.map(p => p.sku), ...productosFull.map(p => p.sku)];
+      const validacion = validarSkus(skusTodos);
+      if (!validacion.valido) return;
+
+      // Enviar al backend
+      const response = await fetch(urlActualizarInventario, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productosDeposito,
+          productosFull,
+          tipoArchivo: empresa,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.skusInactivos) {
+          const listaSkus = errorData.skusInactivos.join(", ");
+          sweetAlert.fire({
+            icon: "error",
+            title: "Productos inactivos con stock",
+            html: `Los siguientes SKUs están <strong>inactivos</strong> pero tienen stock en ${empresa}:<br>
             <strong>${listaSkus}</strong><br><br>
             Actualice en <a href="/actualizarProductos" target="_blank" style="color:#3b82f6; text-decoration:underline;">Actualizar productos</a> antes de cargar el inventario.`,
-          confirmButtonText: "Entendido",
-        });
-        return;
+            confirmButtonText: "Entendido",
+          });
+          return;
+        }
+        throw new Error(errorData.message || "Error en la respuesta del servidor");
       }
-      throw new Error(errorData.message || "Error en la respuesta del servidor");
+
+      const result = await response.json();
+
+      // Actualizar estado local
+      setProductos((prev: Producto[]) =>
+        prev.map((producto) => {
+          const cantDeposito = deposito.get(producto.sku);
+          const cantFull = full.get(producto.sku);
+          const updates: Partial<Producto> = {};
+          if (cantDeposito !== undefined) {
+            updates[empresa === "Femex" ? "cantSistemaFemex" : "cantSistemaBlow"] = cantDeposito;
+          }
+          if (cantFull !== undefined) {
+            updates[empresa === "Femex" ? "cantFullFemex" : "cantFullBlow"] = cantFull;
+          }
+          if (Object.keys(updates).length > 0) {
+            return { ...producto, ...updates, fechaConteo: new Date().toISOString() };
+          }
+          return producto;
+        })
+      );
+
+      sweetAlert.success(
+        "Archivo procesado",
+        `${result.updatedCount} productos actualizados (${empresa}).`
+      );
+
+    } catch (error) {
+      console.error(`Error al procesar archivo de ${empresa}:`, error);
+      sweetAlert.error("Error al guardar", `Error al procesar archivo de ${empresa}`);
+    } finally {
+      setLoading(false);
     }
-
-    const result = await response.json();
-
-    // Actualizar estado local
-    setProductos((prev: Producto[]) =>
-      prev.map((producto) => {
-        const cantDeposito = deposito.get(producto.sku);
-        const cantFull = full.get(producto.sku);
-        const updates: Partial<Producto> = {};
-        if (cantDeposito !== undefined) {
-          updates[empresa === "Femex" ? "cantSistemaFemex" : "cantSistemaBlow"] = cantDeposito;
-        }
-        if (cantFull !== undefined) {
-          updates[empresa === "Femex" ? "cantFullFemex" : "cantFullBlow"] = cantFull;
-        }
-        if (Object.keys(updates).length > 0) {
-          return { ...producto, ...updates, fechaConteo: new Date().toISOString() };
-        }
-        return producto;
-      })
-    );
-
-    sweetAlert.success(
-      "Archivo procesado",
-      `${result.updatedCount} productos actualizados (${empresa}).`
-    );
-
-  } catch (error) {
-    console.error(`Error al procesar archivo de ${empresa}:`, error);
-    sweetAlert.error("Error al guardar", `Error al procesar archivo de ${empresa}`);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const productosFiltrados = productos
-  .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))
-  .filter((p) => {
-    if (bloqueSeleccionado === "") return true;
-    if (bloqueSeleccionado === "No asignado")
-      return !p.idBloque || p.idBloque === "";
-    return p.idBloque == bloqueSeleccionado;
-  })
-  // ➕ FILTRO: Solo no contados
-  .filter((p) => {
-    if (filtroNoContado) {
-      return p.conteoFisico === null;
-    }
-    return true;
-  })
-  // ➕ FILTRO: Solo con diferencia
-  .filter((p) => {
-    if (filtroConDiferencia) {
-      const diferencia = calcularDiferencia(p);
-      return diferencia !== 0;
-    }
-    return true;
-  })
-  .sort((a, b) =>
-    bloqueSeleccionado !== "" ? a.sku.localeCompare(b.sku) : 0
-  );
+    .filter((p) => p.sku.toLowerCase().includes(filtro.toLowerCase()))
+    .filter((p) => {
+      if (bloqueSeleccionado === "") return true;
+      if (bloqueSeleccionado === "No asignado")
+        return !p.idBloque || p.idBloque === "";
+      return p.idBloque == bloqueSeleccionado;
+    })
+    // ➕ FILTRO: Solo no contados
+    .filter((p) => {
+      if (filtroNoContado) {
+        return p.conteoFisico === null;
+      }
+      return true;
+    })
+    // ➕ FILTRO: Solo con diferencia
+    .filter((p) => {
+      if (filtroConDiferencia) {
+        const diferencia = calcularDiferencia(p);
+        return diferencia !== 0;
+      }
+      return true;
+    })
+    .sort((a, b) =>
+      bloqueSeleccionado !== "" ? a.sku.localeCompare(b.sku) : 0
+    );
 
   return (
     <>
@@ -826,19 +892,19 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
 
         <div className="filtros-container">
           <FiltrosInventario
-              filtro={filtro}
-              setFiltro={setFiltro}
-              skuABuscar={skuABuscar}
-              setSkuABuscar={setSkuABuscar}
-              bloqueSeleccionado={bloqueSeleccionado}
-              setBloqueSeleccionado={setBloqueSeleccionado}
-              bloques={bloques}
-              filtroNoContado={filtroNoContado}
-              setFiltroNoContado={setFiltroNoContado}
-              filtroConDiferencia={filtroConDiferencia}
-              setFiltroConDiferencia={setFiltroConDiferencia}
+            filtro={filtro}
+            setFiltro={setFiltro}
+            skuABuscar={skuABuscar}
+            setSkuABuscar={setSkuABuscar}
+            bloqueSeleccionado={bloqueSeleccionado}
+            setBloqueSeleccionado={setBloqueSeleccionado}
+            bloques={bloques}
+            filtroNoContado={filtroNoContado}
+            setFiltroNoContado={setFiltroNoContado}
+            filtroConDiferencia={filtroConDiferencia}
+            setFiltroConDiferencia={setFiltroConDiferencia}
           />
-          
+
         </div>
 
         {!modoReposicion && (
@@ -1241,7 +1307,12 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                         >
                           {producto.sku}
                         </td>
-                        <td className="td-body">
+                        <td
+                          className="td-body"
+                          {...UseLongPress(() => handleLongPressBloque(producto), 800)}
+                          style={{ cursor: "pointer", userSelect: "none" }}
+                          title="Mantener presionado para editar bloque"
+                        >
                           {producto.idBloque || "No asignado"}
                         </td>
                         <td className="td-body">
@@ -1399,6 +1470,80 @@ const handleFileUpload = async (file: File, empresa: "Femex" | "Blow") => {
                   onClick={confirmarSeleccionReposicion}
                 >
                   Aceptar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {mostrarModalEditarBloque && productoAEditarBloque && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h3 className="modal-title">Editar Bloque</h3>
+              <p style={{ marginBottom: "1rem" }}>
+                SKU: <strong>{productoAEditarBloque.sku}</strong>
+              </p>
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+                  Seleccionar bloque existente:
+                </label>
+                <select
+                  value={bloquesDisponibles.includes(nuevoValorBloque) ? nuevoValorBloque : ""}
+                  onChange={(e) => setNuevoValorBloque(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.375rem",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  <option value="">-- Seleccione un bloque --</option>
+                  {bloquesDisponibles.map((bloque) => (
+                    <option key={bloque} value={bloque}>
+                      Bloque {bloque}
+                    </option>
+                  ))}
+                </select>
+
+                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+                  O crear nuevo bloque:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={!bloquesDisponibles.includes(nuevoValorBloque) ? nuevoValorBloque : ""}
+                  onChange={(e) => setNuevoValorBloque(e.target.value)}
+                  placeholder="Ej: 5"
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.375rem",
+                  }}
+                />
+              </div>
+              <div className="modal-buttons">
+                <button
+                  onClick={() => {
+                    setMostrarModalEditarBloque(false);
+                    setProductoAEditarBloque(null);
+                    setNuevoValorBloque("");
+                  }}
+                  className="cancel-button"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarNuevoBloque}
+                  disabled={!nuevoValorBloque}
+                  className="btn-aceptar"
+                  style={{
+                    backgroundColor: nuevoValorBloque ? "#10b981" : "#9ca3af",
+                    cursor: nuevoValorBloque ? "pointer" : "not-allowed",
+                  }}
+                >
+                  Guardar
                 </button>
               </div>
             </div>

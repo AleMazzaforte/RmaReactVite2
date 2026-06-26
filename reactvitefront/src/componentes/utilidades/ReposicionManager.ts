@@ -77,10 +77,10 @@ export const actualizarProductoReposicion = async (
       prev.map((p) => (p.sku === sku ? { ...p, cantidad: nuevaCantidad } : p))
     );
 
-    sweetAlert.success(
-      "Reposición actualizada",
-      `SKU ${sku} actualizado correctamente`
-    );
+    // sweetAlert.success(
+    //   "Reposición actualizada",
+    //   `SKU ${sku} actualizado correctamente`
+    // );
 
     return true; // ✅ ¡Agrega esto al final del try!
   } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Contenedor } from "./utilidades/Contenedor";
 import { FieldSetTintas } from "./utilidades/FieldSetTintas";
 import { FieldSetTintasConfig } from "./utilidades/FieldSetTintasConfig";
@@ -6,15 +6,15 @@ import { GetInventarioStock } from "./utilidades/GetInventarioStock";
 import { GuardarInventario } from "./utilidades/GuardarInventario";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import { sweetAlert } from './utilidades/SweetAlertWrapper'; // Importar sweetAlert
+import { sweetAlert } from './utilidades/SweetAlertWrapper';
 import Urls from './utilidades/Urls';
 import "../estilos/contadorDeTintas.css";
-
+import { actualizarProductoReposicion } from "./utilidades/ReposicionManager";
 
 type ResultadoItem = {
   nombre: string;
   cantidad: number;
-  totalSistema?: number; // Solo number para cálculos
+  totalSistema?: number;
   diferencia?: number;
 };
 
@@ -30,23 +30,121 @@ interface ProductoConteo {
 }
 
 let urlPrepararInventario = Urls.inventario.preparar;
-
 let urlGuardarInventario = Urls.inventario.guardar;
-
+let urlObtenerReposicion = Urls.reposicion.obtener;
 
 export const ContadorDeTintas: React.FC = () => {
+  const [loadingReposicion, setLoadingReposicion] = useState(false);
   const [resultados, setResultados] = useState<ResultadosPorCategoria[]>([]);
-  const [resultadosConSistema, setResultadosConSistema] = useState<
-    ResultadosPorCategoria[]
-  >([]);
-  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const [cambiosPendientes, setCambiosPendientes] = useState<
-    { id: number; conteoFisico: number | null }[]
-  >([]);
+  const [resultadosConSistema, setResultadosConSistema] = useState<ResultadosPorCategoria[]>([]);
+  const [valores, setValores] = useState<Record<string, number>>({});
+  const [cambiosPendientes, setCambiosPendientes] = useState<{ id: number; conteoFisico: number | null }[]>([]);
+  const [productosReposicion, setProductosReposicion] = useState<{sku: string; cantidad: number}[]>([]);
 
-  const { productos: productosSistema, loading } = GetInventarioStock(
-    urlPrepararInventario
-  );
+  const { productos: productosSistema, loading } = GetInventarioStock(urlPrepararInventario);
+
+  // Cargar reposiciones del backend al iniciar
+  const cargarReposiciones = async () => {
+    try {
+      const response = await fetch(urlObtenerReposicion);
+      if (!response.ok) throw new Error("Error al obtener reposiciones");
+      const data = await response.json();
+      const reposicionesActivas = data.filter(
+        (item: { sku: string; cantidad: number }) => item.cantidad > 0
+      );
+      setProductosReposicion(reposicionesActivas);
+    } catch (error) {
+      console.error("Error al cargar reposiciones:", error);
+    }
+  };
+
+  useEffect(() => {
+    cargarReposiciones();
+  }, []);
+
+  const leerValor = (id: string) => valores[id] || 0;
+
+  const actualizarResultados = () => {
+    const resultadosPorCategoria: ResultadosPorCategoria[] = [
+      {
+        legend: "Tintas 664/673 1 L",
+        items: [
+          { nombre: "EP544-EP664-EP673 N", cantidad: leerValor("negro1L") },
+          { nombre: "EP544-EP664-EP673 C", cantidad: leerValor("cian1L") },
+          { nombre: "EP544-EP664-EP673 M", cantidad: leerValor("magenta1L") },
+          { nombre: "EP544-EP664-EP673 A", cantidad: leerValor("amarillo1L") },
+          { nombre: "EP673 LC", cantidad: leerValor("lightCian1L") },
+          { nombre: "EP673 LM", cantidad: leerValor("lightMagenta1L") },
+        ],
+      },
+      {
+        legend: "Tintas 664/673 100 ml",
+        items: [
+          { nombre: "EP664-EP673 N 100ML", cantidad: leerValor("combo664") + leerValor("negro664") },
+          { nombre: "EP664-EP673 C 100ML", cantidad: leerValor("combo664") + leerValor("cian664") },
+          { nombre: "EP664-EP673 M 100ML", cantidad: leerValor("combo664") + leerValor("magenta664") },
+          { nombre: "EP664-EP673 A 100ML", cantidad: leerValor("combo664") + leerValor("amarillo664") },
+          { nombre: "EP673 LC 100ML", cantidad: leerValor("lightCian664") },
+          { nombre: "EP673 LM 100ML", cantidad: leerValor("lightMagenta664") },
+        ],
+      },
+      {
+        legend: "Tintas GI-190",
+        items: [
+          { nombre: "GI190 N 135ML", cantidad: leerValor("comboGI190") + leerValor("negroGI190") },
+          { nombre: "GI190 C 70ML", cantidad: leerValor("comboGI190") + leerValor("cianGI190") },
+          { nombre: "GI190 M 70ML", cantidad: leerValor("comboGI190") + leerValor("magentaGI190") },
+          { nombre: "GI190 A 70ML", cantidad: leerValor("comboGI190") + leerValor("amarilloGI190") },
+        ],
+      },
+      {
+        legend: "Tintas 544/504",
+        items: [
+          { nombre: "EP544 N 70ML", cantidad: leerValor("combo544") + leerValor("negro544") },
+          { nombre: "EP555 G 70ML", cantidad: leerValor("gris555") },
+          { nombre: "EP504-EP544 C 70ML", cantidad: leerValor("combo544") + leerValor("combo504") + leerValor("cian544") + leerValor("cian504") },
+          { nombre: "EP504-EP544 M 70ML", cantidad: leerValor("combo544") + leerValor("combo504") + leerValor("magenta544") + leerValor("magenta504") },
+          { nombre: "EP504-EP544 A 70ML", cantidad: leerValor("combo544") + leerValor("combo504") + leerValor("amarillo544") + leerValor("amarillo504") },
+          { nombre: "EP504 N PI 130ML", cantidad: leerValor("combo504") + leerValor("negro504") },
+        ],
+      },
+      {
+        legend: "Tintas GT51/52",
+        items: [
+          { nombre: "GT51 N 90ML", cantidad: leerValor("comboGt") + leerValor("negroGt") },
+          { nombre: "GT52 C 70ML", cantidad: leerValor("comboGt") + leerValor("cianGt") },
+          { nombre: "GT52 M 70ML", cantidad: leerValor("comboGt") + leerValor("magentaGt") },
+          { nombre: "GT52 A 70ML", cantidad: leerValor("comboGt") + leerValor("amarilloGt") },
+        ],
+      },
+    ];
+
+    setResultados(resultadosPorCategoria);
+  };
+
+  // Actualizar reposición en BD y estado local
+const handleActualizarReposicion = async (sku: string, cantidad: number): Promise<boolean> => {
+  try {
+    await actualizarProductoReposicion(
+      sku,
+      cantidad,
+      setProductosReposicion,
+      setLoadingReposicion
+    );
+    return true;
+  } catch (error) {
+    console.error("Error en handleActualizarReposicion:", error);
+    return false;
+  }
+};
+
+  const handleValorChange = (id: string, value: number) => {
+    setValores((prev) => ({ ...prev, [id]: value }));
+  };
+
+  useEffect(() => {
+    actualizarResultados();
+  }, [valores]);
 
   useEffect(() => {
     if (productosSistema.length > 0 && resultados.length > 0) {
@@ -60,13 +158,11 @@ export const ContadorDeTintas: React.FC = () => {
           });
 
           if (!productoEnSistema) {
-            console.warn("No se encontró:", item.nombre); // Debug
+            console.warn("No se encontró:", item.nombre);
             return { ...item };
           }
 
-          const total =
-            (productoEnSistema.cantSistemaFemex || 0) +
-            (productoEnSistema.cantSistemaBlow || 0);
+          const total = (productoEnSistema.cantSistemaFemex || 0) + (productoEnSistema.cantSistemaBlow || 0);
 
           return {
             ...item,
@@ -84,7 +180,6 @@ export const ContadorDeTintas: React.FC = () => {
 
   const descargarExcel = async () => {
     if (resultados.length === 0) {
-      // Si no hay resultados, mostrar alerta
       sweetAlert.fire({
         title: "No hay resultados",
         text: "Por favor, complete el formulario antes de exportar",
@@ -103,7 +198,6 @@ export const ContadorDeTintas: React.FC = () => {
     ];
 
     resultados.forEach((categoria) => {
-      // Fila de categoría (negrita, fondo gris claro)
       const row = worksheet.addRow({
         color: categoria.legend,
         cantidad: "",
@@ -130,9 +224,7 @@ export const ContadorDeTintas: React.FC = () => {
     saveAs(blob, "resultados-tintas.xlsx");
   };
 
-  const handleGuardarInventario = async (
-    productosParaGuardar: ProductoConteo[]
-  ) => {
+  const handleGuardarInventario = async (productosParaGuardar: ProductoConteo[]) => {
     try {
       const response = await fetch(urlGuardarInventario, {
         method: "PUT",
@@ -161,159 +253,118 @@ export const ContadorDeTintas: React.FC = () => {
     }
   };
 
-  const leerValor = (id: string) => {
-    const ref = inputRefs.current[id];
-    return ref ? parseFloat(ref.value) || 0 : 0;
+  const containerStyle: React.CSSProperties = {
+    position: 'relative',
+    padding: '1rem',
   };
 
-  const handleInputChange = () => {
-    actualizarResultados();
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gap: '2rem',
   };
 
-  const actualizarResultados = () => {
-    const resultadosPorCategoria: ResultadosPorCategoria[] = [
-      {
-        legend: "Tintas 664/673 1 L",
-        items: [
-          { nombre: "EP544-EP664-EP673 N", cantidad: leerValor("negro1L") },
-          { nombre: "EP544-EP664-EP673 C", cantidad: leerValor("cian1L") },
-          { nombre: "EP544-EP664-EP673 M", cantidad: leerValor("magenta1L") },
-          { nombre: "EP544-EP664-EP673 A", cantidad: leerValor("amarillo1L") },
-          { nombre: "EP673 LC", cantidad: leerValor("lightCian1L") },
-          { nombre: "EP673 LM", cantidad: leerValor("lightMagenta1L") },
-        ],
-      },
-      {
-        legend: "Tintas 664/673 100 ml",
-        items: [
-          {
-            nombre: "EP664-EP673 N 100ML",
-            cantidad: leerValor("combo664") + leerValor("negro664"),
-          },
-          {
-            nombre: "EP664-EP673 C 100ML",
-            cantidad: leerValor("combo664") + leerValor("cian664"),
-          },
-          {
-            nombre: "EP664-EP673 M 100ML",
-            cantidad: leerValor("combo664") + leerValor("magenta664"),
-          },
-          {
-            nombre: "EP664-EP673 A 100ML",
-            cantidad: leerValor("combo664") + leerValor("amarillo664"),
-          },
+  const buttonsContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+    alignItems: 'center',
+    marginTop: '2rem',
+  };
 
-          { nombre: "EP673 LC 100ML", cantidad: leerValor("lightCian664") },
-          { nombre: "EP673 LM 100ML", cantidad: leerValor("lightMagenta664") },
-        ],
-      },
-      {
-        legend: "Tintas GI-190",
-        items: [
-          {
-            nombre: "GI190 N 135ML",
-            cantidad: leerValor("comboGI190") + leerValor("negroGI190"),
-          },
-          {
-            nombre: "GI190 C 70ML",
-            cantidad: leerValor("comboGI190") + leerValor("cianGI190"),
-          },
-          {
-            nombre: "GI190 M 70ML",
-            cantidad: leerValor("comboGI190") + leerValor("magentaGI190"),
-          },
-          {
-            nombre: "GI190 A 70ML",
-            cantidad: leerValor("comboGI190") + leerValor("amarilloGI190"),
-          },
-        ],
-      },
-      {
-        legend: "Tintas 544/504",
-        items: [
-          {
-            nombre: "EP544 N 70ML",
-            cantidad: leerValor("combo544") + leerValor("negro544"),
-          },
-          {
-            nombre: "EP555 G 70ML",
-            cantidad: leerValor("gris555")
-          },
-          {
-            nombre: "EP504-EP544 C 70ML",
-            cantidad:
-              leerValor("combo544") +
-              leerValor("combo504") +
-              leerValor("cian544") +
-              leerValor("cian504"),
-          },
-          {
-            nombre: "EP504-EP544 M 70ML",
-            cantidad:
-              leerValor("combo544") +
-              leerValor("combo504") +
-              leerValor("magenta544") +
-              leerValor("magenta504"),
-          },
-          {
-            nombre: "EP504-EP544 A 70ML",
-            cantidad:
-              leerValor("combo544") +
-              leerValor("combo504") +
-              leerValor("amarillo544") +
-              leerValor("amarillo504"),
-          },
+  const buttonBaseStyle: React.CSSProperties = {
+    padding: '0.75rem 1.5rem',
+    color: 'white',
+    borderRadius: '0.375rem',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    transition: 'background-color 0.2s',
+  };
 
-          {
-            nombre: "EP504 N PI 130ML",
-            cantidad: leerValor("combo504") + leerValor("negro504"),
-          },
-        ],
-      },
-      {
-        legend: "Tintas GT51/52",
-        items: [
-          {
-            nombre: "GT51 N 90ML",
-            cantidad: leerValor("comboGt") + leerValor("negroGt"),
-          },
-          {
-            nombre: "GT52 C 70ML",
-            cantidad: leerValor("comboGt") + leerValor("cianGt"),
-          },
-          {
-            nombre: "GT52 M 70ML",
-            cantidad: leerValor("comboGt") + leerValor("magentaGt"),
-          },
-          {
-            nombre: "GT52 A 70ML",
-            cantidad: leerValor("comboGt") + leerValor("amarilloGt"),
-          },
-        ],
-      },
-    ];
+  const tableContainerStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: '590px',
+    margin: '0 auto',
+    overflowX: 'auto',
+  };
 
-    setResultados(resultadosPorCategoria);
+  const tableWrapperStyle: React.CSSProperties = {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: '1.5rem',
+    padding: '0 1rem',
+  };
+
+  const tableStyle: React.CSSProperties = {
+    border: '1px solid #d1d5db',
+    width: '100%',
+    maxWidth: '72rem',
+    borderCollapse: 'collapse',
+  };
+
+  const thStyle: React.CSSProperties = {
+    padding: '0.5rem',
+    textAlign: 'left',
+    backgroundColor: '#93c5fd',
+    border: '1px solid #d1d5db',
+    minWidth: '200px',
+  };
+
+  const thCenterStyle: React.CSSProperties = {
+    ...thStyle,
+    textAlign: 'center',
+    minWidth: '120px',
+  };
+
+  const trHeaderStyle: React.CSSProperties = {
+    backgroundColor: '#e5e7eb',
+  };
+
+  const trEvenStyle: React.CSSProperties = {
+    backgroundColor: 'white',
+  };
+
+  const trOddStyle: React.CSSProperties = {
+    backgroundColor: '#eff6ff',
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: '0.5rem',
+    border: '1px solid #d1d5db',
+  };
+
+  const tdCenterStyle: React.CSSProperties = {
+    ...tdStyle,
+    textAlign: 'center',
+  };
+
+  const emptyMessageStyle: React.CSSProperties = {
+    textAlign: 'center',
+    padding: '1rem',
+    color: '#6b7280',
   };
 
   return (
-    <div className="relative tablet-large-text">
+    <div style={containerStyle} className="tablet-large-text">
       <Contenedor>
-        <div className="grid gap-8  ">
+        <div style={gridStyle}>
           {FieldSetTintasConfig.map((config) => (
             <FieldSetTintas
               key={config.legend}
               legend={config.legend}
               comboId={config.comboId}
+              valores={valores}
+              onValorChange={handleValorChange}
               inputs={config.inputs}
-              inputRefs={inputRefs}
-              onChange={handleInputChange}
               disableCombo={config.legend === "Tintas 664/673 1 L"}
+              productosReposicion={productosReposicion}
+              onUpdateReposicion={handleActualizarReposicion}
             />
           ))}
         </div>
 
-        <div className="flex flex-col gap-4 items-center md:flex-row md:justify-center md:gap-12 mt-8">
+        <div style={buttonsContainerStyle}>
           <GuardarInventario
             productos={resultados.flatMap((categoria) =>
               categoria.items
@@ -323,22 +374,25 @@ export const ContadorDeTintas: React.FC = () => {
                   id:
                     productosSistema.find(
                       (p) =>
-                        p.sku
-                          .toLowerCase()
-                          .includes(item.nombre.toLowerCase()) ||
+                        p.sku.toLowerCase().includes(item.nombre.toLowerCase()) ||
                         item.nombre.toLowerCase().includes(p.sku.toLowerCase())
                     )?.id || 0,
                 }))
                 .filter((item) => item.id !== 0)
             )}
             onGuardar={handleGuardarInventario}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition tablet-large-text"
             disabled={resultados.length === 0}
           >
-            Guardar Inventario
+            <span style={{ ...buttonBaseStyle, backgroundColor: '#16a34a' }}>
+              Guardar Inventario
+            </span>
           </GuardarInventario>
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition focus:outline-black focus:ring focus:ring-black"
+            style={{
+              ...buttonBaseStyle,
+              backgroundColor: resultados.length === 0 ? '#9ca3af' : '#2563eb',
+              cursor: resultados.length === 0 ? 'not-allowed' : 'pointer',
+            }}
             onClick={descargarExcel}
             disabled={resultados.length === 0}
           >
@@ -346,51 +400,42 @@ export const ContadorDeTintas: React.FC = () => {
           </button>
         </div>
       </Contenedor>
-      <div className="w-full max-w-[590px] mx-auto overflow-x-auto">
-        <div className="w-full flex justify-center mt-6 px-4">
-          <div className="w-full max-w-6xl">
+
+      <div style={tableContainerStyle}>
+        <div style={tableWrapperStyle}>
+          <div style={{ width: '100%', maxWidth: '72rem' }}>
             {resultadosConSistema.length > 0 ? (
-              <table className="border border-gray-300 w-full table-auto">
+              <table style={tableStyle}>
                 <thead>
-                  <tr className="bg-blue-300">
-                    <th className="p-2 text-left min-w-[200px]">SKU</th>
-                    <th className="p-2 text-center min-w-[120px]">
-                      Total sistema
-                    </th>
-                    <th className="p-2 text-center min-w-[120px]">
-                      Total contado
-                    </th>
-                    <th className="p-2 text-center min-w-[120px]">
-                      Diferencia
-                    </th>
+                  <tr>
+                    <th style={thStyle}>SKU</th>
+                    <th style={thCenterStyle}>Total sistema</th>
+                    <th style={thCenterStyle}>Total contado</th>
+                    <th style={thCenterStyle}>Diferencia</th>
                   </tr>
                 </thead>
                 <tbody>
                   {resultadosConSistema.map((categoria, catIndex) => (
                     <React.Fragment key={`cat-${catIndex}`}>
-                      <tr className="bg-gray-200">
-                        <td colSpan={4} className="p-2 font-bold">
+                      <tr style={trHeaderStyle}>
+                        <td colSpan={4} style={{ ...tdStyle, fontWeight: 'bold' }}>
                           {categoria.legend}
                         </td>
                       </tr>
                       {categoria.items.map((item, itemIndex) => (
                         <tr
                           key={`${catIndex}-${itemIndex}`}
-                          className={
-                            itemIndex % 2 === 0 ? "bg-white" : "bg-blue-50"
-                          }
+                          style={itemIndex % 2 === 0 ? trEvenStyle : trOddStyle}
                         >
-                          <td className="p-2 pl-4">{item.nombre}</td>
-                          <td className="p-2 text-center">
-                            {item.totalSistema ?? "-"}
-                          </td>
-                          <td className="p-2 text-center ">{item.cantidad}</td>
+                          <td style={{ ...tdStyle, paddingLeft: '1rem' }}>{item.nombre}</td>
+                          <td style={tdCenterStyle}>{item.totalSistema ?? "-"}</td>
+                          <td style={tdCenterStyle}>{item.cantidad}</td>
                           <td
-                            className={`p-2 text-center ${item.diferencia !== undefined &&
-                              item.diferencia < 0
-                              ? "text-red-500 font-bold"
-                              : ""
-                              }`}
+                            style={{
+                              ...tdCenterStyle,
+                              color: item.diferencia !== undefined && item.diferencia < 0 ? '#ef4444' : 'inherit',
+                              fontWeight: item.diferencia !== undefined && item.diferencia < 0 ? 'bold' : 'normal',
+                            }}
                           >
                             {item.diferencia ?? "-"}
                           </td>
@@ -401,10 +446,8 @@ export const ContadorDeTintas: React.FC = () => {
                 </tbody>
               </table>
             ) : (
-              <div className="text-center py-4 text-gray-500">
-                {loading
-                  ? "Cargando datos del sistema..."
-                  : "Complete el formulario y haga click en Mostrar totales"}
+              <div style={emptyMessageStyle}>
+                {loading ? "Cargando datos del sistema..." : "Complete el formulario"}
               </div>
             )}
           </div>

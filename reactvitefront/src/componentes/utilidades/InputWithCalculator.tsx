@@ -12,17 +12,19 @@ interface InputWithLongTouchCalculatorProps {
   productosReposicion?: productosReposicion[];
   sku: string;
   onUpdateReposicion: (sku: string, cantidad: number) => void;
+  disabled?: boolean;              // ✅ Agregado
+  style?: React.CSSProperties;     // ✅ Agregado
+  className?: string;              // ✅ Agregado
 }
+
 interface productosReposicion {
   sku: string;
   cantidad: number;
 }
+
 let urlActualizarCantidadPorBulto = Urls.inventario.actualizarcantidadPorBulto
 
-
-export const InputWithCalculator: React.FC<
-  InputWithLongTouchCalculatorProps
-> = ({
+export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = ({
   value,
   onChange,
   onFocus,
@@ -31,6 +33,9 @@ export const InputWithCalculator: React.FC<
   productosReposicion = [],
   sku,
   onUpdateReposicion,
+  disabled = false,
+  style,
+  className = "",
 }) => {
   const [showCalculator, setShowCalculator] = useState(false);
   const longPressTimer = useRef<number | null>(null);
@@ -61,7 +66,7 @@ export const InputWithCalculator: React.FC<
   const handleTouchStart = () => {
     longPressTimer.current = window.setTimeout(() => {
       setShowCalculator(true);
-    }, 800); // 800ms para long press
+    }, 800);
   };
 
   const handleTouchEnd = () => {
@@ -103,19 +108,9 @@ export const InputWithCalculator: React.FC<
       }
 
       return await response.json();
-      sweetAlert.fire({
-        title: "Éxito",
-        text: "Cantidad por bulto actualizada correctamente",
-        icon: "success",
-      });
     } catch (error) {
       console.error("Error:", error);
       throw error;
-      sweetAlert.fire({
-        title: "Error",
-        text: "No se pudo actualizar la cantidad por bulto",
-        icon: "error",
-      });
     }
   };
 
@@ -138,7 +133,9 @@ export const InputWithCalculator: React.FC<
         onMouseDown={handleTouchStart}
         onMouseUp={handleTouchEnd}
         onMouseLeave={handleTouchEnd}
-        className="w-full p-1 rounded text-right border-0 focus:border-0 focus:ring-0 focus:outline-none"
+        disabled={disabled}
+        style={style}
+        className={className || "w-full p-1 rounded text-right border-0 focus:border-0 focus:ring-0 focus:outline-none"}
       />
 
       {showCalculator && (

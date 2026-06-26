@@ -38,13 +38,13 @@ const CUENTAS = [
 ];
 
 const kitsConDescuento: Record<string, { skuDescuento: string | string[] }> = {
-  "KIT GI190 345ML": { 
+  "KIT GI190 345ML": {
     skuDescuento: [
-      "GI190 N 135ML", 
-      "GI190 C 70ML", 
-      "GI190 M 70ML", 
+      "GI190 N 135ML",
+      "GI190 C 70ML",
+      "GI190 M 70ML",
       "GI190 A 70ML"
-    ] 
+    ]
   },
   "KIT EP544 280ML": { skuDescuento: "EP544 N 70ML" },
   "KIT EP664 400ML": {
@@ -63,15 +63,15 @@ const kitsConDescuento: Record<string, { skuDescuento: string | string[] }> = {
       "EP664-EP673 A 100ML",
       "EP673 LC 100ML",
       "EP673 LM 100ML",
-    ],    
+    ],
   },
   "KIT H901XL": {
-    skuDescuento:[
-      "H901XL N", 
+    skuDescuento: [
+      "H901XL N",
       "H901XL C"
     ],
   },
-  "KIT EP73-EP117": {skuDescuento:["EP117 N"]},  
+  "KIT EP73-EP117": { skuDescuento: ["EP117 N"] },
   "KIT EP544-EP664 4L": { skuDescuento: "EP544-EP664-EP673 N" },
   "KIT EP73-EP115": { skuDescuento: "EP115 N" },
   "KIT EP73-EP90": { skuDescuento: "EP90 N" },
@@ -120,6 +120,7 @@ export const MercadoLibre = () => {
     Record<string, number>
   >({});
   const [loadingDescuento, setLoadingDescuento] = useState<boolean>(true);
+  const [mostrarMultiplesProductos, setMostrarMultiplesProductos] = useState<boolean>(false);
 
   let indice: number = Number(cuentaSeleccionada) - 1;
 
@@ -169,146 +170,146 @@ export const MercadoLibre = () => {
       const allIds = new Set(orders.map((o) => o.numeroOperacion));
       setSelectedOrders(allIds);
     }
-  };  
+  };
 
   // Registrar ventas con descuento /////////////////////////////////////////////////////////
-const registrarVentasConDescuento = async () => {
-  if (selectedOrders.size === 0) {
-    sweetAlert.warning("Selecciona al menos una orden.");
-    return;
-  }
-
-  const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.numeroOperacion));
-
-  // ✅ Paso previo: manejo opcional de órdenes canceladas existentes
-  const ordenesCanceladasSeleccionadas = ordenesSeleccionadas.filter(o => o.tipo_envio === "cancelada");
-  if (ordenesCanceladasSeleccionadas.length > 0) {
-    setLoading(true);
-    try {
-      const numerosOperacionCanceladas = ordenesCanceladasSeleccionadas.map(o => o.numeroOperacion);
-      const response = await axios.post(Urls.ProductosConDescuento.verificarExistencia, {
-        numerosOperacion: numerosOperacionCanceladas
-      });
-      const { existentes } = response.data;
-
-      if (existentes.length > 0) {
-        setLoading(false);
-        const result = await sweetAlert.fire({
-          title: "¿Eliminar órdenes canceladas?",
-          html: `Hay <strong>${existentes.length}</strong> órdenes canceladas ya registradas.<br/>¿Deseas eliminarlas?`,
-          icon: "question",
-          showCancelButton: true,
-          confirmButtonText: "Sí, eliminar",
-          cancelButtonText: "No",
-          reverseButtons: true,
-          customClass: {
-            popup: "animate-swal-shake !border !border-blue-500",
-            confirmButton: "bg-red-600 text-white",
-            cancelButton: "bg-gray-300 text-black",
-          }
-        });
-
-        if (result.isConfirmed) {
-          setLoading(true);
-          await axios.post(Urls.ProductosConDescuento.eliminarOrdenes, {
-            numerosOperacion: existentes
-          });
-          sweetAlert.success(`✅ ${existentes.length} órdenes eliminadas.`);
-        }
-      }
-    } catch (error) {
-      console.error("Error en verificación/borrado:", error);
-      sweetAlert.error("Error al procesar órdenes canceladas.");
-      setLoading(false);
+  const registrarVentasConDescuento = async () => {
+    if (selectedOrders.size === 0) {
+      sweetAlert.warning("Selecciona al menos una orden.");
       return;
     }
-    setLoading(false);
-  }
 
-  // ✅ A PARTIR DE AQUÍ: TU LÓGICA ACTUAL (con filtro de canceladas)
-  const acumulador: Record<string, {
-    idSku: number;
-    canalVenta: string;
-    numeroOperacion: string;
-    fecha: string;
-    cantidad: number;
-  }> = {};
+    const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.numeroOperacion));
 
-  for (const orden of ordenesSeleccionadas) {
-    const fechaISO = new Date(orden.date_created).toISOString().split("T")[0];
-    const numeroOperacion = orden.numeroOperacion;
-    const canalVenta = orden.seller_nickname;
-
-    for (const item of orden.items) {
-      const { sku, quantity } = item;
-
-      const acumular = (skuDescuento: string, qty: number) => {
-        const idSku = productosConDescuento[skuDescuento];
-        if (idSku == null) return;
-        if (orden.tipo_envio === "cancelada") return; // ✅ omitir canceladas
-
-        const clave = `${numeroOperacion}-${idSku}`;
-        if (acumulador[clave]) {
-          acumulador[clave].cantidad += qty;
-        } else {
-          acumulador[clave] = {
-            idSku,
-            canalVenta,
-            numeroOperacion,
-            fecha: fechaISO,
-            cantidad: qty,
-          };
-        }
-      };
-
-      if (productosConDescuento[sku] !== undefined) {
-        acumular(sku, quantity);
-      }
-
-      const kitInfo = kitsConDescuento[sku];
-      if (kitInfo) {
-        const skus = Array.isArray(kitInfo.skuDescuento)
-          ? kitInfo.skuDescuento
-          : [kitInfo.skuDescuento];
-        skus.forEach((s) => acumular(s, quantity));
-      }
-    }
-  }
-
-  const ventasParaGuardar = Object.values(acumulador);
-
-
-  if (ventasParaGuardar.length === 0) {
-    sweetAlert.info("Ninguna orden seleccionada tiene productos con descuento.");
-    return;
-  }
-
-   const ventasParaGuardarComoString = ventasParaGuardar.map(venta => ({
-    ...venta,
-    numeroOperacion: String(venta.numeroOperacion) // ✅ ¡esto es crucial!
-  }));
-
-  // ✅ Aquí se envían al backend, que FILTRA DUPLICADOS
-  sweetAlert.confirm(
-    `¿Registrar ${ventasParaGuardar.length} items con descuento?`,
-    async () => {
+    // ✅ Paso previo: manejo opcional de órdenes canceladas existentes
+    const ordenesCanceladasSeleccionadas = ordenesSeleccionadas.filter(o => o.tipo_envio === "cancelada");
+    if (ordenesCanceladasSeleccionadas.length > 0) {
       setLoading(true);
       try {
-        const response = await axios.post(Urls.ProductosConDescuento.guardarVenta, ventasParaGuardarComoString);
-        const { count, message } = response.data;
-        if (count > 0) {
-          sweetAlert.success(`✅ ${count} ventas registradas.`);
-        } else {
-          sweetAlert.info(`ℹ️ ${message || "Ya estaban registradas."}`);
+        const numerosOperacionCanceladas = ordenesCanceladasSeleccionadas.map(o => o.numeroOperacion);
+        const response = await axios.post(Urls.ProductosConDescuento.verificarExistencia, {
+          numerosOperacion: numerosOperacionCanceladas
+        });
+        const { existentes } = response.data;
+
+        if (existentes.length > 0) {
+          setLoading(false);
+          const result = await sweetAlert.fire({
+            title: "¿Eliminar órdenes canceladas?",
+            html: `Hay <strong>${existentes.length}</strong> órdenes canceladas ya registradas.<br/>¿Deseas eliminarlas?`,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "No",
+            reverseButtons: true,
+            customClass: {
+              popup: "animate-swal-shake !border !border-blue-500",
+              confirmButton: "bg-red-600 text-white",
+              cancelButton: "bg-gray-300 text-black",
+            }
+          });
+
+          if (result.isConfirmed) {
+            setLoading(true);
+            await axios.post(Urls.ProductosConDescuento.eliminarOrdenes, {
+              numerosOperacion: existentes
+            });
+            sweetAlert.success(`✅ ${existentes.length} órdenes eliminadas.`);
+          }
         }
       } catch (error) {
-        sweetAlert.error("Error al registrar ventas.");
-      } finally {
+        console.error("Error en verificación/borrado:", error);
+        sweetAlert.error("Error al procesar órdenes canceladas.");
         setLoading(false);
+        return;
+      }
+      setLoading(false);
+    }
+
+    // ✅ A PARTIR DE AQUÍ: TU LÓGICA ACTUAL (con filtro de canceladas)
+    const acumulador: Record<string, {
+      idSku: number;
+      canalVenta: string;
+      numeroOperacion: string;
+      fecha: string;
+      cantidad: number;
+    }> = {};
+
+    for (const orden of ordenesSeleccionadas) {
+      const fechaISO = new Date(orden.date_created).toISOString().split("T")[0];
+      const numeroOperacion = orden.numeroOperacion;
+      const canalVenta = orden.seller_nickname;
+
+      for (const item of orden.items) {
+        const { sku, quantity } = item;
+
+        const acumular = (skuDescuento: string, qty: number) => {
+          const idSku = productosConDescuento[skuDescuento];
+          if (idSku == null) return;
+          if (orden.tipo_envio === "cancelada") return; // ✅ omitir canceladas
+
+          const clave = `${numeroOperacion}-${idSku}`;
+          if (acumulador[clave]) {
+            acumulador[clave].cantidad += qty;
+          } else {
+            acumulador[clave] = {
+              idSku,
+              canalVenta,
+              numeroOperacion,
+              fecha: fechaISO,
+              cantidad: qty,
+            };
+          }
+        };
+
+        if (productosConDescuento[sku] !== undefined) {
+          acumular(sku, quantity);
+        }
+
+        const kitInfo = kitsConDescuento[sku];
+        if (kitInfo) {
+          const skus = Array.isArray(kitInfo.skuDescuento)
+            ? kitInfo.skuDescuento
+            : [kitInfo.skuDescuento];
+          skus.forEach((s) => acumular(s, quantity));
+        }
       }
     }
-  );
-};
+
+    const ventasParaGuardar = Object.values(acumulador);
+
+
+    if (ventasParaGuardar.length === 0) {
+      sweetAlert.info("Ninguna orden seleccionada tiene productos con descuento.");
+      return;
+    }
+
+    const ventasParaGuardarComoString = ventasParaGuardar.map(venta => ({
+      ...venta,
+      numeroOperacion: String(venta.numeroOperacion) // ✅ ¡esto es crucial!
+    }));
+
+    // ✅ Aquí se envían al backend, que FILTRA DUPLICADOS
+    sweetAlert.confirm(
+      `¿Registrar ${ventasParaGuardar.length} items con descuento?`,
+      async () => {
+        setLoading(true);
+        try {
+          const response = await axios.post(Urls.ProductosConDescuento.guardarVenta, ventasParaGuardarComoString);
+          const { count, message } = response.data;
+          if (count > 0) {
+            sweetAlert.success(`✅ ${count} ventas registradas.`);
+          } else {
+            sweetAlert.info(`ℹ️ ${message || "Ya estaban registradas."}`);
+          }
+        } catch (error) {
+          sweetAlert.error("Error al registrar ventas.");
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
+  };
 
   // ✅ Función actualizada: ahora incluye "cuenta"
   const handleFetchOrders = async () => {
@@ -345,7 +346,10 @@ const registrarVentasConDescuento = async () => {
     }
   };
 
- 
+  const ordersFiltradas = mostrarMultiplesProductos
+    ? orders.filter(o => o.items.length > 1)
+    : orders;
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {loading && <Loader />}
@@ -392,21 +396,21 @@ const registrarVentasConDescuento = async () => {
           {loading ? "Cargando..." : "Obtener órdenes"}
         </button>
 
-       <button
-  onClick={() => generateEnviosPDF(orders, selectedOrders)}
-  disabled={!orders.some(o => selectedOrders.has(o.numeroOperacion) && o.tipo_envio !== "retiro_local")}
-  className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
->
-  Imprimir envíos
-</button>
+        <button
+          onClick={() => generateEnviosPDF(orders, selectedOrders)}
+          disabled={!orders.some(o => selectedOrders.has(o.numeroOperacion) && o.tipo_envio !== "retiro_local")}
+          className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
+        >
+          Imprimir envíos
+        </button>
 
-<button
-  onClick={() => printRetiroLocalHTML(orders, selectedOrders)}
-  disabled={!orders.some(o => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local")}
-  className="ml-2 px-4 py-2 bg-amber-600 text-white rounded disabled:bg-gray-400"
->
-  Imprimir constancias (retiro en local)
-</button>
+        <button
+          onClick={() => printRetiroLocalHTML(orders, selectedOrders)}
+          disabled={!orders.some(o => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local")}
+          className="ml-2 px-4 py-2 bg-amber-600 text-white rounded disabled:bg-gray-400"
+        >
+          Imprimir constancias (retiro en local)
+        </button>
 
         <button
           onClick={registrarVentasConDescuento}
@@ -430,24 +434,44 @@ const registrarVentasConDescuento = async () => {
 
       {orders.length > 0 && (
         <div>
+
+
           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
             <p className="text-gray-700">
               Cuenta <span className="font-bold">{CUENTAS[indice].nombre}</span> —{" "}
               <span className="font-semibold">{orders.length}</span> órdenes
+              {mostrarMultiplesProductos && (
+                <span className="ml-2 text-xs text-blue-600">
+                  (mostrando {orders.filter(o => o.items.length > 1).length} con +1 producto)
+                </span>
+              )}
             </p>
-            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={selectedOrders.size === orders.length}
-                onChange={toggleAll}
-                className="w-4 h-4"
-              />
-              Seleccionar todas
-            </label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={mostrarMultiplesProductos}
+                  onChange={(e) => setMostrarMultiplesProductos(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                +1 SKU
+              </label>
+              <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={selectedOrders.size === orders.length && orders.length > 0}
+                  onChange={toggleAll}
+                  className="w-4 h-4"
+                />
+                Seleccionar todas
+              </label>
+            </div>
           </div>
 
+
+
           <div className="space-y-5">
-            {orders.map((order) => (
+            {ordersFiltradas.map((order) => (
               <div
                 key={order.numeroOperacion}
                 className={`rounded-lg p-5 shadow-sm relative border ${order.tipo_envio === "cancelada"
