@@ -3,6 +3,7 @@ import axios from "axios";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Urls from "./utilidades/Urls";
 import Loader from "./utilidades/Loader";
+import BotonCargarTxt from "./utilidades/BotonCargarTxt"
 // Al inicio del archivo, después de otros imports
 import { generateEnviosPDF } from "./utilidades/pdfGenerators";
 import { printRetiroLocalHTML } from "./utilidades/printUtils";
@@ -122,6 +123,10 @@ export const MercadoLibre = () => {
   const [loadingDescuento, setLoadingDescuento] = useState<boolean>(true);
   const [mostrarMultiplesProductos, setMostrarMultiplesProductos] = useState<boolean>(false);
 
+  const [contenidoTxt, setContenidoTxt] = useState<string>("");
+  const [nombreArchivo, setNombreArchivo] = useState<string>("");
+  const [ordenesVisibles, setOrdenesVisibles] = useState<Order[]>([]);
+
   let indice: number = Number(cuentaSeleccionada) - 1;
 
   const urlGetVentas = Urls.apiMeli.getVentas;
@@ -162,15 +167,111 @@ export const MercadoLibre = () => {
     setSelectedOrders(newSelected);
   };
 
-  // Seleccionar/deseleccionar todas (sin cambios)
+  // Seleccionar/deseleccionar todas 
   const toggleAll = () => {
-    if (selectedOrders.size === orders.length) {
-      setSelectedOrders(new Set());
+    // Trabajar sobre la lista que se está mostrando
+    const listaActual = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
+
+    const idsActuales = listaActual.map(o => o.numeroOperacion);
+    const todasSeleccionadas = idsActuales.every(id => selectedOrders.has(id));
+
+    const newSelected = new Set(selectedOrders);
+    if (todasSeleccionadas) {
+      idsActuales.forEach(id => newSelected.delete(id));
     } else {
-      const allIds = new Set(orders.map((o) => o.numeroOperacion));
-      setSelectedOrders(allIds);
+      idsActuales.forEach(id => newSelected.add(id));
     }
+    setSelectedOrders(newSelected);
   };
+
+  // Input de etiquetas
+
+  /**
+ * Extrae los IDs de venta de un archivo ZPL de etiquetas de MercadoLibre.
+ * Busca el patrón: ^FO198,40^A0N,30,30^FD[NUMERO]^FS
+ */
+  const extraerIdsDeEtiqueta = (contenido: string): string[] => {
+    const regex = /\^FO198,40\^A0N,30,30\^FD(\d+)\^FS/g;
+    const ids: string[] = [];
+    let match;
+    while ((match = regex.exec(contenido)) !== null) {
+      ids.push(match[1]);
+    }
+    // Eliminar duplicados (por si el ZPL repite el número)
+    return [...new Set(ids)];
+  };
+
+  const handleArchivoTxt = (content: string, fileName: string) => {
+    setNombreArchivo(fileName);
+
+    // 1. Extraer IDs del archivo
+    const idsDelArchivo = extraerIdsDeEtiqueta(content);
+
+    if (idsDelArchivo.length === 0) {
+      sweetAlert.warning(
+        "No se encontraron IDs de venta en el archivo. Verificá el formato del ZPL."
+      );
+      return;
+    }
+
+    // 2. Si no hay órdenes cargadas, avisar
+    if (orders.length === 0) {
+      sweetAlert.warning(
+        `Se encontraron ${idsDelArchivo.length} IDs en el archivo, pero no hay órdenes cargadas. Primero obtené las órdenes.`
+      );
+      return;
+    }
+
+    // 3. Buscar coincidencias con las órdenes cargadas
+    const ordenesCoincidentes = orders.filter((o) => {
+      const numOrden = String(o.numeroOperacion);
+      return idsDelArchivo.some(
+        (id) => numOrden.endsWith(id) || id.endsWith(numOrden)
+      );
+    });
+
+    if (ordenesCoincidentes.length === 0) {
+      sweetAlert.warning(
+        `Se encontraron ${idsDelArchivo.length} IDs en el archivo, pero ninguna coincide con las órdenes cargadas.`
+      );
+      setContenidoTxt("")
+      setNombreArchivo("")
+      return;
+    }
+
+
+
+    // ✅ NUEVO: filtrar la vista para mostrar SOLO las coincidentes
+    setOrdenesVisibles((prev) => {
+      // Combinar órdenes anteriores con las nuevas (sin duplicados)
+      const existentes = new Set(prev.map(o => o.numeroOperacion));
+      const nuevas = ordenesCoincidentes.filter(o => !existentes.has(o.numeroOperacion));
+      return [...prev, ...nuevas];
+    });
+
+    const noEncontrados = idsDelArchivo.filter(
+      (id) => !orders.some((o) => {
+        const numOrden = String(o.numeroOperacion);
+        return numOrden.endsWith(id) || id.endsWith(numOrden);
+      })
+    );
+
+    let mensaje = `✅ Se seleccionaron ${ordenesCoincidentes.length} órdenes a partir del archivo "${fileName}".`;
+    if (noEncontrados.length > 0) {
+      mensaje += `\n\n⚠️ ${noEncontrados.length} IDs no se encontraron entre las órdenes cargadas.`;
+    }
+
+    sweetAlert.fire({
+      title: "Órdenes seleccionadas",
+      html: mensaje.replace(/\n/g, "<br/>"),
+      icon: ordenesCoincidentes.length === idsDelArchivo.length ? "success" : "warning",
+      confirmButtonText: "OK",
+    });
+
+
+  };
+
+
 
   // Registrar ventas con descuento /////////////////////////////////////////////////////////
   const registrarVentasConDescuento = async () => {
@@ -346,9 +447,16 @@ export const MercadoLibre = () => {
     }
   };
 
-  const ordersFiltradas = mostrarMultiplesProductos
-    ? orders.filter(o => o.items.length > 1)
-    : orders;
+  // Si hay órdenes filtradas por el archivo, mostrar solo esas
+  // Sino, mostrar todas las órdenes (con filtro opcional de +1 SKU)
+  const baseOrders = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
+
+  const ordersFiltradas = baseOrders.filter((o) => {
+    if (mostrarMultiplesProductos && o.items.length <= 1) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -424,6 +532,11 @@ export const MercadoLibre = () => {
             ? "Cargando..."
             : `Registrar ${selectedOrders.size} con descuento`}
         </button>
+        <BotonCargarTxt
+          onFileRead={handleArchivoTxt}
+          label="Cargar órdenes (.txt)"
+        />
+
       </div>
 
       {error && (
@@ -447,6 +560,16 @@ export const MercadoLibre = () => {
               )}
             </p>
             <div className="flex items-center gap-4">
+              {/* ✅ NUEVO: botón para volver a ver todas */}
+              {ordenesVisibles.length > 0 && (
+                <button
+                  onClick={() => setOrdenesVisibles([])}
+                  className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition whitespace-nowrap"
+                >
+                  ✕ Ver todas ({orders.length})
+                </button>
+              )}
+
               <label className="flex items-center gap-2 text-sm whitespace-nowrap">
                 <input
                   type="checkbox"
@@ -456,16 +579,21 @@ export const MercadoLibre = () => {
                 />
                 +1 SKU
               </label>
+
               <label className="flex items-center gap-2 text-sm whitespace-nowrap">
                 <input
                   type="checkbox"
-                  checked={selectedOrders.size === orders.length && orders.length > 0}
+                  checked={(() => {
+                    const listaActual = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
+                    return listaActual.length > 0 && listaActual.every(o => selectedOrders.has(o.numeroOperacion));
+                  })()}
                   onChange={toggleAll}
                   className="w-4 h-4"
                 />
                 Seleccionar todas
               </label>
             </div>
+
           </div>
 
 
