@@ -3,12 +3,13 @@ import axios from "axios";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Urls from "./utilidades/Urls";
 import Loader from "./utilidades/Loader";
-import BotonCargarTxt from "./utilidades/BotonCargarTxt"
-// Al inicio del archivo, después de otros imports
+import BotonCargarTxt from "./utilidades/BotonCargarTxt";
 import { generateEnviosPDF } from "./utilidades/pdfGenerators";
 import { printRetiroLocalHTML } from "./utilidades/printUtils";
+import { PdfGenerarConsolidado } from "./utilidades/pdfGenerarConsolidado";
 
-// Tipos actualizados
+// ─── Tipos ──────────────────────────────────────────────────────────────────
+
 interface OrderItem {
   sku: string;
   quantity: number;
@@ -21,7 +22,7 @@ export interface Order {
   seller_nickname: string;
   date_created: string;
   etiqueta_impresa: boolean;
-  tipo_envio: string; // ✅ añadido
+  tipo_envio: string;
   items: OrderItem[];
   buyer_full_name?: string;
 }
@@ -32,71 +33,47 @@ interface ApiResponse {
   data?: Order[];
 }
 
-// ✅ Nueva constante: cuentas disponibles
-const CUENTAS = [
-  { id: "1", nombre: "Femex" },
-  { id: "2", nombre: "Blow" },
-];
+// ─── Constantes ─────────────────────────────────────────────────────────────
+
+const SELLER_FEMEX = "FEMEX";
+const SELLER_BLOW = "BLOW INK";
 
 const kitsConDescuento: Record<string, { skuDescuento: string | string[] }> = {
   "KIT GI190 345ML": {
-    skuDescuento: [
-      "GI190 N 135ML",
-      "GI190 C 70ML",
-      "GI190 M 70ML",
-      "GI190 A 70ML"
-    ]
+    skuDescuento: ["GI190 N 135ML", "GI190 C 70ML", "GI190 M 70ML", "GI190 A 70ML"],
   },
   "KIT EP544 280ML": { skuDescuento: "EP544 N 70ML" },
   "KIT EP664 400ML": {
     skuDescuento: [
-      "EP664-EP673 N 100ML",
-      "EP664-EP673 C 100ML",
-      "EP664-EP673 M 100ML",
-      "EP664-EP673 A 100ML",
+      "EP664-EP673 N 100ML", "EP664-EP673 C 100ML",
+      "EP664-EP673 M 100ML", "EP664-EP673 A 100ML",
     ],
   },
   "KIT EP673 600ML": {
     skuDescuento: [
-      "EP664-EP673 N 100ML",
-      "EP664-EP673 C 100ML",
-      "EP664-EP673 M 100ML",
-      "EP664-EP673 A 100ML",
-      "EP673 LC 100ML",
-      "EP673 LM 100ML",
+      "EP664-EP673 N 100ML", "EP664-EP673 C 100ML",
+      "EP664-EP673 M 100ML", "EP664-EP673 A 100ML",
+      "EP673 LC 100ML", "EP673 LM 100ML",
     ],
   },
-  "KIT H901XL": {
-    skuDescuento: [
-      "H901XL N",
-      "H901XL C"
-    ],
-  },
+  "KIT H901XL": { skuDescuento: ["H901XL N", "H901XL C"] },
   "KIT EP73-EP117": { skuDescuento: ["EP117 N"] },
   "KIT EP544-EP664 4L": { skuDescuento: "EP544-EP664-EP673 N" },
   "KIT EP73-EP115": { skuDescuento: "EP115 N" },
   "KIT EP73-EP90": { skuDescuento: "EP90 N" },
 };
 
-// ✅ Función para formatear fecha en 24h (solo para visualización)
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 const formatDateToDisplay = (isoDateString: string): string => {
   const date = new Date(isoDateString);
-  if (isNaN(date.getTime())) {
-    console.warn("Fecha inválida:", isoDateString);
-    return "Fecha inválida";
-  }
-  return date.toLocaleString('es-AR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
+  if (isNaN(date.getTime())) return "Fecha inválida";
+  return date.toLocaleString("es-AR", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
   });
 };
 
-// ✅ Mapeo visual para tipo_envio
 const getTipoEnvioLabel = (tipo: string): string => {
   const labels: Record<string, string> = {
     full: "Envío Full",
@@ -105,33 +82,212 @@ const getTipoEnvioLabel = (tipo: string): string => {
     vendedor: "Vendedor",
     retiro_local: "Retiro en local",
     cancelada: "❌ Cancelada",
-    desconocido: "Desconocido"
+    desconocido: "Desconocido",
   };
   return labels[tipo] || tipo;
 };
 
+const extraerIdsDeEtiqueta = (contenido: string): string[] => {
+  const regex = /\^FO198,40\^A0N,30,30\^FD(\d+)\^FS/g;
+  const ids: string[] = [];
+  let match;
+  while ((match = regex.exec(contenido)) !== null) {
+    ids.push(match[1]);
+  }
+  return [...new Set(ids)];
+};
+
+// ─── Componente Columna ─────────────────────────────────────────────────────
+
+interface ColumnaOrdenesProps {
+  titulo: string;
+  orders: Order[];
+  ordenesVisibles: Order[];
+  setOrdenesVisibles: React.Dispatch<React.SetStateAction<Order[]>>;
+  mostrarMultiples: boolean;
+  setMostrarMultiples: (v: boolean) => void;
+  selectedOrders: Set<string>;
+  toggleOrderSelection: (orderId: string) => void;
+  onToggleAll: (ids: string[]) => void;
+}
+
+const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
+  titulo,
+  orders,
+  ordenesVisibles,
+  setOrdenesVisibles,
+  mostrarMultiples,
+  setMostrarMultiples,
+  selectedOrders,
+  toggleOrderSelection,
+  onToggleAll,
+}) => {
+  const baseOrders = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
+
+  const ordersFiltradas = baseOrders.filter((o) => {
+    if (mostrarMultiples && o.items.length <= 1) return false;
+    return true;
+  });
+
+  const idsBase = baseOrders.map((o) => o.numeroOperacion);
+  const todasSeleccionadas =
+    idsBase.length > 0 && idsBase.every((id) => selectedOrders.has(id));
+
+  const cantidadMultiples = orders.filter((o) => o.items.length > 1).length;
+
+  if (orders.length === 0) return null;
+
+  return (
+    <div className="flex-1 min-w-0">
+      {/* Header de columna */}
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2 sticky top-0 bg-white/90 backdrop-blur z-10 py-2 rounded">
+        <p className="text-gray-700">
+          <span className="font-bold text-lg">{titulo}</span> —{" "}
+          <span className="font-semibold">{orders.length}</span> órdenes
+          {mostrarMultiples && (
+            <span className="ml-2 text-xs text-blue-600">
+              (mostrando {cantidadMultiples} con +1 producto)
+            </span>
+          )}
+        </p>
+        <div className="flex items-center gap-3">
+          {ordenesVisibles.length > 0 && (
+            <button
+              onClick={() => setOrdenesVisibles([])}
+              className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition whitespace-nowrap"
+            >
+              ✕ Ver todas ({orders.length})
+            </button>
+          )}
+          <label className="flex items-center gap-1.5 text-sm whitespace-nowrap cursor-pointer">
+            <input
+              type="checkbox"
+              checked={mostrarMultiples}
+              onChange={(e) => setMostrarMultiples(e.target.checked)}
+              className="w-4 h-4"
+            />
+            +1 SKU
+          </label>
+          <label className="flex items-center gap-1.5 text-sm whitespace-nowrap cursor-pointer">
+            <input
+              type="checkbox"
+              checked={todasSeleccionadas}
+              onChange={() => onToggleAll(idsBase)}
+              className="w-4 h-4"
+            />
+            Seleccionar todas
+          </label>
+        </div>
+      </div>
+
+      {/* Lista de órdenes */}
+      <div className="space-y-4">
+        {ordersFiltradas.map((order) => (
+          <div
+            key={order.numeroOperacion}
+            className={`rounded-lg p-4 shadow-sm relative border ${
+              order.tipo_envio === "cancelada"
+                ? "bg-gray-100 border-gray-300"
+                : order.tipo_envio === "retiro_local"
+                ? "bg-amber-50 border-amber-200"
+                : "bg-white border-gray-200"
+            }`}
+          >
+            <div className="absolute top-3 right-3">
+              <input
+                type="checkbox"
+                checked={selectedOrders.has(order.numeroOperacion)}
+                onChange={() => toggleOrderSelection(order.numeroOperacion)}
+                className="w-5 h-5 cursor-pointer"
+              />
+            </div>
+
+            <div className="flex justify-between items-start pr-8">
+              <h3 className="text-base font-semibold text-gray-800">
+                Orden #{order.numeroOperacion}
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">
+                  <span className="font-semibold">
+                    {getTipoEnvioLabel(order.tipo_envio)}
+                  </span>
+                </span>
+                <span
+                  className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                    order.etiqueta_impresa
+                      ? "bg-green-100 text-green-800"
+                      : "bg-blue-100 text-blue-800"
+                  }`}
+                >
+                  {order.etiqueta_impresa ? "Etiqueta generada" : "Sin etiqueta"}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 mt-1">
+              <span className="font-medium">Comprador:</span>{" "}
+              {order.buyer_full_name} ({order.buyer_nickname})
+            </p>
+
+            <p className="text-sm text-gray-600 mt-1">
+              <span className="font-medium">Fecha:</span>{" "}
+              {formatDateToDisplay(order.date_created)}
+            </p>
+
+            <div className="mt-2">
+              <p className="text-sm text-gray-700 font-medium">Items:</p>
+              <ul className="list-disc list-inside mt-1 text-sm text-gray-600">
+                {order.items.map((item, idx) => (
+                  <li key={idx}>
+                    <span className="font-bold">{item.sku}</span> —{" "}
+                    <span className="font-bold">{item.quantity} Un.</span> —{" "}
+                    <span className="text-gray-500">{item.description}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── Componente Principal ───────────────────────────────────────────────────
+
 export const MercadoLibre = () => {
-  const [dias, setDias] = useState<number>(3);
-  const [cuentaSeleccionada, setCuentaSeleccionada] = useState<string>("1");
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  // Días independientes
+  const [diasFemex, setDiasFemex] = useState<number>(3);
+  const [diasBlow, setDiasBlow] = useState<number>(3);
+
+  // Órdenes por empresa
+  const [ordersFemex, setOrdersFemex] = useState<Order[]>([]);
+  const [ordersBlow, setOrdersBlow] = useState<Order[]>([]);
+
+  // Filtrado por etiqueta por empresa
+  const [ordenesVisiblesFemex, setOrdenesVisiblesFemex] = useState<Order[]>([]);
+  const [ordenesVisiblesBlow, setOrdenesVisiblesBlow] = useState<Order[]>([]);
+
+  // Filtros +1 SKU por empresa
+  const [mostrarMultiplesFemex, setMostrarMultiplesFemex] = useState(false);
+  const [mostrarMultiplesBlow, setMostrarMultiplesBlow] = useState(false);
+
+  // Estado global compartido
+  const [loading, setLoading] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
-  const [productosConDescuento, setProductosConDescuento] = useState<
-    Record<string, number>
-  >({});
-  const [loadingDescuento, setLoadingDescuento] = useState<boolean>(true);
-  const [mostrarMultiplesProductos, setMostrarMultiplesProductos] = useState<boolean>(false);
+  const [productosConDescuento, setProductosConDescuento] = useState<Record<string, number>>({});
+  const [loadingDescuento, setLoadingDescuento] = useState(true);
 
-  const [contenidoTxt, setContenidoTxt] = useState<string>("");
-  const [nombreArchivo, setNombreArchivo] = useState<string>("");
-  const [ordenesVisibles, setOrdenesVisibles] = useState<Order[]>([]);
-
-  let indice: number = Number(cuentaSeleccionada) - 1;
+  const [nombreArchivo, setNombreArchivo] = useState("");
+  const [contenidoTxt, setContenidoTxt] = useState("");
 
   const urlGetVentas = Urls.apiMeli.getVentas;
 
-  // Cargar productos con descuento (sin cambios)
+  // Todas las órdenes combinadas (para funciones globales)
+  const allOrders = [...ordersFemex, ...ordersBlow];
+
+  // ─── Cargar productos con descuento ─────────────────────────────────────
+
   useEffect(() => {
     const fetchProductosConDescuento = async () => {
       setLoading(true);
@@ -152,11 +308,11 @@ export const MercadoLibre = () => {
         setLoading(false);
       }
     };
-
     fetchProductosConDescuento();
   }, []);
 
-  // Toggle selección de una orden (sin cambios)
+  // ─── Selección ──────────────────────────────────────────────────────────
+
   const toggleOrderSelection = (orderId: string) => {
     const newSelected = new Set(selectedOrders);
     if (newSelected.has(orderId)) {
@@ -167,129 +323,177 @@ export const MercadoLibre = () => {
     setSelectedOrders(newSelected);
   };
 
-  // Seleccionar/deseleccionar todas 
-  const toggleAll = () => {
-    // Trabajar sobre la lista que se está mostrando
-    const listaActual = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
-
-    const idsActuales = listaActual.map(o => o.numeroOperacion);
-    const todasSeleccionadas = idsActuales.every(id => selectedOrders.has(id));
-
+  const toggleAllForIds = (ids: string[]) => {
+    const todasSeleccionadas = ids.length > 0 && ids.every((id) => selectedOrders.has(id));
     const newSelected = new Set(selectedOrders);
     if (todasSeleccionadas) {
-      idsActuales.forEach(id => newSelected.delete(id));
+      ids.forEach((id) => newSelected.delete(id));
     } else {
-      idsActuales.forEach(id => newSelected.add(id));
+      ids.forEach((id) => newSelected.add(id));
     }
     setSelectedOrders(newSelected);
   };
 
-  // Input de etiquetas
+  // ─── Fetch de órdenes (paralelo) ───────────────────────────────────────
 
-  /**
- * Extrae los IDs de venta de un archivo ZPL de etiquetas de MercadoLibre.
- * Busca el patrón: ^FO198,40^A0N,30,30^FD[NUMERO]^FS
- */
-  const extraerIdsDeEtiqueta = (contenido: string): string[] => {
-    const regex = /\^FO198,40\^A0N,30,30\^FD(\d+)\^FS/g;
-    const ids: string[] = [];
-    let match;
-    while ((match = regex.exec(contenido)) !== null) {
-      ids.push(match[1]);
-    }
-    // Eliminar duplicados (por si el ZPL repite el número)
-    return [...new Set(ids)];
-  };
-
-  const handleArchivoTxt = (content: string, fileName: string) => {
-    setNombreArchivo(fileName);
-
-    // 1. Extraer IDs del archivo
-    const idsDelArchivo = extraerIdsDeEtiqueta(content);
-
-    if (idsDelArchivo.length === 0) {
-      sweetAlert.warning(
-        "No se encontraron IDs de venta en el archivo. Verificá el formato del ZPL."
-      );
+  const handleFetchOrders = async () => {
+    if (diasFemex < 1 || diasFemex > 30 || diasBlow < 1 || diasBlow > 30) {
+      sweetAlert.warning("Ingresá valores entre 1 y 30 días.");
       return;
     }
 
-    // 2. Si no hay órdenes cargadas, avisar
-    if (orders.length === 0) {
+    setLoading(true);
+    setSelectedOrders(new Set());
+    setOrdenesVisiblesFemex([]);
+    setOrdenesVisiblesBlow([]);
+    setMostrarMultiplesFemex(false);
+    setMostrarMultiplesBlow(false);
+
+    try {
+      const [resFemex, resBlow] = await Promise.allSettled([
+        axios.get<ApiResponse>(`${urlGetVentas}${diasFemex}&cuenta=1`),
+        axios.get<ApiResponse>(`${urlGetVentas}${diasBlow}&cuenta=2`),
+      ]);
+
+      // Femex
+      if (resFemex.status === "fulfilled") {
+        const data = resFemex.value.data;
+        if (data.success && data.data) {
+          setOrdersFemex(data.data);
+        } else {
+          sweetAlert.error(`Femex: ${data.message || "Error desconocido"}`);
+          setOrdersFemex([]);
+        }
+      } else {
+        sweetAlert.error("Femex: Error al conectar con el servidor.");
+        setOrdersFemex([]);
+      }
+
+      // Blow
+      if (resBlow.status === "fulfilled") {
+        const data = resBlow.value.data;
+        if (data.success && data.data) {
+          setOrdersBlow(data.data);
+        } else {
+          sweetAlert.error(`Blow: ${data.message || "Error desconocido"}`);
+          setOrdersBlow([]);
+        }
+      } else {
+        sweetAlert.error("Blow: Error al conectar con el servidor.");
+        setOrdersBlow([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── Carga de archivo de etiquetas ─────────────────────────────────────
+
+  const handleArchivoTxt = (content: string, fileName: string) => {
+    setNombreArchivo(fileName);
+    const idsDelArchivo = extraerIdsDeEtiqueta(content);
+
+    if (idsDelArchivo.length === 0) {
+      sweetAlert.warning("No se encontraron IDs de venta en el archivo. Verificá el formato del ZPL.");
+      return;
+    }
+
+    if (ordersFemex.length === 0 && ordersBlow.length === 0) {
       sweetAlert.warning(
         `Se encontraron ${idsDelArchivo.length} IDs en el archivo, pero no hay órdenes cargadas. Primero obtené las órdenes.`
       );
       return;
     }
 
-    // 3. Buscar coincidencias con las órdenes cargadas
-    const ordenesCoincidentes = orders.filter((o) => {
-      const numOrden = String(o.numeroOperacion);
-      return idsDelArchivo.some(
-        (id) => numOrden.endsWith(id) || id.endsWith(numOrden)
-      );
+    // Buscar coincidencias en cada empresa por separado
+    const coincidentesFemex = ordersFemex.filter((o) => {
+      const num = String(o.numeroOperacion);
+      return idsDelArchivo.some((id) => num.endsWith(id) || id.endsWith(num));
     });
 
-    if (ordenesCoincidentes.length === 0) {
+    const coincidentesBlow = ordersBlow.filter((o) => {
+      const num = String(o.numeroOperacion);
+      return idsDelArchivo.some((id) => num.endsWith(id) || id.endsWith(num));
+    });
+
+    const totalCoincidentes = coincidentesFemex.length + coincidentesBlow.length;
+
+    if (totalCoincidentes === 0) {
       sweetAlert.warning(
         `Se encontraron ${idsDelArchivo.length} IDs en el archivo, pero ninguna coincide con las órdenes cargadas.`
       );
-      setContenidoTxt("")
-      setNombreArchivo("")
+      setContenidoTxt("");
+      setNombreArchivo("");
       return;
     }
 
+    // Filtrar solo la columna que tenga coincidencias (acumulando)
+    if (coincidentesFemex.length > 0) {
+      setOrdenesVisiblesFemex((prev) => {
+        const existentes = new Set(prev.map((o) => o.numeroOperacion));
+        const nuevas = coincidentesFemex.filter((o) => !existentes.has(o.numeroOperacion));
+        return [...prev, ...nuevas];
+      });
+    }
 
+    if (coincidentesBlow.length > 0) {
+      setOrdenesVisiblesBlow((prev) => {
+        const existentes = new Set(prev.map((o) => o.numeroOperacion));
+        const nuevas = coincidentesBlow.filter((o) => !existentes.has(o.numeroOperacion));
+        return [...prev, ...nuevas];
+      });
+    }
 
-    // ✅ NUEVO: filtrar la vista para mostrar SOLO las coincidentes
-    setOrdenesVisibles((prev) => {
-      // Combinar órdenes anteriores con las nuevas (sin duplicados)
-      const existentes = new Set(prev.map(o => o.numeroOperacion));
-      const nuevas = ordenesCoincidentes.filter(o => !existentes.has(o.numeroOperacion));
-      return [...prev, ...nuevas];
-    });
-
+    // IDs no encontrados
     const noEncontrados = idsDelArchivo.filter(
-      (id) => !orders.some((o) => {
-        const numOrden = String(o.numeroOperacion);
-        return numOrden.endsWith(id) || id.endsWith(numOrden);
-      })
+      (id) =>
+        !allOrders.some((o) => {
+          const num = String(o.numeroOperacion);
+          return num.endsWith(id) || id.endsWith(num);
+        })
     );
 
-    let mensaje = `✅ Se seleccionaron ${ordenesCoincidentes.length} órdenes a partir del archivo "${fileName}".`;
+    let mensaje = `✅ Se filtraron ${totalCoincidentes} órdenes a partir de "${fileName}".`;
+    if (coincidentesFemex.length > 0) mensaje += `<br/>📦 Femex: ${coincidentesFemex.length}`;
+    if (coincidentesBlow.length > 0) mensaje += `<br/>📦 Blow: ${coincidentesBlow.length}`;
     if (noEncontrados.length > 0) {
-      mensaje += `\n\n⚠️ ${noEncontrados.length} IDs no se encontraron entre las órdenes cargadas.`;
+      mensaje += `<br/><br/>⚠️ ${noEncontrados.length} IDs no se encontraron.`;
     }
 
     sweetAlert.fire({
-      title: "Órdenes seleccionadas",
-      html: mensaje.replace(/\n/g, "<br/>"),
-      icon: ordenesCoincidentes.length === idsDelArchivo.length ? "success" : "warning",
+      title: "Órdenes filtradas",
+      html: mensaje,
+      icon: totalCoincidentes === idsDelArchivo.length ? "success" : "warning",
       confirmButtonText: "OK",
     });
-
-
   };
 
+  const handleConsolidadoStock = () => {
+  PdfGenerarConsolidado(allOrders, selectedOrders, [...ordenesVisiblesFemex, ...ordenesVisiblesBlow]);
+};
 
+  // ─── Registrar ventas con descuento ─────────────────────────────────────
 
-  // Registrar ventas con descuento /////////////////////////////////////////////////////////
   const registrarVentasConDescuento = async () => {
     if (selectedOrders.size === 0) {
-      sweetAlert.warning("Selecciona al menos una orden.");
+      sweetAlert.warning("Seleccioná al menos una orden.");
       return;
     }
 
-    const ordenesSeleccionadas = orders.filter((o) => selectedOrders.has(o.numeroOperacion));
+    const ordenesSeleccionadas = allOrders.filter((o) => selectedOrders.has(o.numeroOperacion));
 
-    // ✅ Paso previo: manejo opcional de órdenes canceladas existentes
-    const ordenesCanceladasSeleccionadas = ordenesSeleccionadas.filter(o => o.tipo_envio === "cancelada");
+    // Manejo de canceladas
+    const ordenesCanceladasSeleccionadas = ordenesSeleccionadas.filter(
+      (o) => o.tipo_envio === "cancelada"
+    );
     if (ordenesCanceladasSeleccionadas.length > 0) {
       setLoading(true);
       try {
-        const numerosOperacionCanceladas = ordenesCanceladasSeleccionadas.map(o => o.numeroOperacion);
+        const numerosOperacionCanceladas = ordenesCanceladasSeleccionadas.map(
+          (o) => o.numeroOperacion
+        );
         const response = await axios.post(Urls.ProductosConDescuento.verificarExistencia, {
-          numerosOperacion: numerosOperacionCanceladas
+          numerosOperacion: numerosOperacionCanceladas,
         });
         const { existentes } = response.data;
 
@@ -307,13 +511,13 @@ export const MercadoLibre = () => {
               popup: "animate-swal-shake !border !border-blue-500",
               confirmButton: "bg-red-600 text-white",
               cancelButton: "bg-gray-300 text-black",
-            }
+            },
           });
 
           if (result.isConfirmed) {
             setLoading(true);
             await axios.post(Urls.ProductosConDescuento.eliminarOrdenes, {
-              numerosOperacion: existentes
+              numerosOperacion: existentes,
             });
             sweetAlert.success(`✅ ${existentes.length} órdenes eliminadas.`);
           }
@@ -327,14 +531,11 @@ export const MercadoLibre = () => {
       setLoading(false);
     }
 
-    // ✅ A PARTIR DE AQUÍ: TU LÓGICA ACTUAL (con filtro de canceladas)
-    const acumulador: Record<string, {
-      idSku: number;
-      canalVenta: string;
-      numeroOperacion: string;
-      fecha: string;
-      cantidad: number;
-    }> = {};
+    // Acumulador
+    const acumulador: Record<
+      string,
+      { idSku: number; canalVenta: string; numeroOperacion: string; fecha: string; cantidad: number }
+    > = {};
 
     for (const orden of ordenesSeleccionadas) {
       const fechaISO = new Date(orden.date_created).toISOString().split("T")[0];
@@ -347,19 +548,13 @@ export const MercadoLibre = () => {
         const acumular = (skuDescuento: string, qty: number) => {
           const idSku = productosConDescuento[skuDescuento];
           if (idSku == null) return;
-          if (orden.tipo_envio === "cancelada") return; // ✅ omitir canceladas
+          if (orden.tipo_envio === "cancelada") return;
 
           const clave = `${numeroOperacion}-${idSku}`;
           if (acumulador[clave]) {
             acumulador[clave].cantidad += qty;
           } else {
-            acumulador[clave] = {
-              idSku,
-              canalVenta,
-              numeroOperacion,
-              fecha: fechaISO,
-              cantidad: qty,
-            };
+            acumulador[clave] = { idSku, canalVenta, numeroOperacion, fecha: fechaISO, cantidad: qty };
           }
         };
 
@@ -379,24 +574,25 @@ export const MercadoLibre = () => {
 
     const ventasParaGuardar = Object.values(acumulador);
 
-
     if (ventasParaGuardar.length === 0) {
       sweetAlert.info("Ninguna orden seleccionada tiene productos con descuento.");
       return;
     }
 
-    const ventasParaGuardarComoString = ventasParaGuardar.map(venta => ({
+    const ventasParaGuardarComoString = ventasParaGuardar.map((venta) => ({
       ...venta,
-      numeroOperacion: String(venta.numeroOperacion) // ✅ ¡esto es crucial!
+      numeroOperacion: String(venta.numeroOperacion),
     }));
 
-    // ✅ Aquí se envían al backend, que FILTRA DUPLICADOS
     sweetAlert.confirm(
       `¿Registrar ${ventasParaGuardar.length} items con descuento?`,
       async () => {
         setLoading(true);
         try {
-          const response = await axios.post(Urls.ProductosConDescuento.guardarVenta, ventasParaGuardarComoString);
+          const response = await axios.post(
+            Urls.ProductosConDescuento.guardarVenta,
+            ventasParaGuardarComoString
+          );
           const { count, message } = response.data;
           if (count > 0) {
             sweetAlert.success(`✅ ${count} ventas registradas.`);
@@ -412,264 +608,135 @@ export const MercadoLibre = () => {
     );
   };
 
-  // ✅ Función actualizada: ahora incluye "cuenta"
-  const handleFetchOrders = async () => {
-    if (dias < 1 || dias > 30) {
-      sweetAlert.warning("Ingresa un valor entre 1 y 30.");
-      return;
-    }
 
-    setLoading(true);
-    setError(null);
-    setOrders([]);
-    setSelectedOrders(new Set());
 
-    try {
-      const response = await axios.get<ApiResponse>(
-        `${urlGetVentas}${dias}&cuenta=${cuentaSeleccionada}`
-      );
-      const data = response.data;
+  // ─── Render ─────────────────────────────────────────────────────────────
 
-      if (data.success && data.data) {
-        setOrders(data.data);
-      } else {
-        setError(data.message || "Error desconocido");
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        "Error al conectar con el servidor"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Si hay órdenes filtradas por el archivo, mostrar solo esas
-  // Sino, mostrar todas las órdenes (con filtro opcional de +1 SKU)
-  const baseOrders = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
-
-  const ordersFiltradas = baseOrders.filter((o) => {
-    if (mostrarMultiplesProductos && o.items.length <= 1) {
-      return false;
-    }
-    return true;
-  });
+  const hayOrdenes = ordersFemex.length > 0 || ordersBlow.length > 0;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-[1600px] mx-auto">
       {loading && <Loader />}
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        Órdenes de Mercado Libre
-      </h2>
 
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <label className="text-gray-700 font-medium whitespace-nowrap">
-          Cuenta:
-          <select
-            value={cuentaSeleccionada}
-            onChange={(e) => setCuentaSeleccionada(e.target.value)}
-            className="ml-2 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-          >
-            {CUENTAS.map((cuenta) => (
-              <option key={cuenta.id} value={cuenta.id}>
-                {cuenta.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Órdenes de Mercado Libre</h2>
 
+      {/* ── Controles superiores ─────────────────────────────────────────── */}
+      <div className="mb-6 flex flex-wrap items-end gap-4">
+        {/* Días Femex */}
         <label className="text-gray-700 font-medium whitespace-nowrap">
-          Últimos días:
+          <span className="text-blue-700">Femex</span> días:
           <input
             type="number"
             min="1"
             max="30"
-            value={dias}
-            onChange={(e) => setDias(Number(e.target.value))}
-            className="ml-2 w-20 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+            value={diasFemex}
+            onChange={(e) => setDiasFemex(Number(e.target.value))}
+            className="ml-2 w-16 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
           />
         </label>
 
+        {/* Días Blow */}
+        <label className="text-gray-700 font-medium whitespace-nowrap">
+          <span className="text-orange-600">Blow</span> días:
+          <input
+            type="number"
+            min="1"
+            max="30"
+            value={diasBlow}
+            onChange={(e) => setDiasBlow(Number(e.target.value))}
+            className="ml-2 w-16 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+          />
+        </label>
+
+        {/* Fetch */}
         <button
           onClick={handleFetchOrders}
           disabled={loading}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${loading
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-blue-600 hover:bg-blue-700"
-            }`}
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
+            loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
           {loading ? "Cargando..." : "Obtener órdenes"}
         </button>
 
+        {/* Imprimir envíos */}
         <button
-          onClick={() => generateEnviosPDF(orders, selectedOrders)}
-          disabled={!orders.some(o => selectedOrders.has(o.numeroOperacion) && o.tipo_envio !== "retiro_local")}
+          onClick={() => generateEnviosPDF(allOrders, selectedOrders)}
+          disabled={
+            !allOrders.some(
+              (o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio !== "retiro_local"
+            )
+          }
           className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
         >
           Imprimir envíos
         </button>
 
+        {/* Imprimir constancias */}
         <button
-          onClick={() => printRetiroLocalHTML(orders, selectedOrders)}
-          disabled={!orders.some(o => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local")}
-          className="ml-2 px-4 py-2 bg-amber-600 text-white rounded disabled:bg-gray-400"
+          onClick={() => printRetiroLocalHTML(allOrders, selectedOrders)}
+          disabled={
+            !allOrders.some(
+              (o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local"
+            )
+          }
+          className="px-4 py-2 bg-amber-600 text-white rounded disabled:bg-gray-400"
         >
           Imprimir constancias (retiro en local)
         </button>
 
+        {/* Registrar con descuento */}
         <button
           onClick={registrarVentasConDescuento}
           disabled={selectedOrders.size === 0 || loadingDescuento}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0 || loadingDescuento
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-purple-600 hover:bg-purple-700"
-            }`}
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
+            selectedOrders.size === 0 || loadingDescuento
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-purple-600 hover:bg-purple-700"
+          }`}
         >
-          {loadingDescuento
-            ? "Cargando..."
-            : `Registrar ${selectedOrders.size} con descuento`}
+          {loadingDescuento ? "Cargando..." : `Registrar ${selectedOrders.size} con descuento`}
         </button>
-        <BotonCargarTxt
-          onFileRead={handleArchivoTxt}
-          label="Cargar órdenes (.txt)"
-        />
 
+        {/* Cargar etiquetas */}
+        <BotonCargarTxt onFileRead={handleArchivoTxt} label="Cargar etiquetas (.txt)" />
+        <button
+  onClick={handleConsolidadoStock}
+  disabled={allOrders.length === 0}
+  className="px-4 py-2 bg-green-600 text-white rounded disabled:bg-gray-400"
+>
+  Consolidado de stock
+</button>
       </div>
 
-      {error && (
-        <div className="mb-6 p-3 bg-red-100 text-red-700 rounded flex items-center">
-          <span className="mr-2">❌</span> {error}
-        </div>
-      )}
+      {/* ── Columnas ─────────────────────────────────────────────────────── */}
+      {hayOrdenes && (
+        <div className="flex gap-6">
+          {/* Femex (izquierda) */}
+          <ColumnaOrdenes
+            titulo="Femex"
+            orders={ordersFemex}
+            ordenesVisibles={ordenesVisiblesFemex}
+            setOrdenesVisibles={setOrdenesVisiblesFemex}
+            mostrarMultiples={mostrarMultiplesFemex}
+            setMostrarMultiples={setMostrarMultiplesFemex}
+            selectedOrders={selectedOrders}
+            toggleOrderSelection={toggleOrderSelection}
+            onToggleAll={toggleAllForIds}
+          />
 
-      {orders.length > 0 && (
-        <div>
-
-
-          <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-            <p className="text-gray-700">
-              Cuenta <span className="font-bold">{CUENTAS[indice].nombre}</span> —{" "}
-              <span className="font-semibold">{orders.length}</span> órdenes
-              {mostrarMultiplesProductos && (
-                <span className="ml-2 text-xs text-blue-600">
-                  (mostrando {orders.filter(o => o.items.length > 1).length} con +1 producto)
-                </span>
-              )}
-            </p>
-            <div className="flex items-center gap-4">
-              {/* ✅ NUEVO: botón para volver a ver todas */}
-              {ordenesVisibles.length > 0 && (
-                <button
-                  onClick={() => setOrdenesVisibles([])}
-                  className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition whitespace-nowrap"
-                >
-                  ✕ Ver todas ({orders.length})
-                </button>
-              )}
-
-              <label className="flex items-center gap-2 text-sm whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={mostrarMultiplesProductos}
-                  onChange={(e) => setMostrarMultiplesProductos(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                +1 SKU
-              </label>
-
-              <label className="flex items-center gap-2 text-sm whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={(() => {
-                    const listaActual = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
-                    return listaActual.length > 0 && listaActual.every(o => selectedOrders.has(o.numeroOperacion));
-                  })()}
-                  onChange={toggleAll}
-                  className="w-4 h-4"
-                />
-                Seleccionar todas
-              </label>
-            </div>
-
-          </div>
-
-
-
-          <div className="space-y-5">
-            {ordersFiltradas.map((order) => (
-              <div
-                key={order.numeroOperacion}
-                className={`rounded-lg p-5 shadow-sm relative border ${order.tipo_envio === "cancelada"
-                  ? "bg-gray-100 border-gray-300"
-                  : order.tipo_envio === "retiro_local"
-                    ? "bg-amber-50 border-amber-200"
-                    : "bg-white border-gray-200"
-                  }`}
-              >
-                <div className="absolute top-3 right-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedOrders.has(order.numeroOperacion)}
-                    onChange={() => toggleOrderSelection(order.numeroOperacion)}
-                    className="w-5 h-5"
-                  />
-                </div>
-
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      Orden #{order.numeroOperacion}
-                    </h3>
-
-                  </div>
-
-                  <p className="text-sm text-gray-600 mt-1">
-                    <span className="font-medium">Envío: </span>
-                    <span className="font-semibold">{getTipoEnvioLabel(order.tipo_envio)}</span>
-                  </p>
-                  <div
-                    className={`px-2 py-1 mr-10 text-xs font-medium rounded-full ${order.etiqueta_impresa
-                      ? "bg-green-100 text-green-800"
-                      : "bg-blue-100 text-blue-800"
-                      }`}
-                  >
-                    {order.etiqueta_impresa
-                      ? "Etiqueta generada"
-                      : "Sin etiqueta"}
-                  </div>
-                </div>
-
-                <p className="text-sm text-gray-600 mt-2">
-                  <span className="font-medium">Comprador:</span>{" "}
-                  {order.buyer_full_name}{" "} ({order.buyer_nickname})
-                </p>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Vendedor:</span>{" "}
-                  {order.seller_nickname}
-                </p>
-
-                <p className="text-sm text-gray-600 mt-3">
-                  <span className="font-medium">Fecha:</span>{" "}
-                  {formatDateToDisplay(order.date_created)}
-                </p>
-
-                <div className="mt-3">
-                  <p className=" text-gray-700">Items:</p>
-                  <ul className="list-disc list-inside mt-1 text-sm text-gray-600">
-                    {order.items.map((item, idx) => (
-                      <li key={idx}>
-                        <span className="font-bold">{item.sku}</span> —{" "}
-                        <span className="font-bold">{item.quantity} Un.</span>- <span className="text-gray-500 text-sm">{item.description}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Blow (derecha) */}
+          <ColumnaOrdenes
+            titulo="Blow"
+            orders={ordersBlow}
+            ordenesVisibles={ordenesVisiblesBlow}
+            setOrdenesVisibles={setOrdenesVisiblesBlow}
+            mostrarMultiples={mostrarMultiplesBlow}
+            setMostrarMultiples={setMostrarMultiplesBlow}
+            selectedOrders={selectedOrders}
+            toggleOrderSelection={toggleOrderSelection}
+            onToggleAll={toggleAllForIds}
+          />
         </div>
       )}
     </div>

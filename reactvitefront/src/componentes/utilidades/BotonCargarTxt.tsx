@@ -36,6 +36,9 @@ const BotonCargarTxt: React.FC<BotonCargarTxtProps> = ({
     reader.onload = (event) => {
       const content = event.target?.result as string;
       onFileRead(content, file.name);
+      if (inputRef.current) {
+      inputRef.current.value = "";
+    }
     };
     reader.onerror = () => {
       alert("Error al leer el archivo");
