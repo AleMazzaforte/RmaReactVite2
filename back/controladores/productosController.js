@@ -56,13 +56,13 @@ export const postCargarProducto = {
     }
   },
 
-  postActualizarProductos: async (req, res) => {
-    const { id, sku, descripcion, marca, rubro, isActive } = req.body;
+    postActualizarProductos: async (req, res) => {
+    const { id, sku, descripcion, marca, rubro, isActive, codigoBarras, pesoGr, alto, ancho, largo } = req.body;
 
     try {
       const results = await conn.query(
-        "UPDATE productos SET sku = ?, descripcion = ?, marca = ?, rubro = ?, isActive = ? WHERE id = ?",
-        [sku, descripcion, marca, rubro, isActive, id]
+        "UPDATE productos SET sku = ?, descripcion = ?, marca = ?, rubro = ?, isActive = ?, codigoBarras = ?, pesoGr = ?, alto = ?, ancho = ?, largo = ? WHERE id = ?",
+        [sku, descripcion, marca, rubro, isActive, codigoBarras, pesoGr, alto, ancho, largo, id]
       );
       if (results[0].affectedRows > 0) {
         res.status(201).json({ message: "Producto actualizado correctamente" });

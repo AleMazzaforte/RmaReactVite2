@@ -53,7 +53,7 @@ const clienteController = {
 const productosGeneralController = {
   getListarProductos: async (req, res) => {
     const query =
-      "SELECT id, sku, descripcion, marca, rubro, isActive FROM productos";
+      "SELECT id, sku, descripcion, marca, rubro, isActive, codigoBarras, pesoGr, alto, ancho, largo FROM productos";
     let connection;
 
     try {
