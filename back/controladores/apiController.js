@@ -4,6 +4,77 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// ✅ FUNCIÓN AUXILIAR: Crear objeto de orden para ordersByPack
+const crearOrdenBase = (fullOrder, mlUserId, numeroOperacion, etiqueta_impresa, tipo_envio, shipping_status) => {
+  const sellerNicknameMap = {
+    [process.env.ML_USER_ID_1]: "FEMEX",
+    [process.env.ML_USER_ID_2]: "BLOW INK"
+  };
+  
+  const buyer_full_name = `${fullOrder.buyer?.first_name || ''} ${fullOrder.buyer?.last_name || ''}`.trim();
+  
+  return {
+    numeroOperacion: numeroOperacion,
+    buyer_nickname: fullOrder.buyer?.nickname || "",
+    seller_nickname: sellerNicknameMap[mlUserId] || "Desconocido",
+    buyer_full_name,
+    date_created: fullOrder.date_created,
+    etiqueta_impresa,
+    tipo_envio,
+    shipping_status,
+    status: fullOrder.status,
+    items: [],
+  };
+};
+
+// ✅ FUNCIÓN AUXILIAR: Determinar estado de envío desde shipment
+const determinarEstadoEnvio = (shipping) => {
+  const substatus = shipping.substatus || 'unknown';
+  const status = shipping.status;
+  let etiqueta_impresa = false;
+  let shipping_status = 'unknown';
+
+  if (status === 'shipped' || status === 'delivered') {
+    etiqueta_impresa = true;
+    shipping_status = substatus === 'unknown' ? status : substatus;
+  } 
+  else if (['printed', 'handling', 'shipped', 'delivered'].includes(substatus)) {
+    etiqueta_impresa = true;
+    shipping_status = substatus;
+  }
+  else if (substatus === 'ready_to_print') {
+    etiqueta_impresa = false;
+    shipping_status = 'ready_to_print';
+  }
+  else if (substatus === 'in_packing_list') {
+    etiqueta_impresa = false;
+    shipping_status = 'in_packing_list';
+  }
+  else {
+    etiqueta_impresa = false;
+    shipping_status = status || substatus || 'unknown';
+  }
+
+  return { etiqueta_impresa, shipping_status };
+};
+
+// ✅ FUNCIÓN AUXILIAR: Determinar tipo de envío desde shipment
+const determinarTipoEnvio = (shipping) => {
+  if (shipping.logistic_type === "fulfillment" || shipping.mode === "fulfillment") {
+    return "full";
+  } else if (shipping.logistic_type === "me2") {
+    return "mercado_envios";
+  } else if (["drop_off", "xd_drop_off"].includes(shipping.logistic_type)) {
+    return "mercado_envios";
+  } else if (shipping.logistic_type === "self_service") {
+    return "flex";
+  } else if (shipping.mode === "custom") {
+    return "vendedor";
+  } else {
+    return "desconocido";
+  }
+};
+
 // Función para obtener tokens de la DB por mlUser
 const getTokensFromDB = async (mlUserId) => {
   const [rows] = await conn.execute(
@@ -109,10 +180,7 @@ const getOrderDetails = async (orderId, accessToken) => {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
     );
-
     return response.data;
-    
-    
   } catch (error) {
     console.warn(
       `⚠️ No se pudo obtener detalles de la orden ${orderId}:`,
@@ -122,10 +190,7 @@ const getOrderDetails = async (orderId, accessToken) => {
   }
 };
 
-
-
 const getVentas = async (req, res) => { 
-
   try {
     const dias = parseInt(req.query.dias) || 7;
     if (dias < 1 || dias > 21) {
@@ -171,7 +236,6 @@ const getVentas = async (req, res) => {
       (order) => new Date(order.date_created) >= startDate
     );
   
-    
     const ordersByPack = {};
 
     for (const order of filteredOrders) {
@@ -179,16 +243,17 @@ const getVentas = async (req, res) => {
       if (!fullOrder) continue;
 
       const numeroOperacion = fullOrder.pack_id || fullOrder.id;
-      const buyer_full_name = `${fullOrder.buyer?.first_name || ''} ${fullOrder.buyer?.last_name || ''}`.trim();
 
       if (!ordersByPack[numeroOperacion]) {
         let tipo_envio = "desconocido";
         let etiqueta_impresa = false;
+        let shipping_status = 'unknown';
 
         // ✅ 1. Órdenes canceladas
         if (fullOrder.status === "cancelled") {
           tipo_envio = "cancelada";
           etiqueta_impresa = false;
+          shipping_status = 'cancelled';
         }
         // ✅ 2. Retiro en local: sin shipping.id y sin costo de envío
         else if (
@@ -197,11 +262,13 @@ const getVentas = async (req, res) => {
         ) {
           tipo_envio = "retiro_local";
           etiqueta_impresa = false;
+          shipping_status = 'no_shipping';
         }
         // ✅ 3. También detectar por tag (por compatibilidad)
         else if (fullOrder.tags?.includes("no_shipping")) {
           tipo_envio = "retiro_local";
           etiqueta_impresa = false;
+          shipping_status = 'no_shipping';
         }
         // ✅ 4. Si tiene shipping, obtener detalles
         else if (fullOrder.shipping?.id) {
@@ -211,27 +278,12 @@ const getVentas = async (req, res) => {
               { headers: { Authorization: `Bearer ${accessToken}` } }
             );
             const shipping = shipmentRes.data;
-
-            etiqueta_impresa = !!shipping.id;
-
-            if (
-              shipping.logistic_type === "fulfillment" ||
-              shipping.mode === "fulfillment"
-            ) {
-              tipo_envio = "full";
-            } else if (shipping.logistic_type === "me2") {
-              tipo_envio = "mercado_envios";
-            } else if (
-              ["drop_off", "xd_drop_off"].includes(shipping.logistic_type)
-            ) {
-              tipo_envio = "mercado_envios";
-            } else if (shipping.logistic_type === "self_service") {
-              tipo_envio = "flex";
-            } else if (shipping.mode === "custom") {
-              tipo_envio = "vendedor";
-            } else {
-              tipo_envio = "desconocido";
-            }
+            
+            // ✅ USAR FUNCIONES AUXILIARES
+            const estadoEnvio = determinarEstadoEnvio(shipping);
+            etiqueta_impresa = estadoEnvio.etiqueta_impresa;
+            shipping_status = estadoEnvio.shipping_status;
+            tipo_envio = determinarTipoEnvio(shipping);
 
           } catch (err) {
             console.warn(
@@ -240,30 +292,25 @@ const getVentas = async (req, res) => {
             );
             etiqueta_impresa = true;
             tipo_envio = "desconocido";
+            shipping_status = 'error';
           }
         }
         // ✅ 5. Caso residual
         else {
           tipo_envio = "desconocido";
           etiqueta_impresa = false;
+          shipping_status = 'unknown';
         }
 
-        const sellerNicknameMap = {
-          [process.env.ML_USER_ID_1]: "FEMEX",
-          [process.env.ML_USER_ID_2]: "BLOW INK"
-        };
-
-        ordersByPack[numeroOperacion] = {
-          numeroOperacion: numeroOperacion,
-          buyer_nickname: fullOrder.buyer?.nickname || "",
-          seller_nickname: sellerNicknameMap[mlUserId] || "Desconocido",
-          buyer_full_name,
-          date_created: fullOrder.date_created, // ISO string
+        // ✅ CREAR OBJETO UNA SOLA VEZ
+        ordersByPack[numeroOperacion] = crearOrdenBase(
+          fullOrder,
+          mlUserId,
+          numeroOperacion,
           etiqueta_impresa,
           tipo_envio,
-          status: fullOrder.status, // útil para debugging en frontend
-          items: [],
-        };
+          shipping_status
+        );
       }
 
       // Agregar ítems

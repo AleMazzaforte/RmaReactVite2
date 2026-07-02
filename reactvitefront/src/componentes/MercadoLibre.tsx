@@ -25,6 +25,7 @@ export interface Order {
   tipo_envio: string;
   items: OrderItem[];
   buyer_full_name?: string;
+  shipping_status?: string;
 }
 
 interface ApiResponse {
@@ -85,6 +86,24 @@ const getTipoEnvioLabel = (tipo: string): string => {
     desconocido: "Desconocido",
   };
   return labels[tipo] || tipo;
+};
+
+const getShippingStatusLabel = (status?: string, tipoEnvio?: string): { label: string; color: string } => {
+  const statusMap: Record<string, { label: string; color: string }> = {
+    'ready_to_print': { label: '📄 Etiqueta generada', color: 'bg-blue-100 text-blue-800' },
+    'printed': { label: '🖨️ Etiqueta impresa', color: 'bg-green-100 text-green-800' },
+    'handling': { label: '⚙️ En proceso', color: 'bg-yellow-100 text-yellow-800' },
+    'shipped': { label: '🚚 Enviado', color: 'bg-purple-100 text-purple-800' },
+    'delivered': { label: '✅ Entregado', color: 'bg-emerald-100 text-emerald-800' },
+    'not_visited': { label: '⚠️ No visitado', color: 'bg-orange-100 text-orange-800' },
+    'cancelled': { label: '❌ Cancelado', color: 'bg-red-100 text-red-800' },
+    'in_packing_list': { label: '📦 En lista de empaque', color: 'bg-indigo-100 text-indigo-800' },
+    'error': { label: '⚠️ Error al obtener', color: 'bg-gray-100 text-gray-800' },
+    'unknown': { label: '❓ Sin estado', color: 'bg-gray-100 text-gray-800' },
+    'no_shipping': { label: '📭 Sin etiqueta', color: 'bg-amber-100 text-amber-800' }
+  };
+
+  return statusMap[status || 'unknown'] || { label: '❓ Desconocido', color: 'bg-gray-100 text-gray-800' };
 };
 
 const extraerIdsDeEtiqueta = (contenido: string): string[] => {
@@ -185,13 +204,12 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
         {ordersFiltradas.map((order) => (
           <div
             key={order.numeroOperacion}
-            className={`rounded-lg p-4 shadow-sm relative border ${
-              order.tipo_envio === "cancelada"
+            className={`rounded-lg p-4 shadow-sm relative border ${order.tipo_envio === "cancelada"
                 ? "bg-gray-100 border-gray-300"
                 : order.tipo_envio === "retiro_local"
-                ? "bg-amber-50 border-amber-200"
-                : "bg-white border-gray-200"
-            }`}
+                  ? "bg-amber-50 border-amber-200"
+                  : "bg-white border-gray-200"
+              }`}
           >
             <div className="absolute top-3 right-3">
               <input
@@ -212,15 +230,17 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
                     {getTipoEnvioLabel(order.tipo_envio)}
                   </span>
                 </span>
-                <span
-                  className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                    order.etiqueta_impresa
-                      ? "bg-green-100 text-green-800"
-                      : "bg-blue-100 text-blue-800"
-                  }`}
-                >
-                  {order.etiqueta_impresa ? "Etiqueta generada" : "Sin etiqueta"}
-                </span>
+                {(() => {
+                  const statusInfo = getShippingStatusLabel(order.shipping_status, order.tipo_envio);
+                  return (
+                    <span
+                      className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusInfo.color}`}
+                      title={`Status: ${order.shipping_status || 'desconocido'}`}
+                    >
+                      {statusInfo.label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
 
@@ -469,8 +489,8 @@ export const MercadoLibre = () => {
   };
 
   const handleConsolidadoStock = () => {
-  PdfGenerarConsolidado(allOrders, selectedOrders, [...ordenesVisiblesFemex, ...ordenesVisiblesBlow]);
-};
+    PdfGenerarConsolidado(allOrders, selectedOrders, [...ordenesVisiblesFemex, ...ordenesVisiblesBlow]);
+  };
 
   // ─── Registrar ventas con descuento ─────────────────────────────────────
 
@@ -652,9 +672,8 @@ export const MercadoLibre = () => {
         <button
           onClick={handleFetchOrders}
           disabled={loading}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
-            loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-          }`}
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+            }`}
         >
           {loading ? "Cargando..." : "Obtener órdenes"}
         </button>
@@ -689,11 +708,10 @@ export const MercadoLibre = () => {
         <button
           onClick={registrarVentasConDescuento}
           disabled={selectedOrders.size === 0 || loadingDescuento}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${
-            selectedOrders.size === 0 || loadingDescuento
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0 || loadingDescuento
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-purple-600 hover:bg-purple-700"
-          }`}
+            }`}
         >
           {loadingDescuento ? "Cargando..." : `Registrar ${selectedOrders.size} con descuento`}
         </button>
@@ -701,12 +719,12 @@ export const MercadoLibre = () => {
         {/* Cargar etiquetas */}
         <BotonCargarTxt onFileRead={handleArchivoTxt} label="Cargar etiquetas (.txt)" />
         <button
-  onClick={handleConsolidadoStock}
-  disabled={allOrders.length === 0}
-  className="px-4 py-2 bg-green-600 text-white rounded disabled:bg-gray-400"
->
-  Consolidado de stock
-</button>
+          onClick={handleConsolidadoStock}
+          disabled={allOrders.length === 0}
+          className="px-4 py-2 bg-green-600 text-white rounded disabled:bg-gray-400"
+        >
+          Consolidado de stock
+        </button>
       </div>
 
       {/* ── Columnas ─────────────────────────────────────────────────────── */}
