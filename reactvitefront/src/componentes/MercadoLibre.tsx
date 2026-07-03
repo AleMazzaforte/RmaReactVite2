@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Urls from "./utilidades/Urls";
@@ -301,6 +301,10 @@ export const MercadoLibre = () => {
   const [nombreArchivo, setNombreArchivo] = useState("");
   const [contenidoTxt, setContenidoTxt] = useState("");
 
+  // 🆕 Estados para drag & drop
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+
   const urlGetVentas = Urls.apiMeli.getVentas;
 
   // Todas las órdenes combinadas (para funciones globales)
@@ -492,6 +496,61 @@ export const MercadoLibre = () => {
     PdfGenerarConsolidado(allOrders, selectedOrders, [...ordenesVisiblesFemex, ...ordenesVisiblesBlow]);
   };
 
+  // ─── Drag & Drop (🆕) ─────────────────────────────────────────────────
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      dragCounter.current++;
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    // Procesar cada archivo individualmente (igual que el botón)
+    files.forEach((file) => {
+      if (!file.name.toLowerCase().endsWith(".txt")) {
+        sweetAlert.warning(`"${file.name}" no es un archivo .txt. Se ignora.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        if (content) {
+          handleArchivoTxt(content, file.name);
+        }
+      };
+      reader.onerror = () => {
+        sweetAlert.error(`No se pudo leer "${file.name}".`);
+      };
+      reader.readAsText(file);
+    });
+  };
+
   // ─── Registrar ventas con descuento ─────────────────────────────────────
 
   const registrarVentasConDescuento = async () => {
@@ -628,14 +687,38 @@ export const MercadoLibre = () => {
     );
   };
 
-
-
   // ─── Render ─────────────────────────────────────────────────────────────
 
   const hayOrdenes = ordersFemex.length > 0 || ordersBlow.length > 0;
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto">
+    // 🆕 Contenedor con eventos de drag & drop y overlay visual
+    <div
+      className={`p-6 max-w-[1600px] mx-auto relative transition-all duration-200 ${
+        isDragging
+          ? "ring-4 ring-blue-400 ring-offset-2 bg-blue-50/50 rounded-xl"
+          : ""
+      }`}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* 🆕 Overlay visual cuando se está arrastrando algo */}
+      {isDragging && (
+        <div className="absolute inset-0 flex items-center justify-center bg-blue-100/70 backdrop-blur-sm rounded-xl z-50 pointer-events-none">
+          <div className="text-center">
+            <div className="text-6xl mb-2">📥</div>
+            <p className="text-xl font-bold text-blue-700">
+              Soltá el archivo .txt aquí
+            </p>
+            <p className="text-sm text-blue-600 mt-1">
+              Se filtrarán las órdenes por las etiquetas
+            </p>
+          </div>
+        </div>
+      )}
+
       {loading && <Loader />}
 
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Órdenes de Mercado Libre</h2>

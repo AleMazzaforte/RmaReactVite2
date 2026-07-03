@@ -1,7 +1,6 @@
 import express from 'express';
 import {
     clienteController,
-    productosGeneralController,
     cargarRma,
     gestionarRma,
 } from '../controladores/rmaController.js';
@@ -57,7 +56,7 @@ router.get('/buscarCliente', clienteController.getListarClientesRma);
 
 // Ruta para productos
 router.post('/cargarProducto', productosController.postCargarProducto);
-router.get('/listarProductos', productosGeneralController.getListarProductos);
+router.get('/listarProductos', productosController.getListarProductos);/////
 router.post('/actualizarProducto/', productosController.postActualizarProductos);
 router.post('/eliminarProducto/:sku', productosController.postELiminarProducto);
 

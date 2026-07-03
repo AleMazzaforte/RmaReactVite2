@@ -1,16 +1,16 @@
 import { useState, useRef } from "react";
-import {sweetAlert} from "./utilidades/SweetAlertWrapper"; // Importar sweetAlert
-import Loader from "./utilidades/Loader"; // Importar el componente Loader
-import { ListarMarcas } from "./utilidades/ListarMarcas"; // Importar el componente ListarMarcas
-import { Contenedor } from "./utilidades/Contenedor"; // Importar el componente Contenedor
+import {sweetAlert} from "./utilidades/SweetAlertWrapper";
+import Loader from "./utilidades/Loader";
+import { ListarMarcas } from "./utilidades/ListarMarcas";
+import { Contenedor } from "./utilidades/Contenedor";
 import Urls from "./utilidades/Urls";
 import InputCheckbox from "./utilidades/InputCheckbox";
 
 export const CargarProductos: React.FC = () => {
-  const [loading, setLoading] = useState(false); // Estado para el loader
+  const [loading, setLoading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const [marcaSeleccionada, setMarcaSeleccionada] = useState<any>(null); // Estado para la marca seleccionada
-  const [isActive, setIsActive] = useState(false); // Estado para el checkbox de producto activo
+  const [marcaSeleccionada, setMarcaSeleccionada] = useState<any>(null);
+  const [isActive, setIsActive] = useState(false);
 
   const urlProductos = Urls.productos.cargar;
   const urlListarMarcas = Urls.marcas.listar;
@@ -23,6 +23,11 @@ export const CargarProductos: React.FC = () => {
         marca: marcaSeleccionada ? marcaSeleccionada.nombre : "",
         descripcion: formData.get("descripcion") as string,
         rubro: formData.get("rubro") as string,
+        codigoBarras: formData.get("codigoBarras") as string,
+        peso: formData.get("pesoKgr") ? Number(formData.get("peso")) : null,
+        alto: formData.get("alto") ? Number(formData.get("alto")) : null,
+        ancho: formData.get("ancho") ? Number(formData.get("ancho")) : null,
+        largo: formData.get("largo") ? Number(formData.get("largo")) : null,
         isActive: isActive,
       };
 
@@ -39,7 +44,6 @@ export const CargarProductos: React.FC = () => {
         const result = await response.json();
 
         if (response.ok) {
-          // Si la respuesta es exitosa
           sweetAlert.fire({
             icon: "success",
             title: "Éxito",
@@ -47,11 +51,11 @@ export const CargarProductos: React.FC = () => {
           }).then(() => {
             if (formRef.current) {
               formRef.current.reset();
-              setMarcaSeleccionada(null); // Resetear la marca seleccionada
+              setMarcaSeleccionada(null);
+              setIsActive(false);
             }
           });
         } else {
-          // Si hay un error en la respuesta
           console.error("Error al cargar el producto:", result);
           sweetAlert.fire({
             icon: "error",
@@ -89,7 +93,6 @@ export const CargarProductos: React.FC = () => {
     });
   };
 
-  
   return (
     <div>
       <Contenedor>
@@ -113,6 +116,21 @@ export const CargarProductos: React.FC = () => {
               name="sku"
               type="text"
               id="sku"
+              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="codigoBarras"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Código de Barras:
+            </label>
+            <input
+              name="codigoBarras"
+              type="text"
+              id="codigoBarras"
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
             />
           </div>
@@ -161,6 +179,83 @@ export const CargarProductos: React.FC = () => {
             />
           </div>
 
+          {/* 🆕 Dimensiones y peso en grilla */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Dimensiones y peso:
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <label
+                  htmlFor="peso"
+                  className="block text-xs font-medium text-gray-600 mb-1"
+                >
+                  Peso (kg):
+                </label>
+                <input
+                  name="peso"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  id="peso"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="alto"
+                  className="block text-xs font-medium text-gray-600 mb-1"
+                >
+                  Alto (cm):
+                </label>
+                <input
+                  name="alto"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  id="alto"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="ancho"
+                  className="block text-xs font-medium text-gray-600 mb-1"
+                >
+                  Ancho (cm):
+                </label>
+                <input
+                  name="ancho"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  id="ancho"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="largo"
+                  className="block text-xs font-medium text-gray-600 mb-1"
+                >
+                  Largo (cm):
+                </label>
+                <input
+                  name="largo"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  id="largo"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+          </div>
+
           <div>
             <label
               htmlFor="checkbox"
@@ -169,7 +264,7 @@ export const CargarProductos: React.FC = () => {
               Producto activo
             </label>
             <InputCheckbox 
-            checked={isActive}
+              checked={isActive}
               onChange={(checked) => setIsActive(checked)}
             />
           </div>

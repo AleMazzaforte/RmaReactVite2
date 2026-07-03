@@ -20,7 +20,7 @@ interface Producto {
   marca: string | Marca;
   isActive: boolean | number;
   codigoBarras?: string | null;
-  pesoGr?: number | null;
+  pesoKgr?: number | null;
   alto?: number | null;
   ancho?: number | null;
   largo?: number | null;
@@ -52,8 +52,8 @@ export const ActualizarProductos: React.FC = () => {
       const codigoBarrasInput = formRef.current.querySelector(
         'input[name="codigoBarras"]'
       ) as HTMLInputElement;
-      const pesoGrInput = formRef.current.querySelector(
-        'input[name="pesoGr"]'
+      const pesoKgrInput = formRef.current.querySelector(
+        'input[name="pesoKgr"]'
       ) as HTMLInputElement;
       const altoInput = formRef.current.querySelector(
         'input[name="alto"]'
@@ -69,13 +69,13 @@ export const ActualizarProductos: React.FC = () => {
       if (descripcionInput) descripcionInput.value = producto.descripcion;
       if (rubroInput) rubroInput.value = producto.rubro;
       
-      // ✅ Cargar los nuevos campos
       if (codigoBarrasInput) codigoBarrasInput.value = producto.codigoBarras || '';
-      if (pesoGrInput) pesoGrInput.value = producto.pesoGr?.toString() || '';
+      if (pesoKgrInput) pesoKgrInput.value = producto.pesoKgr?.toString() || 'pedo al horno';
       if (altoInput) altoInput.value = producto.alto?.toString() || '';
       if (anchoInput) anchoInput.value = producto.ancho?.toString() || '';
       if (largoInput) largoInput.value = producto.largo?.toString() || '';
 
+      
       const nuevoEstadoActivo = Boolean(Number(producto.isActive));
       setIsActive(nuevoEstadoActivo);
       
@@ -103,9 +103,8 @@ export const ActualizarProductos: React.FC = () => {
           productoSeleccionado.descripcion,
         rubro: (formData.get("rubro") as string) || productoSeleccionado.rubro,
         isActive: isActive,
-        // ✅ Agregar los nuevos campos
         codigoBarras: (formData.get("codigoBarras") as string) || null,
-        pesoGr: formData.get("pesoGr") ? parseFloat(formData.get("pesoGr") as string) : null,
+        pesoKgr: formData.get("pesoKgr") ? parseFloat(formData.get("pesoKgr") as string) : null,
         alto: formData.get("alto") ? parseFloat(formData.get("alto") as string) : null,
         ancho: formData.get("ancho") ? parseFloat(formData.get("ancho") as string) : null,
         largo: formData.get("largo") ? parseFloat(formData.get("largo") as string) : null,
@@ -131,6 +130,7 @@ export const ActualizarProductos: React.FC = () => {
             if (formRef.current) {
               formRef.current.reset();
               setProductoSeleccionado(null);
+              setIsActive(false);
             }
           });
         } else {
@@ -176,6 +176,7 @@ export const ActualizarProductos: React.FC = () => {
           if (formRef.current) {
             formRef.current.reset();
             setProductoSeleccionado(null);
+            setIsActive(false);
           }
         } else {
           console.error("Error al eliminar el producto:", result);
@@ -262,7 +263,6 @@ export const ActualizarProductos: React.FC = () => {
             />
           </div>
 
-          {/* ✅ Código de Barras */}
           <div>
             <label
               htmlFor="codigoBarras"
@@ -322,25 +322,27 @@ export const ActualizarProductos: React.FC = () => {
             />
           </div>
 
-          {/* ✅ Dimensiones y Peso - Grid 2x2 */}
+          {/* 🔄 Dimensiones y peso - grilla 4 columnas como en cargar */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Peso y Dimensiones:
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Dimensiones y peso:
             </label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div>
                 <label
-                  htmlFor="pesoGr"
+                  htmlFor="pesoKgr"
                   className="block text-xs font-medium text-gray-600 mb-1"
                 >
-                  Peso (gr):
+                  Peso (kg):
                 </label>
                 <input
+                  name="pesoKgr"
                   type="number"
                   step="0.01"
-                  id="pesoGr"
-                  name="pesoGr"
-                  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  min="0"
+                  id="pesoKgr"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  placeholder="0.00"
                 />
               </div>
               <div>
@@ -351,11 +353,13 @@ export const ActualizarProductos: React.FC = () => {
                   Alto (cm):
                 </label>
                 <input
+                  name="alto"
                   type="number"
                   step="0.01"
+                  min="0"
                   id="alto"
-                  name="alto"
-                  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  placeholder="0.00"
                 />
               </div>
               <div>
@@ -366,11 +370,13 @@ export const ActualizarProductos: React.FC = () => {
                   Ancho (cm):
                 </label>
                 <input
+                  name="ancho"
                   type="number"
                   step="0.01"
+                  min="0"
                   id="ancho"
-                  name="ancho"
-                  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  placeholder="0.00"
                 />
               </div>
               <div>
@@ -381,11 +387,13 @@ export const ActualizarProductos: React.FC = () => {
                   Largo (cm):
                 </label>
                 <input
+                  name="largo"
                   type="number"
                   step="0.01"
+                  min="0"
                   id="largo"
-                  name="largo"
-                  className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+                  placeholder="0.00"
                 />
               </div>
             </div>
@@ -394,9 +402,9 @@ export const ActualizarProductos: React.FC = () => {
           <div>
             <label
               htmlFor="checkbox"
-              className="block text-sm font-medium text-gray-700 mb-3"
+              className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Producto Activo:
+              Producto activo
             </label>
             <InputCheckbox
               checked={isActive}
@@ -423,7 +431,7 @@ export const ActualizarProductos: React.FC = () => {
           </div>
         </form>
       </Contenedor>
-      {loading ? <Loader /> : ""}
+      {loading && <Loader />}
     </div>
   );
 };

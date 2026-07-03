@@ -91,6 +91,7 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
     }
   };
 
+
   return (
     <div ref={containerRef}>
       <input

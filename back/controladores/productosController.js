@@ -8,7 +8,7 @@ dotenv.config();
 
 export const postCargarProducto = {
   postCargarProducto: async (req, res) => {
-    const { sku, descripcion, marca, rubro, isActive } = req.body;
+    const { sku, descripcion, marca, rubro, isActive, codigoBarras, pesoKgr, alto, ancho, largo } = req.body;
 
     let connection;
     try {
@@ -28,8 +28,8 @@ export const postCargarProducto = {
 
       // Insertar el producto
       const [results] = await connection.query(
-        "INSERT INTO productos (sku, descripcion, marca, rubro, isActive) VALUES (?, ?, ?, ?, ?)",
-        [sku, descripcion, marca, rubro, isActive]
+        "INSERT INTO productos (sku, descripcion, marca, rubro, isActive, codigoBarras, pesoKgr, alto, ancho, largo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [sku, descripcion, marca, rubro, isActive, codigoBarras, pesoKgr, alto, ancho, largo ]
       );
 
       if (results.affectedRows > 0) {
@@ -57,12 +57,12 @@ export const postCargarProducto = {
   },
 
     postActualizarProductos: async (req, res) => {
-    const { id, sku, descripcion, marca, rubro, isActive, codigoBarras, pesoGr, alto, ancho, largo } = req.body;
+    const { id, sku, descripcion, marca, rubro, isActive, codigoBarras, pesoKgr, alto, ancho, largo } = req.body;
 
     try {
       const results = await conn.query(
-        "UPDATE productos SET sku = ?, descripcion = ?, marca = ?, rubro = ?, isActive = ?, codigoBarras = ?, pesoGr = ?, alto = ?, ancho = ?, largo = ? WHERE id = ?",
-        [sku, descripcion, marca, rubro, isActive, codigoBarras, pesoGr, alto, ancho, largo, id]
+        "UPDATE productos SET sku = ?, descripcion = ?, marca = ?, rubro = ?, isActive = ?, codigoBarras = ?, pesoKgr = ?, alto = ?, ancho = ?, largo = ? WHERE id = ?",
+        [sku, descripcion, marca, rubro, isActive, codigoBarras, pesoKgr, alto, ancho, largo, id]
       );
       if (results[0].affectedRows > 0) {
         res.status(201).json({ message: "Producto actualizado correctamente" });
@@ -112,6 +112,28 @@ postInactivarProducto: async (req, res) => {
       res.status(500).json({ message: "Error al eliminar el producto" });
     }
   },
+ 
+  getListarProductos: async (req, res) => {
+    const query =
+      "SELECT id, sku, descripcion, marca, rubro, isActive, codigoBarras, pesoKgr, alto, ancho, largo FROM productos";
+    let connection;
+
+    try {
+      // Obtiene una conexión del pool
+      connection = await conn.getConnection();
+      const [results] = await connection.query(query);
+      res.json(results);
+      
+    } catch (error) {
+      console.error("Error al listar productos:", error);
+      res.status(500).send("Error al listar productos");
+    } finally {
+      if (connection) {
+        connection.release();
+      }
+    }
+  },
+
 };
 
 export default postCargarProducto;
