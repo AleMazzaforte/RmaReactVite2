@@ -7,6 +7,7 @@ import BotonCargarTxt from "./utilidades/BotonCargarTxt";
 import { generateEnviosPDF } from "./utilidades/pdfGenerators";
 import { printRetiroLocalHTML } from "./utilidades/printUtils";
 import { PdfGenerarConsolidado } from "./utilidades/pdfGenerarConsolidado";
+import kits from "./utilidades/Kits";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -14,6 +15,8 @@ interface OrderItem {
   sku: string;
   quantity: number;
   description: string;
+  codigoBarras: string | null;
+  codigosBarrasComponentes?: string[]
 }
 
 export interface Order {
@@ -32,6 +35,14 @@ interface ApiResponse {
   success: boolean;
   message: string;
   data?: Order[];
+}
+
+interface ItemVerificacion {
+  sku: string;
+  codigoBarras: string | null;
+  quantity: number;
+  esComponenteKit: boolean;
+  skuKitOriginal?: string;
 }
 
 // ─── Constantes ─────────────────────────────────────────────────────────────
@@ -99,11 +110,10 @@ const getShippingStatusLabel = (status?: string, tipoEnvio?: string): { label: s
     'cancelled': { label: '❌ Cancelado', color: 'bg-red-100 text-red-800' },
     'in_packing_list': { label: '📦 En lista de empaque', color: 'bg-indigo-100 text-indigo-800' },
     'error': { label: '⚠️ Error al obtener', color: 'bg-gray-100 text-gray-800' },
-    'unknown': { label: '❓ Sin estado', color: 'bg-gray-100 text-gray-800' },
+    'unknown': { label: 'Sin estado', color: 'bg-gray-100 text-gray-800' },
     'no_shipping': { label: '📭 Sin etiqueta', color: 'bg-amber-100 text-amber-800' }
   };
-
-  return statusMap[status || 'unknown'] || { label: '❓ Desconocido', color: 'bg-gray-100 text-gray-800' };
+  return statusMap[status || 'unknown'] || { label: 'Sin estado', color: 'bg-gray-100 text-gray-800' };
 };
 
 const extraerIdsDeEtiqueta = (contenido: string): string[] => {
@@ -115,6 +125,75 @@ const extraerIdsDeEtiqueta = (contenido: string): string[] => {
   }
   return [...new Set(ids)];
 };
+
+// ─── 🆕 Helpers de Scanner ─────────────────────────────────────────────────
+
+const contarEscaneados = (
+  codigoBarras: string,
+  numeroOperacion: string,
+  scansPorOrden: Record<string, string[]>
+): number => {
+  const scans = scansPorOrden[numeroOperacion] || [];
+  return scans.filter((s) => s === codigoBarras).length;
+};
+
+const getProgresoOrden = (
+  orden: Order,
+  scansPorOrden: Record<string, string[]>
+): { total: number; verificados: number; items: (OrderItem & { verificados: number })[] } => {
+  const scans = scansPorOrden[orden.numeroOperacion] || [];
+
+  const itemsConProgreso = orden.items.map((item) => {
+    const verificados = item.codigoBarras
+      ? scans.filter((s) => s === item.codigoBarras).length
+      : 0;
+    return {
+      ...item,
+      verificados: Math.min(verificados, item.quantity),
+    };
+  });
+
+  const total = orden.items.reduce((sum, i) => sum + i.quantity, 0);
+  const verificados = itemsConProgreso.reduce((sum, i) => sum + i.verificados, 0);
+
+  return { total, verificados, items: itemsConProgreso };
+};
+
+const expandirOrdenParaVerificacion = (orden: Order): ItemVerificacion[] => {
+  const itemsVerificacion: ItemVerificacion[] = [];
+
+  for (const item of orden.items) {
+    const kitInfo = kitsConDescuento[item.sku];
+
+    if (kitInfo && item.codigosBarrasComponentes?.length) {
+      // Es un kit: expandir en componentes usando los códigos de barras reales
+      const skusComponentes = Array.isArray(kitInfo.skuDescuento)
+        ? kitInfo.skuDescuento
+        : [kitInfo.skuDescuento];
+
+      skusComponentes.forEach((skuComp, index) => {
+        itemsVerificacion.push({
+          sku: skuComp,
+          codigoBarras: item.codigosBarrasComponentes?.[index] || null, // 🆕 Usar el CB real
+          quantity: item.quantity,
+          esComponenteKit: true,
+          skuKitOriginal: item.sku,
+        });
+      });
+    } else {
+      // No es kit o no tiene componentes cargados: item normal
+      itemsVerificacion.push({
+        sku: item.sku,
+        codigoBarras: item.codigoBarras,
+        quantity: item.quantity,
+        esComponenteKit: false,
+      });
+    }
+  }
+
+  return itemsVerificacion;
+};
+
 
 // ─── Componente Columna ─────────────────────────────────────────────────────
 
@@ -128,6 +207,10 @@ interface ColumnaOrdenesProps {
   selectedOrders: Set<string>;
   toggleOrderSelection: (orderId: string) => void;
   onToggleAll: (ids: string[]) => void;
+  // 🆕 Props de scanner
+  modoScanner: boolean;
+  onIniciarScan: (numeroOperacion: string) => void;
+  scansPorOrden: Record<string, string[]>;
 }
 
 const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
@@ -140,10 +223,16 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
   selectedOrders,
   toggleOrderSelection,
   onToggleAll,
+  // 🆕
+  modoScanner,
+  onIniciarScan,
+  scansPorOrden,
 }) => {
   const baseOrders = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
 
   const ordersFiltradas = baseOrders.filter((o) => {
+    // 🆕 En modo scanner, ocultar Envío Full (no las arma el usuario)
+    if (modoScanner && o.tipo_envio === "full") return false;
     if (mostrarMultiples && o.items.length <= 1) return false;
     return true;
   });
@@ -187,87 +276,144 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
             />
             +1 SKU
           </label>
-          <label className="flex items-center gap-1.5 text-sm whitespace-nowrap cursor-pointer">
-            <input
-              type="checkbox"
-              checked={todasSeleccionadas}
-              onChange={() => onToggleAll(idsBase)}
-              className="w-4 h-4"
-            />
-            Seleccionar todas
-          </label>
+          {!modoScanner && (
+            <label className="flex items-center gap-1.5 text-sm whitespace-nowrap cursor-pointer">
+              <input
+                type="checkbox"
+                checked={todasSeleccionadas}
+                onChange={() => onToggleAll(idsBase)}
+                className="w-4 h-4"
+              />
+              Seleccionar todas
+            </label>
+          )}
         </div>
       </div>
 
       {/* Lista de órdenes */}
       <div className="space-y-4">
-        {ordersFiltradas.map((order) => (
-          <div
-            key={order.numeroOperacion}
-            className={`rounded-lg p-4 shadow-sm relative border ${order.tipo_envio === "cancelada"
-                ? "bg-gray-100 border-gray-300"
-                : order.tipo_envio === "retiro_local"
-                  ? "bg-amber-50 border-amber-200"
-                  : "bg-white border-gray-200"
-              }`}
-          >
-            <div className="absolute top-3 right-3">
-              <input
-                type="checkbox"
-                checked={selectedOrders.has(order.numeroOperacion)}
-                onChange={() => toggleOrderSelection(order.numeroOperacion)}
-                className="w-5 h-5 cursor-pointer"
-              />
-            </div>
+        {ordersFiltradas.map((order) => {
+          // 🆕 Calcular progreso si hay scans
+          const progreso = modoScanner ? getProgresoOrden(order, scansPorOrden) : null;
+          const completo = progreso ? progreso.verificados === progreso.total && progreso.total > 0 : false;
 
-            <div className="flex justify-between items-start pr-8">
-              <h3 className="text-base font-semibold text-gray-800">
-                Orden #{order.numeroOperacion}
-              </h3>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">
-                  <span className="font-semibold">
-                    {getTipoEnvioLabel(order.tipo_envio)}
+          return (
+            <div
+              key={order.numeroOperacion}
+              className={`rounded-lg p-4 shadow-sm relative border transition-all ${order.tipo_envio === "cancelada"
+                  ? "bg-gray-100 border-gray-300"
+                  : completo
+                    ? "bg-green-50 border-green-400 ring-2 ring-green-300"
+                    : order.tipo_envio === "retiro_local"
+                      ? "bg-amber-50 border-amber-200"
+                      : "bg-white border-gray-200"
+                } ${modoScanner && !completo ? "cursor-pointer hover:ring-2 hover:ring-blue-300" : ""}`}
+              // 🆕 En modo scanner, clic en la card abre el escaneo
+              onClick={() => {
+                if (modoScanner && !completo && order.tipo_envio !== "cancelada") {
+                  onIniciarScan(order.numeroOperacion);
+                }
+              }}
+            >
+              <div className="absolute top-3 right-3">
+                {modoScanner ? (
+                  // 🆕 En modo scanner: indicador de estado
+                  <span className={`text-lg ${completo ? "text-green-500" : "text-gray-400"}`}>
+                    {completo ? "✅" : "🔍"}
                   </span>
-                </span>
-                {(() => {
-                  const statusInfo = getShippingStatusLabel(order.shipping_status, order.tipo_envio);
-                  return (
-                    <span
-                      className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusInfo.color}`}
-                      title={`Status: ${order.shipping_status || 'desconocido'}`}
-                    >
-                      {statusInfo.label}
-                    </span>
-                  );
-                })()}
+                ) : (
+                  <input
+                    type="checkbox"
+                    checked={selectedOrders.has(order.numeroOperacion)}
+                    onChange={() => toggleOrderSelection(order.numeroOperacion)}
+                    className="w-5 h-5 cursor-pointer"
+                  />
+                )}
               </div>
+
+              <div className="flex justify-between items-start pr-8">
+                <h3 className="text-base font-semibold text-gray-800">
+                  Orden #{order.numeroOperacion}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">
+                    <span className="font-semibold">
+                      {getTipoEnvioLabel(order.tipo_envio)}
+                    </span>
+                  </span>
+                  {(() => {
+                    const statusInfo = getShippingStatusLabel(order.shipping_status, order.tipo_envio);
+                    return (
+                      <span
+                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusInfo.color}`}
+                        title={`Status: ${order.shipping_status || 'desconocido'}`}
+                      >
+                        {statusInfo.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 mt-1">
+                <span className="font-medium">Comprador:</span>{" "}
+                {order.buyer_full_name} ({order.buyer_nickname})
+              </p>
+
+              <p className="text-sm text-gray-600 mt-1">
+                <span className="font-medium">Fecha:</span>{" "}
+                {formatDateToDisplay(order.date_created)}
+              </p>
+
+              <div className="mt-2">
+                <p className="text-sm text-gray-700 font-medium">Items:</p>
+                <ul className="list-disc list-inside mt-1 text-sm text-gray-600">
+                  {order.items.map((item, idx) => {
+                    // 🆕 Progreso del item individual
+                    const itemProgreso = progreso?.items[idx];
+                    const itemCompleto = itemProgreso ? itemProgreso.verificados >= itemProgreso.quantity : false;
+
+                    return (
+                      <li key={idx} className={itemCompleto ? "text-green-700 line-through" : ""}>
+                        <span className="font-bold">{item.sku}</span> —{" "}
+                        <span className="font-bold">{item.quantity} Un.</span> —{" "}
+                        <span className="text-gray-500">{item.description}</span>
+                        {/* 🆕 Indicador de progreso del item */}
+                        {modoScanner && itemProgreso && (
+                          <span className={`ml-2 text-xs font-bold ${itemCompleto ? "text-green-600" : "text-blue-600"}`}>
+                            [{itemProgreso.verificados}/{itemProgreso.quantity}]
+                          </span>
+                        )}
+                        {/* 🆕 Warning si no tiene CB */}
+                        {modoScanner && !item.codigoBarras && (
+                          <span className="ml-2 text-xs text-orange-500 font-bold">
+                            ⚠️ Sin CB
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              {/* 🆕 Barra de progreso en modo scanner */}
+              {modoScanner && progreso && progreso.total > 0 && (
+                <div className="mt-3">
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-300 ${completo ? "bg-green-500" : "bg-blue-500"
+                        }`}
+                      style={{ width: `${(progreso.verificados / progreso.total) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 text-right">
+                    {progreso.verificados}/{progreso.total} verificados
+                  </p>
+                </div>
+              )}
             </div>
-
-            <p className="text-sm text-gray-600 mt-1">
-              <span className="font-medium">Comprador:</span>{" "}
-              {order.buyer_full_name} ({order.buyer_nickname})
-            </p>
-
-            <p className="text-sm text-gray-600 mt-1">
-              <span className="font-medium">Fecha:</span>{" "}
-              {formatDateToDisplay(order.date_created)}
-            </p>
-
-            <div className="mt-2">
-              <p className="text-sm text-gray-700 font-medium">Items:</p>
-              <ul className="list-disc list-inside mt-1 text-sm text-gray-600">
-                {order.items.map((item, idx) => (
-                  <li key={idx}>
-                    <span className="font-bold">{item.sku}</span> —{" "}
-                    <span className="font-bold">{item.quantity} Un.</span> —{" "}
-                    <span className="text-gray-500">{item.description}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -305,10 +451,28 @@ export const MercadoLibre = () => {
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
 
+  // 🆕 Estados para scanner
+  const [modoScanner, setModoScanner] = useState(false);
+  const [ordenEnScan, setOrdenEnScan] = useState<string | null>(null);
+  const [scansPorOrden, setScansPorOrden] = useState<Record<string, string[]>>({});
+  const [inputScan, setInputScan] = useState("");
+  const scannerInputRef = useRef<HTMLInputElement>(null);
+
   const urlGetVentas = Urls.apiMeli.getVentas;
 
-  // Todas las órdenes combinadas (para funciones globales)
+  // Todas las órdenes combinadas
   const allOrders = [...ordersFemex, ...ordersBlow];
+
+  // 🆕 Buscar la orden que está en escaneo
+  const ordenActiva = allOrders.find((o) => o.numeroOperacion === ordenEnScan) || null;
+  const progresoActivo = ordenActiva ? getProgresoOrden(ordenActiva, scansPorOrden) : null;
+
+  // 🆕 Enfocar input del scanner cuando se abre el modal
+  useEffect(() => {
+    if (ordenEnScan && scannerInputRef.current) {
+      setTimeout(() => scannerInputRef.current?.focus(), 100);
+    }
+  }, [ordenEnScan]);
 
   // ─── Cargar productos con descuento ─────────────────────────────────────
 
@@ -356,6 +520,114 @@ export const MercadoLibre = () => {
       ids.forEach((id) => newSelected.add(id));
     }
     setSelectedOrders(newSelected);
+  };
+
+  // ─── 🆕 Lógica de Scanner ──────────────────────────────────────────────
+
+  const handleIniciarScan = (numeroOperacion: string) => {
+    setOrdenEnScan(numeroOperacion);
+    setInputScan("");
+  };
+
+  const handleCerrarScan = () => {
+    setOrdenEnScan(null);
+    setInputScan("");
+  };
+
+  const handleScanKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+
+    const codigo = inputScan.trim();
+    if (!codigo || !ordenActiva) return;
+
+    // Expandir la orden para verificación (incluye componentes de kits)
+    const itemsVerificacion = expandirOrdenParaVerificacion(ordenActiva);
+
+    // 1️ Buscar coincidencia exacta de código de barras
+    const itemMatch = itemsVerificacion.find((item) => item.codigoBarras === codigo);
+
+    if (!itemMatch) {
+      // 2️ Si no hay coincidencia exacta, verificar si el código escaneado es el SKU de un producto sin CB
+      const itemSinCB = itemsVerificacion.find(
+        (item) => item.sku === codigo && !item.codigoBarras
+      );
+
+      if (itemSinCB) {
+        sweetAlert.fire({
+          title: "⚠️ Producto sin Código de Barras",
+          html: `El producto <strong>"${itemSinCB.sku}"</strong> está en la orden, pero no tiene código de barras registrado en el sistema.<br/><br/>Registrá el CB en la base de datos para poder escanearlo.`,
+          icon: "warning",
+          confirmButtonText: "Entendido"
+        });
+        setInputScan("");
+        return;
+      }
+
+      // 3️⃣ Verificar si hay ALGÚN producto en la orden sin CB (mensaje contextual)
+      const hayProductosSinCB = itemsVerificacion.some((item) => !item.codigoBarras);
+
+      if (hayProductosSinCB) {
+        sweetAlert.fire({
+          title: "❌ Código no reconocido",
+          html: `Este código no corresponde a ningún producto registrado de esta orden.<br/><br/>⚠️ <strong>Atención:</strong> Hay productos en esta orden sin código de barras. Verificá que estés escaneando el producto correcto o registrá los CB faltantes.`,
+          icon: "error",
+          confirmButtonText: "OK"
+        });
+      } else {
+        sweetAlert.error("❌ Este código de barras no corresponde a ningún producto de esta orden.");
+      }
+
+      setInputScan("");
+      return;
+    }
+
+    // ✅ Código válido: Verificar si ya se escanearon todas las unidades de este componente
+    const yaEscaneados = contarEscaneados(codigo, ordenActiva.numeroOperacion, scansPorOrden);
+
+    if (yaEscaneados >= itemMatch.quantity) {
+      sweetAlert.warning(
+        `⚠️ Ya escaneaste las ${itemMatch.quantity} unidad(es) de "${itemMatch.sku}".`
+      );
+      setInputScan("");
+      return;
+    }
+
+    // ✅ Código válido y faltan unidades: agregar al array de scans
+    setScansPorOrden((prev) => ({
+      ...prev,
+      [ordenActiva.numeroOperacion]: [
+        ...(prev[ordenActiva.numeroOperacion] || []),
+        codigo,
+      ],
+    }));
+
+    setInputScan("");
+
+    // Verificar si la orden quedó completa después de este scan
+    const nuevoProgreso = getProgresoOrden(ordenActiva, {
+      ...scansPorOrden,
+      [ordenActiva.numeroOperacion]: [
+        ...(scansPorOrden[ordenActiva.numeroOperacion] || []),
+        codigo,
+      ],
+    });
+
+    if (nuevoProgreso.verificados === nuevoProgreso.total) {
+      sweetAlert.success(`✅ Orden #${ordenActiva.numeroOperacion} verificada completamente.`);
+      setOrdenEnScan(null);
+    }
+  };
+
+  const handleDeshacerUltimoScan = () => {
+    if (!ordenEnScan) return;
+    setScansPorOrden((prev) => {
+      const scans = prev[ordenEnScan] || [];
+      if (scans.length === 0) return prev;
+      const nuevos = [...scans];
+      nuevos.pop();
+      return { ...prev, [ordenEnScan]: nuevos };
+    });
   };
 
   // ─── Fetch de órdenes (paralelo) ───────────────────────────────────────
@@ -429,7 +701,6 @@ export const MercadoLibre = () => {
       return;
     }
 
-    // Buscar coincidencias en cada empresa por separado
     const coincidentesFemex = ordersFemex.filter((o) => {
       const num = String(o.numeroOperacion);
       return idsDelArchivo.some((id) => num.endsWith(id) || id.endsWith(num));
@@ -451,7 +722,6 @@ export const MercadoLibre = () => {
       return;
     }
 
-    // Filtrar solo la columna que tenga coincidencias (acumulando)
     if (coincidentesFemex.length > 0) {
       setOrdenesVisiblesFemex((prev) => {
         const existentes = new Set(prev.map((o) => o.numeroOperacion));
@@ -468,7 +738,6 @@ export const MercadoLibre = () => {
       });
     }
 
-    // IDs no encontrados
     const noEncontrados = idsDelArchivo.filter(
       (id) =>
         !allOrders.some((o) => {
@@ -492,11 +761,51 @@ export const MercadoLibre = () => {
     });
   };
 
-  const handleConsolidadoStock = () => {
-    PdfGenerarConsolidado(allOrders, selectedOrders, [...ordenesVisiblesFemex, ...ordenesVisiblesBlow]);
+  // ── Helper para desglosar Kits ────────────────────────────────────────────
+
+  const expandirKitsEnOrdenes = (ordenes: Order[]): Order[] => {
+    return ordenes.map((orden) => {
+      const itemsExpandidos: OrderItem[] = [];
+
+      for (const item of orden.items) {
+        const kitInfo = kits[item.sku];
+
+        if (kitInfo) {
+          // Si es un kit, lo desglosamos en sus componentes
+          const skusComponentes = Array.isArray(kitInfo.sku)
+            ? kitInfo.sku
+            : [kitInfo.sku];
+
+          for (const skuComp of skusComponentes) {
+            itemsExpandidos.push({
+              sku: skuComp,
+              quantity: item.quantity, // Mantiene la misma cantidad del kit
+              description: `[Kit] ${skuComp} (de ${item.sku})`, // Etiqueta para identificarlo en el PDF
+              codigoBarras: null,
+            });
+          }
+        } else {
+          // Si no es kit, se deja el item tal cual
+          itemsExpandidos.push(item);
+        }
+      }
+
+      return { ...orden, items: itemsExpandidos };
+    });
   };
 
-  // ─── Drag & Drop (🆕) ─────────────────────────────────────────────────
+  const handleConsolidadoStock = () => {
+    const ordenesVisiblesCombinadas = [...ordenesVisiblesFemex, ...ordenesVisiblesBlow];
+
+    // 🆕 Expandimos los kits en las órdenes antes de generar el PDF
+    const allOrdersExpandidas = expandirKitsEnOrdenes(allOrders);
+    const visiblesExpandidas = expandirKitsEnOrdenes(ordenesVisiblesCombinadas);
+
+
+    PdfGenerarConsolidado(allOrdersExpandidas, selectedOrders, visiblesExpandidas);
+  };
+
+  // ─── Drag & Drop ─────────────────────────────────────────────────────
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -530,7 +839,6 @@ export const MercadoLibre = () => {
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
 
-    // Procesar cada archivo individualmente (igual que el botón)
     files.forEach((file) => {
       if (!file.name.toLowerCase().endsWith(".txt")) {
         sweetAlert.warning(`"${file.name}" no es un archivo .txt. Se ignora.`);
@@ -561,7 +869,6 @@ export const MercadoLibre = () => {
 
     const ordenesSeleccionadas = allOrders.filter((o) => selectedOrders.has(o.numeroOperacion));
 
-    // Manejo de canceladas
     const ordenesCanceladasSeleccionadas = ordenesSeleccionadas.filter(
       (o) => o.tipo_envio === "cancelada"
     );
@@ -610,7 +917,6 @@ export const MercadoLibre = () => {
       setLoading(false);
     }
 
-    // Acumulador
     const acumulador: Record<
       string,
       { idSku: number; canalVenta: string; numeroOperacion: string; fecha: string; cantidad: number }
@@ -692,29 +998,20 @@ export const MercadoLibre = () => {
   const hayOrdenes = ordersFemex.length > 0 || ordersBlow.length > 0;
 
   return (
-    // 🆕 Contenedor con eventos de drag & drop y overlay visual
     <div
-      className={`p-6 max-w-[1600px] mx-auto relative transition-all duration-200 ${
-        isDragging
-          ? "ring-4 ring-blue-400 ring-offset-2 bg-blue-50/50 rounded-xl"
-          : ""
-      }`}
+      className={`p-6 max-w-[1600px] mx-auto relative transition-all duration-200 ${isDragging ? "ring-4 ring-blue-400 ring-offset-2 bg-blue-50/50 rounded-xl" : ""
+        }`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {/* 🆕 Overlay visual cuando se está arrastrando algo */}
       {isDragging && (
         <div className="absolute inset-0 flex items-center justify-center bg-blue-100/70 backdrop-blur-sm rounded-xl z-50 pointer-events-none">
           <div className="text-center">
             <div className="text-6xl mb-2">📥</div>
-            <p className="text-xl font-bold text-blue-700">
-              Soltá el archivo .txt aquí
-            </p>
-            <p className="text-sm text-blue-600 mt-1">
-              Se filtrarán las órdenes por las etiquetas
-            </p>
+            <p className="text-xl font-bold text-blue-700">Soltá el archivo .txt aquí</p>
+            <p className="text-sm text-blue-600 mt-1">Se filtrarán las órdenes por las etiquetas</p>
           </div>
         </div>
       )}
@@ -725,7 +1022,6 @@ export const MercadoLibre = () => {
 
       {/* ── Controles superiores ─────────────────────────────────────────── */}
       <div className="mb-6 flex flex-wrap items-end gap-4">
-        {/* Días Femex */}
         <label className="text-gray-700 font-medium whitespace-nowrap">
           <span className="text-blue-700">Femex</span> días:
           <input
@@ -738,7 +1034,6 @@ export const MercadoLibre = () => {
           />
         </label>
 
-        {/* Días Blow */}
         <label className="text-gray-700 font-medium whitespace-nowrap">
           <span className="text-orange-600">Blow</span> días:
           <input
@@ -751,55 +1046,70 @@ export const MercadoLibre = () => {
           />
         </label>
 
-        {/* Fetch */}
         <button
           onClick={handleFetchOrders}
           disabled={loading}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
         >
           {loading ? "Cargando..." : "Obtener órdenes"}
         </button>
 
-        {/* Imprimir envíos */}
-        <button
-          onClick={() => generateEnviosPDF(allOrders, selectedOrders)}
-          disabled={
-            !allOrders.some(
-              (o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio !== "retiro_local"
-            )
-          }
-          className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
-        >
-          Imprimir envíos
-        </button>
+        {/* 🆕 Toggle Modo Scanner */}
+        <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-300 rounded cursor-pointer select-none whitespace-nowrap">
+          <input
+            type="checkbox"
+            checked={modoScanner}
+            onChange={(e) => {
+              setModoScanner(e.target.checked);
+              if (!e.target.checked) {
+                setOrdenEnScan(null);
+                setInputScan("");
+              }
+            }}
+            className="w-4 h-4 accent-indigo-600"
+          />
+          <span className="text-indigo-700 font-medium">🔍 Modo Scanner</span>
+        </label>
 
-        {/* Imprimir constancias */}
-        <button
-          onClick={() => printRetiroLocalHTML(allOrders, selectedOrders)}
-          disabled={
-            !allOrders.some(
-              (o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local"
-            )
-          }
-          className="px-4 py-2 bg-amber-600 text-white rounded disabled:bg-gray-400"
-        >
-          Imprimir constancias (retiro en local)
-        </button>
+        {!modoScanner && (
+          <>
+            <button
+              onClick={() => generateEnviosPDF(allOrders, selectedOrders)}
+              disabled={
+                !allOrders.some(
+                  (o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio !== "retiro_local"
+                )
+              }
+              className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
+            >
+              Imprimir envíos
+            </button>
 
-        {/* Registrar con descuento */}
-        <button
-          onClick={registrarVentasConDescuento}
-          disabled={selectedOrders.size === 0 || loadingDescuento}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0 || loadingDescuento
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-purple-600 hover:bg-purple-700"
-            }`}
-        >
-          {loadingDescuento ? "Cargando..." : `Registrar ${selectedOrders.size} con descuento`}
-        </button>
+            <button
+              onClick={() => printRetiroLocalHTML(allOrders, selectedOrders)}
+              disabled={
+                !allOrders.some(
+                  (o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local"
+                )
+              }
+              className="px-4 py-2 bg-amber-600 text-white rounded disabled:bg-gray-400"
+            >
+              Imprimir constancias (retiro en local)
+            </button>
 
-        {/* Cargar etiquetas */}
+            <button
+              onClick={registrarVentasConDescuento}
+              disabled={selectedOrders.size === 0 || loadingDescuento}
+              className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0 || loadingDescuento
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-purple-600 hover:bg-purple-700"
+                }`}
+            >
+              {loadingDescuento ? "Cargando..." : `Registrar ${selectedOrders.size} con descuento`}
+            </button>
+          </>
+        )}
+
         <BotonCargarTxt onFileRead={handleArchivoTxt} label="Cargar etiquetas (.txt)" />
         <button
           onClick={handleConsolidadoStock}
@@ -813,7 +1123,6 @@ export const MercadoLibre = () => {
       {/* ── Columnas ─────────────────────────────────────────────────────── */}
       {hayOrdenes && (
         <div className="flex gap-6">
-          {/* Femex (izquierda) */}
           <ColumnaOrdenes
             titulo="Femex"
             orders={ordersFemex}
@@ -824,9 +1133,11 @@ export const MercadoLibre = () => {
             selectedOrders={selectedOrders}
             toggleOrderSelection={toggleOrderSelection}
             onToggleAll={toggleAllForIds}
+            modoScanner={modoScanner}
+            onIniciarScan={handleIniciarScan}
+            scansPorOrden={scansPorOrden}
           />
 
-          {/* Blow (derecha) */}
           <ColumnaOrdenes
             titulo="Blow"
             orders={ordersBlow}
@@ -837,7 +1148,155 @@ export const MercadoLibre = () => {
             selectedOrders={selectedOrders}
             toggleOrderSelection={toggleOrderSelection}
             onToggleAll={toggleAllForIds}
+            modoScanner={modoScanner}
+            onIniciarScan={handleIniciarScan}
+            scansPorOrden={scansPorOrden}
           />
+        </div>
+      )}
+
+      {/* ── 🆕 Modal de Escaneo ──────────────────────────────────────────── */}
+      {ordenEnScan && ordenActiva && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={(e) => {
+            // Cerrar si se hace clic fuera del modal
+            if (e.target === e.currentTarget) handleCerrarScan();
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col overflow-hidden">
+            {/* Header del modal */}
+            <div className="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold">🔍 Escaneando Orden #{ordenActiva.numeroOperacion}</h3>
+                <p className="text-indigo-200 text-sm">
+                  {ordenActiva.buyer_full_name} ({ordenActiva.buyer_nickname})
+                </p>
+              </div>
+              <button
+                onClick={handleCerrarScan}
+                className="text-white/70 hover:text-white text-2xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Input de escaneo */}
+            <div className="px-6 py-4 border-b bg-indigo-50">
+              <label className="block text-sm font-medium text-indigo-700 mb-2">
+                Escaneá el código de barras:
+              </label>
+              <input
+                ref={scannerInputRef}
+                type="text"
+                value={inputScan}
+                onChange={(e) => setInputScan(e.target.value)}
+                onKeyDown={handleScanKeyDown}
+                placeholder="Apuntá la pistola y escaneá..."
+                className="w-full text-xl p-3 border-2 border-indigo-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono tracking-widest"
+                autoFocus
+              />
+            </div>
+
+            {/* Progreso general */}
+            {progresoActivo && (
+              <div className="px-6 py-3 border-b bg-gray-50">
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>Progreso</span>
+                  <span className="font-bold">
+                    {progresoActivo.verificados}/{progresoActivo.total} unidades
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className="bg-indigo-500 h-3 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${(progresoActivo.verificados / progresoActivo.total) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Lista de items con progreso */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+              {progresoActivo?.items.map((item, idx) => {
+                const completo = item.verificados >= item.quantity;
+                return (
+                  <div
+                    key={idx}
+                    className={`p-3 rounded-lg border ${completo
+                        ? "bg-green-50 border-green-300"
+                        : "bg-white border-gray-200"
+                      }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-gray-800">{item.sku}</p>
+                        <p className="text-sm text-gray-500">{item.description}</p>
+                        {item.codigoBarras && (
+                          <p className="text-xs text-gray-400 font-mono mt-1">
+                            CB: {item.codigoBarras}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={`text-sm font-bold px-2 py-1 rounded ${completo
+                            ? "bg-green-200 text-green-800"
+                            : "bg-blue-100 text-blue-800"
+                          }`}
+                      >
+                        {item.verificados}/{item.quantity}
+                      </span>
+                    </div>
+                    {/* Mini barra por item */}
+                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-300 ${completo ? "bg-green-500" : "bg-blue-400"
+                          }`}
+                        style={{
+                          width: `${(item.verificados / item.quantity) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Items sin código de barras */}
+              {ordenActiva.items.some((i) => !i.codigoBarras) && (
+                <div className="p-3 bg-orange-50 border border-orange-300 rounded-lg">
+                  <p className="text-sm text-orange-700 font-medium">
+                    ⚠️ Los siguientes productos no tienen código de barras registrado:
+                  </p>
+                  <ul className="text-sm text-orange-600 mt-1 list-disc list-inside">
+                    {ordenActiva.items
+                      .filter((i) => !i.codigoBarras)
+                      .map((i, idx) => (
+                        <li key={idx}>{i.sku} ({i.quantity} un.)</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Footer con botones */}
+            <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
+              <button
+                onClick={handleDeshacerUltimoScan}
+                disabled={(scansPorOrden[ordenEnScan] || []).length === 0}
+                className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                ↩️ Deshacer último scan
+              </button>
+              <button
+                onClick={handleCerrarScan}
+                className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded transition"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { conn } from "../bd/bd.js";
 import axios from "axios";
 import dotenv from "dotenv";
+import kits from "../../reactvitefront/src/componentes/utilidades/Kits.ts";
 
 dotenv.config();
 
@@ -10,9 +11,9 @@ const crearOrdenBase = (fullOrder, mlUserId, numeroOperacion, etiqueta_impresa, 
     [process.env.ML_USER_ID_1]: "FEMEX",
     [process.env.ML_USER_ID_2]: "BLOW INK"
   };
-  
+
   const buyer_full_name = `${fullOrder.buyer?.first_name || ''} ${fullOrder.buyer?.last_name || ''}`.trim();
-  
+
   return {
     numeroOperacion: numeroOperacion,
     buyer_nickname: fullOrder.buyer?.nickname || "",
@@ -37,7 +38,7 @@ const determinarEstadoEnvio = (shipping) => {
   if (status === 'shipped' || status === 'delivered') {
     etiqueta_impresa = true;
     shipping_status = substatus === 'unknown' ? status : substatus;
-  } 
+  }
   else if (['printed', 'handling', 'shipped', 'delivered'].includes(substatus)) {
     etiqueta_impresa = true;
     shipping_status = substatus;
@@ -190,7 +191,9 @@ const getOrderDetails = async (orderId, accessToken) => {
   }
 };
 
-const getVentas = async (req, res) => { 
+
+
+const getVentas = async (req, res) => {
   try {
     const dias = parseInt(req.query.dias) || 7;
     if (dias < 1 || dias > 21) {
@@ -235,7 +238,7 @@ const getVentas = async (req, res) => {
     const filteredOrders = orders.filter(
       (order) => new Date(order.date_created) >= startDate
     );
-  
+
     const ordersByPack = {};
 
     for (const order of filteredOrders) {
@@ -278,7 +281,7 @@ const getVentas = async (req, res) => {
               { headers: { Authorization: `Bearer ${accessToken}` } }
             );
             const shipping = shipmentRes.data;
-            
+
             // ✅ USAR FUNCIONES AUXILIARES
             const estadoEnvio = determinarEstadoEnvio(shipping);
             etiqueta_impresa = estadoEnvio.etiqueta_impresa;
@@ -323,7 +326,60 @@ const getVentas = async (req, res) => {
       }
     }
 
+    // 🆕 ENRIQUECER CON CÓDIGO DE BARRAS
     const enrichedOrders = Object.values(ordersByPack);
+
+    // Recolectar todos los SKUs únicos de todas las órdenes
+    const skusUnicos = new Set();
+    for (const order of enrichedOrders) {
+      for (const item of order.items) {
+        if (item.sku) {
+          skusUnicos.add(item.sku);
+          const kitInfo = kits[item.sku];
+          if (kitInfo) {
+            const componentes = Array.isArray(kitInfo.sku)
+              ? kitInfo.sku
+              : [kitInfo.sku];
+            componentes.forEach(c => skusUnicos.add(c));
+          }
+
+        }
+      }
+    }
+
+    // Hacer UNA SOLA query para obtener todos los códigos de barras
+    const skusArray = Array.from(skusUnicos);
+    let mapaCodigosBarras = {};
+
+    if (skusArray.length > 0) {
+      const placeholders = skusArray.map(() => '?').join(',');
+      const [productos] = await conn.query(
+        `SELECT sku, codigoBarras FROM productos WHERE sku IN (${placeholders})`,
+        skusArray
+      );
+
+      // Crear mapa SKU -> codigoBarras
+      for (const prod of productos) {
+        mapaCodigosBarras[prod.sku] = prod.codigoBarras;
+      }
+    }
+
+    // Asignar codigoBarras a cada item
+    for (const order of enrichedOrders) {
+      for (const item of order.items) {
+        item.codigoBarras = mapaCodigosBarras[item.sku] || null;
+        const kitInfo = kits[item.sku];
+        if (kitInfo) {
+          const componentes = Array.isArray(kitInfo.sku)
+            ? kitInfo.sku
+            : [kitInfo.sku];
+
+          item.codigosBarrasComponentes = componentes.map(c => mapaCodigosBarras[c] || null);
+        } else {
+          item.codigosBarrasComponentes = [];
+        }
+      }
+    }
 
     res.status(200).json({
       message: `Órdenes de los últimos ${dias} días para la cuenta ${cuenta}`,
