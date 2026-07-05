@@ -30,6 +30,7 @@ import { CargarKits } from "../componentes/CargarKits";
 import { MercadoLibre } from "../componentes/MercadoLibre";
 import { ProductosConDescuento } from "../componentes/ProductosConDescuento";
 import { Magia } from "../componentes/Magia";
+import { ActualizarKits } from "../componentes/ActualizarKits";
 
 export const Rutas = (): JSX.Element => {
   return (
@@ -45,6 +46,7 @@ export const Rutas = (): JSX.Element => {
         <Route path="/actualizarProductos" element={<ActualizarProductos />} />
         <Route path="/cargarMarcas" element={<CargarMarca />} />
         <Route path="/actualizarMarca" element={<ActualizarMarca />} />
+        <Route path="/actualizarKits" element={<ActualizarKits />} />
         <Route path="/cargarTransporte" element={<CargarTransporte />} />
         <Route path="/actualizarTransporte" element={<ActualizarTransporte />} />
         <Route path="/imprimirEtiqueta" element={<ImprimirEtiqueta />} />

@@ -7,7 +7,6 @@ import BotonCargarTxt from "./utilidades/BotonCargarTxt";
 import { generateEnviosPDF } from "./utilidades/pdfGenerators";
 import { printRetiroLocalHTML } from "./utilidades/printUtils";
 import { PdfGenerarConsolidado } from "./utilidades/pdfGenerarConsolidado";
-import kits from "./utilidades/Kits";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -31,11 +30,7 @@ export interface Order {
   shipping_status?: string;
 }
 
-interface ApiResponse {
-  success: boolean;
-  message: string;
-  data?: Order[];
-}
+
 
 interface ItemVerificacion {
   sku: string;
@@ -43,6 +38,23 @@ interface ItemVerificacion {
   quantity: number;
   esComponenteKit: boolean;
   skuKitOriginal?: string;
+}
+
+interface KitInfo {
+  id: number;
+  componentes: Array<{
+    idSku: number;
+    sku: string;
+    cantidad: number;
+    codigoBarras: string | null;
+  }>;
+}
+
+interface ApiResponse {
+  success: boolean;
+  message: string;
+  data?: Order[];
+  kits?: Record<string, KitInfo>; 
 }
 
 // ─── Constantes ─────────────────────────────────────────────────────────────
@@ -127,6 +139,105 @@ const extraerIdsDeEtiqueta = (contenido: string): string[] => {
 };
 
 // ─── 🆕 Helpers de Scanner ─────────────────────────────────────────────────
+// Función helper fuera del componente
+const expandirOrdenParaVerificacion = (
+  orden: Order, 
+  kitsMap: Record<string, KitInfo> // 🆕 Agregar parámetro
+): ItemVerificacion[] => {
+  const itemsVerificacion: ItemVerificacion[] = [];
+
+  for (const item of orden.items) {
+    const kitInfo = kitsMap[item.sku]; // ✅ Ahora usa el parámetro
+
+    if (kitInfo && item.codigosBarrasComponentes?.length) {
+      const skusAplanados: string[] = [];
+      for (const comp of kitInfo.componentes) {
+        for (let i = 0; i < comp.cantidad; i++) {
+          skusAplanados.push(comp.sku);
+        }
+      }
+      
+      skusAplanados.forEach((skuComp, index) => {
+        itemsVerificacion.push({
+          sku: skuComp,
+          codigoBarras: item.codigosBarrasComponentes?.[index] || null,
+          quantity: item.quantity,
+          esComponenteKit: true,
+          skuKitOriginal: item.sku,
+        });
+      });
+    } else {
+      itemsVerificacion.push({
+        sku: item.sku,
+        codigoBarras: item.codigoBarras,
+        quantity: item.quantity,
+        esComponenteKit: false,
+      });
+    }
+  }
+
+  return itemsVerificacion;
+};
+
+// Lo mismo para expandirKitsEnOrdenes
+const expandirKitsEnOrdenes = (
+  ordenes: Order[], 
+  kitsMap: Record<string, KitInfo> // 🆕 Agregar parámetro
+): Order[] => {
+  return ordenes.map((orden) => {
+    const itemsExpandidos: OrderItem[] = [];
+
+    for (const item of orden.items) {
+      const kitInfo = kitsMap[item.sku]; // ✅ Ahora usa el parámetro
+
+      if (kitInfo) {
+        for (const comp of kitInfo.componentes) {
+          for (let i = 0; i < comp.cantidad; i++) {
+            itemsExpandidos.push({
+              sku: comp.sku,
+              quantity: item.quantity,
+              description: `[Kit] ${comp.sku} (de ${item.sku})`,
+              codigoBarras: comp.codigoBarras,
+            });
+          }
+        }
+      } else {
+        itemsExpandidos.push(item);
+      }
+    }
+
+    return { ...orden, items: itemsExpandidos };
+  });
+};
+
+
+const expandirOrdenIndividual = (
+  orden: Order, 
+  kitsMap: Record<string, KitInfo>
+): Order => {
+  const itemsExpandidos: OrderItem[] = [];
+
+  for (const item of orden.items) {
+    const kitInfo = kitsMap[item.sku];
+
+    if (kitInfo) {
+      for (const comp of kitInfo.componentes) {
+        for (let i = 0; i < comp.cantidad; i++) {
+          itemsExpandidos.push({
+            sku: comp.sku,
+            quantity: item.quantity,
+            description: `[Kit] ${comp.sku} (de ${item.sku})`,
+            codigoBarras: comp.codigoBarras,
+          });
+        }
+      }
+    } else {
+      itemsExpandidos.push(item);
+    }
+  }
+
+  return { ...orden, items: itemsExpandidos };
+};
 
 const contarEscaneados = (
   codigoBarras: string,
@@ -139,11 +250,14 @@ const contarEscaneados = (
 
 const getProgresoOrden = (
   orden: Order,
-  scansPorOrden: Record<string, string[]>
+  scansPorOrden: Record<string, string[]>,
+  kitsMap?: Record<string, KitInfo> // 🆕 Agregar parámetro opcional
 ): { total: number; verificados: number; items: (OrderItem & { verificados: number })[] } => {
-  const scans = scansPorOrden[orden.numeroOperacion] || [];
+  // 🆕 Expandir orden si se pasa kitsMap
+  const ordenProcesada = kitsMap ? expandirOrdenIndividual(orden, kitsMap) : orden;
+  const scans = scansPorOrden[ordenProcesada.numeroOperacion] || [];
 
-  const itemsConProgreso = orden.items.map((item) => {
+  const itemsConProgreso = ordenProcesada.items.map((item) => {
     const verificados = item.codigoBarras
       ? scans.filter((s) => s === item.codigoBarras).length
       : 0;
@@ -153,46 +267,13 @@ const getProgresoOrden = (
     };
   });
 
-  const total = orden.items.reduce((sum, i) => sum + i.quantity, 0);
+  const total = ordenProcesada.items.reduce((sum, i) => sum + i.quantity, 0);
   const verificados = itemsConProgreso.reduce((sum, i) => sum + i.verificados, 0);
 
   return { total, verificados, items: itemsConProgreso };
 };
 
-const expandirOrdenParaVerificacion = (orden: Order): ItemVerificacion[] => {
-  const itemsVerificacion: ItemVerificacion[] = [];
 
-  for (const item of orden.items) {
-    const kitInfo = kitsConDescuento[item.sku];
-
-    if (kitInfo && item.codigosBarrasComponentes?.length) {
-      // Es un kit: expandir en componentes usando los códigos de barras reales
-      const skusComponentes = Array.isArray(kitInfo.skuDescuento)
-        ? kitInfo.skuDescuento
-        : [kitInfo.skuDescuento];
-
-      skusComponentes.forEach((skuComp, index) => {
-        itemsVerificacion.push({
-          sku: skuComp,
-          codigoBarras: item.codigosBarrasComponentes?.[index] || null, // 🆕 Usar el CB real
-          quantity: item.quantity,
-          esComponenteKit: true,
-          skuKitOriginal: item.sku,
-        });
-      });
-    } else {
-      // No es kit o no tiene componentes cargados: item normal
-      itemsVerificacion.push({
-        sku: item.sku,
-        codigoBarras: item.codigoBarras,
-        quantity: item.quantity,
-        esComponenteKit: false,
-      });
-    }
-  }
-
-  return itemsVerificacion;
-};
 
 
 // ─── Componente Columna ─────────────────────────────────────────────────────
@@ -211,6 +292,7 @@ interface ColumnaOrdenesProps {
   modoScanner: boolean;
   onIniciarScan: (numeroOperacion: string) => void;
   scansPorOrden: Record<string, string[]>;
+  kitsMap: Record<string, KitInfo>;
 }
 
 const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
@@ -227,6 +309,7 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
   modoScanner,
   onIniciarScan,
   scansPorOrden,
+  kitsMap,
 }) => {
   const baseOrders = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
 
@@ -294,7 +377,7 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
       <div className="space-y-4">
         {ordersFiltradas.map((order) => {
           // 🆕 Calcular progreso si hay scans
-          const progreso = modoScanner ? getProgresoOrden(order, scansPorOrden) : null;
+          const progreso = modoScanner ? getProgresoOrden(order, scansPorOrden, kitsMap) : null;
           const completo = progreso ? progreso.verificados === progreso.total && progreso.total > 0 : false;
 
           return (
@@ -457,15 +540,20 @@ export const MercadoLibre = () => {
   const [scansPorOrden, setScansPorOrden] = useState<Record<string, string[]>>({});
   const [inputScan, setInputScan] = useState("");
   const scannerInputRef = useRef<HTMLInputElement>(null);
+  
+const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
 
   const urlGetVentas = Urls.apiMeli.getVentas;
+
+
+
 
   // Todas las órdenes combinadas
   const allOrders = [...ordersFemex, ...ordersBlow];
 
   // 🆕 Buscar la orden que está en escaneo
   const ordenActiva = allOrders.find((o) => o.numeroOperacion === ordenEnScan) || null;
-  const progresoActivo = ordenActiva ? getProgresoOrden(ordenActiva, scansPorOrden) : null;
+  const progresoActivo = ordenActiva ? getProgresoOrden(ordenActiva, scansPorOrden, kitsMap) : null;
 
   // 🆕 Enfocar input del scanner cuando se abre el modal
   useEffect(() => {
@@ -542,7 +630,7 @@ export const MercadoLibre = () => {
     if (!codigo || !ordenActiva) return;
 
     // Expandir la orden para verificación (incluye componentes de kits)
-    const itemsVerificacion = expandirOrdenParaVerificacion(ordenActiva);
+    const itemsVerificacion = expandirOrdenParaVerificacion(ordenActiva, kitsMap);
 
     // 1️ Buscar coincidencia exacta de código de barras
     const itemMatch = itemsVerificacion.find((item) => item.codigoBarras === codigo);
@@ -653,31 +741,37 @@ export const MercadoLibre = () => {
 
       // Femex
       if (resFemex.status === "fulfilled") {
-        const data = resFemex.value.data;
-        if (data.success && data.data) {
-          setOrdersFemex(data.data);
-        } else {
-          sweetAlert.error(`Femex: ${data.message || "Error desconocido"}`);
-          setOrdersFemex([]);
-        }
-      } else {
-        sweetAlert.error("Femex: Error al conectar con el servidor.");
-        setOrdersFemex([]);
-      }
+  const data = resFemex.value.data;
+
+  if (data.kits) {
+  setKitsMap(data.kits);
+  console.log("✅ KITS RECIBIDOS:", Object.keys(data.kits).length);
+  console.log("📋 EJEMPLO KIT:", data.kits[Object.keys(data.kits)[0]]);
+}
+  if (data.success && data.data) {
+    setOrdersFemex(data.data);
+    if (data.kits) { // 🆕
+      setKitsMap(data.kits);
+    }
+  } else {
+    sweetAlert.error(`Femex: ${data.message || "Error desconocido"}`);
+    setOrdersFemex([]);
+  }
+}
 
       // Blow
       if (resBlow.status === "fulfilled") {
-        const data = resBlow.value.data;
-        if (data.success && data.data) {
-          setOrdersBlow(data.data);
-        } else {
-          sweetAlert.error(`Blow: ${data.message || "Error desconocido"}`);
-          setOrdersBlow([]);
-        }
-      } else {
-        sweetAlert.error("Blow: Error al conectar con el servidor.");
-        setOrdersBlow([]);
-      }
+  const data = resBlow.value.data;
+  if (data.success && data.data) {
+    setOrdersBlow(data.data);
+    if (data.kits) { // 🆕
+      setKitsMap(data.kits);
+    }
+  } else {
+    sweetAlert.error(`Blow: ${data.message || "Error desconocido"}`);
+    setOrdersBlow([]);
+  }
+}
     } finally {
       setLoading(false);
     }
@@ -763,43 +857,40 @@ export const MercadoLibre = () => {
 
   // ── Helper para desglosar Kits ────────────────────────────────────────────
 
-  const expandirKitsEnOrdenes = (ordenes: Order[]): Order[] => {
-    return ordenes.map((orden) => {
-      const itemsExpandidos: OrderItem[] = [];
+  const expandirKitsEnOrdenes = (ordenes: Order[], kitsMap: Record<string, any>): Order[] => {
+  return ordenes.map((orden) => {
+    const itemsExpandidos: OrderItem[] = [];
 
-      for (const item of orden.items) {
-        const kitInfo = kits[item.sku];
+    for (const item of orden.items) {
+      const kitInfo = kitsMap[item.sku]; // 🆕 Usar kitsMap
 
-        if (kitInfo) {
-          // Si es un kit, lo desglosamos en sus componentes
-          const skusComponentes = Array.isArray(kitInfo.sku)
-            ? kitInfo.sku
-            : [kitInfo.sku];
-
-          for (const skuComp of skusComponentes) {
+      if (kitInfo) {
+        for (const comp of kitInfo.componentes) {
+          for (let i = 0; i < comp.cantidad; i++) {
             itemsExpandidos.push({
-              sku: skuComp,
-              quantity: item.quantity, // Mantiene la misma cantidad del kit
-              description: `[Kit] ${skuComp} (de ${item.sku})`, // Etiqueta para identificarlo en el PDF
-              codigoBarras: null,
+              sku: comp.sku,
+              quantity: item.quantity,
+              description: `[Kit] ${comp.sku} (de ${item.sku})`,
+              codigoBarras: comp.codigoBarras,
             });
           }
-        } else {
-          // Si no es kit, se deja el item tal cual
-          itemsExpandidos.push(item);
         }
+      } else {
+        itemsExpandidos.push(item);
       }
+    }
 
-      return { ...orden, items: itemsExpandidos };
-    });
-  };
+    return { ...orden, items: itemsExpandidos };
+  });
+};
 
   const handleConsolidadoStock = () => {
+    const allOrdersSinFull = allOrders.filter((o) => o.tipo_envio !== "full");
     const ordenesVisiblesCombinadas = [...ordenesVisiblesFemex, ...ordenesVisiblesBlow];
 
     // 🆕 Expandimos los kits en las órdenes antes de generar el PDF
-    const allOrdersExpandidas = expandirKitsEnOrdenes(allOrders);
-    const visiblesExpandidas = expandirKitsEnOrdenes(ordenesVisiblesCombinadas);
+    const allOrdersExpandidas = expandirKitsEnOrdenes(allOrdersSinFull, kitsMap);
+    const visiblesExpandidas = expandirKitsEnOrdenes(ordenesVisiblesCombinadas, kitsMap);
 
 
     PdfGenerarConsolidado(allOrdersExpandidas, selectedOrders, visiblesExpandidas);
@@ -1136,6 +1227,7 @@ export const MercadoLibre = () => {
             modoScanner={modoScanner}
             onIniciarScan={handleIniciarScan}
             scansPorOrden={scansPorOrden}
+            kitsMap={kitsMap}
           />
 
           <ColumnaOrdenes
@@ -1151,6 +1243,7 @@ export const MercadoLibre = () => {
             modoScanner={modoScanner}
             onIniciarScan={handleIniciarScan}
             scansPorOrden={scansPorOrden}
+            kitsMap={kitsMap}
           />
         </div>
       )}

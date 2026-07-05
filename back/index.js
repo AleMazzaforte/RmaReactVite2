@@ -23,9 +23,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 
-app.use(cors());
+
 
 app.use(cookieParser());
+const corsOptions = {
+  origin: [
+    'https://rma-react-vite2.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:8080'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Usar las rutas importadas
 app.use('/', rutas);

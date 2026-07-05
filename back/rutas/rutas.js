@@ -48,7 +48,6 @@ router.get('/getOpProductosRaw/:idOp', listarOp.getOpProductosRaw);
 router.get('/getSku/:idsProductos', listarOp.getSku);
 router.post('/actualizarOp', listarOp.postActualizarOp);
 router.post('/agregarProductoOp', listarOp.postAgregarProductoOp);
-// En tu archivo de rutas
 router.delete('/eliminarProductoOp', listarOp.eliminarProductoOp);
 
 // Ruta para listar clientes
@@ -124,7 +123,12 @@ router.get('/obtenerReposiciones', inventarioController.getObtenerReposiciones);
 router.post('/limpiarReposiciones', inventarioController.postLimpiarReposiciones);
 
 // Rutas para kits
-router.post('/guardarKit', kitsController.postGuardarKit)
+router.post('/guardarKit', kitsController.postGuardarKit);
+router.put('/actualizarKit', kitsController.putActualizarKit);
+router.get('/listarKits', kitsController.getListarKits);
+router.get('/obtenerKit/:idKit', kitsController.getObtenerKit);
+router.delete('/eliminarKit/:idKit', kitsController.deleteEliminarKit);
+router.get('/buscarKit', kitsController.getBuscarKits);
 
 // Ruta para backup
 router.get('/backup', backupController.getBackup)

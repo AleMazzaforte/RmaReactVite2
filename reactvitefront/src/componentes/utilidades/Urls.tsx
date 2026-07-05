@@ -90,7 +90,12 @@ const Urls = {
     eliminarLote: `${base}/eliminarLote`
   },
   kits: {
-    guardarKit: `${base}/guardarKit`
+    guardarKit: `${base}/guardarKit`,
+    actualizarKit: `${base}/actualizarKit`, 
+  listarKits: `${base}/listarKits`, 
+  buscarKit: `${base}/buscarKit`,
+  obtenerKit: (idKit: number) => `${base}/obtenerKit/${idKit}`,
+  eliminarKit: (idKit: number) => `${base}/eliminarKit/${idKit}`,
   },
   backup: {
     getBackup: `${base}/backup`

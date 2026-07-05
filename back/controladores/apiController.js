@@ -1,7 +1,6 @@
 import { conn } from "../bd/bd.js";
 import axios from "axios";
 import dotenv from "dotenv";
-import kits from "../../reactvitefront/src/componentes/utilidades/Kits.ts";
 
 dotenv.config();
 
@@ -252,42 +251,32 @@ const getVentas = async (req, res) => {
         let etiqueta_impresa = false;
         let shipping_status = 'unknown';
 
-        // ✅ 1. Órdenes canceladas
         if (fullOrder.status === "cancelled") {
           tipo_envio = "cancelada";
           etiqueta_impresa = false;
           shipping_status = 'cancelled';
-        }
-        // ✅ 2. Retiro en local: sin shipping.id y sin costo de envío
-        else if (
+        } else if (
           fullOrder.shipping?.id === null &&
           (fullOrder.shipping_cost === null || fullOrder.shipping_cost === 0)
         ) {
           tipo_envio = "retiro_local";
           etiqueta_impresa = false;
           shipping_status = 'no_shipping';
-        }
-        // ✅ 3. También detectar por tag (por compatibilidad)
-        else if (fullOrder.tags?.includes("no_shipping")) {
+        } else if (fullOrder.tags?.includes("no_shipping")) {
           tipo_envio = "retiro_local";
           etiqueta_impresa = false;
           shipping_status = 'no_shipping';
-        }
-        // ✅ 4. Si tiene shipping, obtener detalles
-        else if (fullOrder.shipping?.id) {
+        } else if (fullOrder.shipping?.id) {
           try {
             const shipmentRes = await axios.get(
               `https://api.mercadolibre.com/shipments/${fullOrder.shipping.id}`,
               { headers: { Authorization: `Bearer ${accessToken}` } }
             );
             const shipping = shipmentRes.data;
-
-            // ✅ USAR FUNCIONES AUXILIARES
             const estadoEnvio = determinarEstadoEnvio(shipping);
             etiqueta_impresa = estadoEnvio.etiqueta_impresa;
             shipping_status = estadoEnvio.shipping_status;
             tipo_envio = determinarTipoEnvio(shipping);
-
           } catch (err) {
             console.warn(
               `⚠️ No se pudo obtener shipment ${fullOrder.shipping.id}:`,
@@ -297,15 +286,12 @@ const getVentas = async (req, res) => {
             tipo_envio = "desconocido";
             shipping_status = 'error';
           }
-        }
-        // ✅ 5. Caso residual
-        else {
+        } else {
           tipo_envio = "desconocido";
           etiqueta_impresa = false;
           shipping_status = 'unknown';
         }
 
-        // ✅ CREAR OBJETO UNA SOLA VEZ
         ordersByPack[numeroOperacion] = crearOrdenBase(
           fullOrder,
           mlUserId,
@@ -316,7 +302,6 @@ const getVentas = async (req, res) => {
         );
       }
 
-      // Agregar ítems
       for (const item of fullOrder.order_items || []) {
         ordersByPack[numeroOperacion].items.push({
           sku: item.item.seller_sku || item.item.id,
@@ -326,28 +311,56 @@ const getVentas = async (req, res) => {
       }
     }
 
-    // 🆕 ENRIQUECER CON CÓDIGO DE BARRAS
     const enrichedOrders = Object.values(ordersByPack);
 
-    // Recolectar todos los SKUs únicos de todas las órdenes
+    // 🆕 1. Traer todos los kits con sus componentes y CBs desde la BD
+    const [todosLosKits] = await conn.query(`
+      SELECT 
+        k.id,
+        k.skuKit,
+        kc.idSku,
+        p.sku AS skuComponente,
+        p.codigoBarras,
+        kc.cantidad,
+        kc.orden
+      FROM kits k
+      LEFT JOIN kits_componentes kc ON k.id = kc.idKit
+      LEFT JOIN productos p ON kc.idSku = p.id
+      ORDER BY k.id, kc.orden
+    `);
+
+    // 🆕 Construir kitsMap
+    const kitsMap = {};
+    for (const row of todosLosKits) {
+      if (!kitsMap[row.skuKit]) {
+        kitsMap[row.skuKit] = {
+          id: row.id,
+          componentes: []
+        };
+      }
+      if (row.idSku) {
+        kitsMap[row.skuKit].componentes.push({
+          idSku: row.idSku,
+          sku: row.skuComponente,
+          cantidad: row.cantidad,
+          codigoBarras: row.codigoBarras
+        });
+      }
+    }
+    console.log(" KITS MAP:", JSON.stringify(kitsMap, null, 2));
+console.log("📦 RESPONSE KITS:", Object.keys(kitsMap).length, "kits encontrados");
+
+    // 🆕 2. Recolectar SKUs únicos de productos normales
     const skusUnicos = new Set();
     for (const order of enrichedOrders) {
       for (const item of order.items) {
         if (item.sku) {
           skusUnicos.add(item.sku);
-          const kitInfo = kits[item.sku];
-          if (kitInfo) {
-            const componentes = Array.isArray(kitInfo.sku)
-              ? kitInfo.sku
-              : [kitInfo.sku];
-            componentes.forEach(c => skusUnicos.add(c));
-          }
-
         }
       }
     }
 
-    // Hacer UNA SOLA query para obtener todos los códigos de barras
+    // 🆕 3. Query para CBs de productos normales
     const skusArray = Array.from(skusUnicos);
     let mapaCodigosBarras = {};
 
@@ -357,24 +370,26 @@ const getVentas = async (req, res) => {
         `SELECT sku, codigoBarras FROM productos WHERE sku IN (${placeholders})`,
         skusArray
       );
-
-      // Crear mapa SKU -> codigoBarras
       for (const prod of productos) {
         mapaCodigosBarras[prod.sku] = prod.codigoBarras;
       }
     }
 
-    // Asignar codigoBarras a cada item
+    // 🆕 4. Asignar CBs a cada item
     for (const order of enrichedOrders) {
       for (const item of order.items) {
         item.codigoBarras = mapaCodigosBarras[item.sku] || null;
-        const kitInfo = kits[item.sku];
+        
+        const kitInfo = kitsMap[item.sku];
         if (kitInfo) {
-          const componentes = Array.isArray(kitInfo.sku)
-            ? kitInfo.sku
-            : [kitInfo.sku];
-
-          item.codigosBarrasComponentes = componentes.map(c => mapaCodigosBarras[c] || null);
+          // Aplanar CBs según cantidad
+          const codigosAplanados = [];
+          for (const comp of kitInfo.componentes) {
+            for (let i = 0; i < comp.cantidad; i++) {
+              codigosAplanados.push(comp.codigoBarras);
+            }
+          }
+          item.codigosBarrasComponentes = codigosAplanados;
         } else {
           item.codigosBarrasComponentes = [];
         }
@@ -385,6 +400,7 @@ const getVentas = async (req, res) => {
       message: `Órdenes de los últimos ${dias} días para la cuenta ${cuenta}`,
       success: true,
       data: enrichedOrders,
+      kits: kitsMap, // 🆕 Enviar kits al frontend
     });
   } catch (error) {
     console.error("🔥 ERROR EN GETVENTAS:");

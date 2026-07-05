@@ -2,68 +2,272 @@ import { conn } from "../bd/bd.js";
 
 export const kitsController = {
   postGuardarKit: async (req, res) => {
-    const { idKit, skusCartuchos } = req.body;
+    const { skuKit, componentes } = req.body;
 
-    // ✅ Validaciones
-    if (!idKit || typeof idKit !== 'number') {
-      return res.status(400).json({ error: "El id del kit es obligatorio y debe ser un número" });
+    if (!skuKit || typeof skuKit !== 'string' || skuKit.trim() === '') {
+      return res.status(400).json({ error: "El SKU del kit es obligatorio" });
     }
 
-    if (!Array.isArray(skusCartuchos) || skusCartuchos.length === 0) {
-      return res.status(400).json({ error: "Debe proporcionar al menos un cartucho (ID)" });
+    if (!Array.isArray(componentes) || componentes.length === 0) {
+      return res.status(400).json({ error: "Debe proporcionar al menos un componente" });
     }
 
-    // ✅ Validar que sean números
-    if (!skusCartuchos.every(id => typeof id === 'number')) {
-      return res.status(400).json({ error: "Todos los IDs de cartuchos deben ser números" });
+    // Validar estructura de cada componente
+    for (const comp of componentes) {
+      if (typeof comp.idSku !== 'number') {
+        return res.status(400).json({ error: "Cada componente debe tener idSku (número)" });
+      }
+      if (typeof comp.cantidad !== 'number' || comp.cantidad < 1) {
+        return res.status(400).json({ error: "Cada componente debe tener cantidad >= 1" });
+      }
     }
 
-    // ✅ Limitar a 4 cartuchos
-    if (skusCartuchos.length > 4) {
-      return res.status(400).json({ error: "Solo se permiten hasta 4 cartuchos por kit" });
+    const idsUnicos = [...new Set(componentes.map(c => c.idSku))];
+    if (idsUnicos.length !== componentes.length) {
+      return res.status(400).json({ error: "No se permiten componentes duplicados" });
     }
-
-    // ✅ Opcional: evitar duplicados
-    const idsUnicos = [...new Set(skusCartuchos)];
-    if (idsUnicos.length !== skusCartuchos.length) {
-      return res.status(400).json({ error: "No se permiten cartuchos duplicados" });
-    }
-
-    // ✅ Opcional: evitar que el kit esté en los cartuchos
-    if (idsUnicos.includes(idKit)) {
-      return res.status(400).json({ error: "El kit no puede contenerse a sí mismo como cartucho" });
-    }
-
-    // ✅ Preparar los valores para la inserción
-    const values = {
-      idSkuKit: idKit,
-      idSku1: idsUnicos[0] || null,  // Si hay menos de 4, rellena con NULL
-      idSku2: idsUnicos[1] || null,
-      idSku3: idsUnicos[2] || null,
-      idSku4: idsUnicos[3] || null,
-    };
 
     try {
-      // ✅ Insertar en la tabla `kits`
-      const [result] = await conn.query(
-        'INSERT INTO kits (idSkuKit, idSku1, idSku2, idSku3, idSku4) VALUES (?, ?, ?, ?, ?)',
-        [
-          values.idSkuKit,
-          values.idSku1,
-          values.idSku2,
-          values.idSku3,
-          values.idSku4
-        ]
+      const [kitExistente] = await conn.query(
+        'SELECT id FROM kits WHERE skuKit = ?',
+        [skuKit.trim()]
       );
+
+      if (kitExistente.length > 0) {
+        return res.status(400).json({ error: "Este kit ya existe. Use la opción de actualizar." });
+      }
+
+      const [resultKit] = await conn.query(
+        'INSERT INTO kits (skuKit) VALUES (?)',
+        [skuKit.trim()]
+      );
+
+      const idKitInsertado = resultKit.insertId;
+
+      if (componentes.length > 0) {
+        const valoresComponentes = componentes.map((comp, index) => [
+          idKitInsertado,
+          comp.idSku,
+          comp.cantidad,
+          index + 1
+        ]);
+
+        await conn.query(
+          'INSERT INTO kits_componentes (idKit, idSku, cantidad, orden) VALUES ?',
+          [valoresComponentes]
+        );
+      }
 
       res.status(201).json({
         message: "Kit guardado exitosamente",
-        id: result.insertId, // si usas AUTO_INCREMENT
-        ...values
+        id: idKitInsertado,
+        skuKit: skuKit.trim(),
+        componentes
       });
 
     } catch (error) {
       console.error("Error al guardar el kit:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  },
+
+  putActualizarKit: async (req, res) => {
+    const { idKit, skuKit, componentes } = req.body;
+
+    if (!idKit || typeof idKit !== 'number') {
+      return res.status(400).json({ error: "El id del kit es obligatorio" });
+    }
+
+    if (!skuKit || typeof skuKit !== 'string' || skuKit.trim() === '') {
+      return res.status(400).json({ error: "El SKU del kit es obligatorio" });
+    }
+
+    if (!Array.isArray(componentes) || componentes.length === 0) {
+      return res.status(400).json({ error: "Debe proporcionar al menos un componente" });
+    }
+
+    for (const comp of componentes) {
+      if (typeof comp.idSku !== 'number') {
+        return res.status(400).json({ error: "Cada componente debe tener idSku (número)" });
+      }
+      if (typeof comp.cantidad !== 'number' || comp.cantidad < 1) {
+        return res.status(400).json({ error: "Cada componente debe tener cantidad >= 1" });
+      }
+    }
+
+    const idsUnicos = [...new Set(componentes.map(c => c.idSku))];
+    if (idsUnicos.length !== componentes.length) {
+      return res.status(400).json({ error: "No se permiten componentes duplicados" });
+    }
+
+    try {
+      const [kitExistente] = await conn.query(
+        'SELECT id FROM kits WHERE id = ?',
+        [idKit]
+      );
+
+      if (kitExistente.length === 0) {
+        return res.status(404).json({ error: "El kit no existe" });
+      }
+
+      await conn.query(
+        'UPDATE kits SET skuKit = ? WHERE id = ?',
+        [skuKit.trim(), idKit]
+      );
+
+      await conn.query(
+        'DELETE FROM kits_componentes WHERE idKit = ?',
+        [idKit]
+      );
+
+      if (componentes.length > 0) {
+        const valoresComponentes = componentes.map((comp, index) => [
+          idKit,
+          comp.idSku,
+          comp.cantidad,
+          index + 1
+        ]);
+
+        await conn.query(
+          'INSERT INTO kits_componentes (idKit, idSku, cantidad, orden) VALUES ?',
+          [valoresComponentes]
+        );
+      }
+
+      res.status(200).json({
+        message: "Kit actualizado exitosamente",
+        idKit,
+        skuKit: skuKit.trim(),
+        componentes
+      });
+
+    } catch (error) {
+      console.error("Error al actualizar el kit:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  },
+
+  getListarKits: async (req, res) => {
+    try {
+      const [kits] = await conn.query(`
+        SELECT 
+          k.id,
+          k.skuKit,
+          GROUP_CONCAT(CONCAT(p.sku, ' x', kc.cantidad) ORDER BY kc.orden SEPARATOR ', ') AS cartuchos
+        FROM kits k
+        LEFT JOIN kits_componentes kc ON k.id = kc.idKit
+        LEFT JOIN productos p ON kc.idSku = p.id
+        GROUP BY k.id, k.skuKit
+        ORDER BY k.id DESC
+      `);
+
+      res.status(200).json(kits);
+
+    } catch (error) {
+      console.error("Error al listar kits:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  },
+
+  getObtenerKit: async (req, res) => {
+    const { idKit } = req.params;
+
+    if (!idKit || isNaN(parseInt(idKit))) {
+      return res.status(400).json({ error: "El id del kit es obligatorio" });
+    }
+
+    try {
+      const [kits] = await conn.query(
+        'SELECT id, skuKit FROM kits WHERE id = ?',
+        [idKit]
+      );
+
+      if (kits.length === 0) {
+        return res.status(404).json({ error: "Kit no encontrado" });
+      }
+
+      const [componentes] = await conn.query(`
+        SELECT 
+          kc.idSku,
+          kc.cantidad,
+          p.sku AS skuCartucho,
+          kc.orden
+        FROM kits_componentes kc
+        LEFT JOIN productos p ON kc.idSku = p.id
+        WHERE kc.idKit = ?
+        ORDER BY kc.orden
+      `, [idKit]);
+
+      res.status(200).json({
+        ...kits[0],
+        componentes
+      });
+
+    } catch (error) {
+      console.error("Error al obtener el kit:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  },
+
+  deleteEliminarKit: async (req, res) => {
+    const { idKit } = req.params;
+
+    if (!idKit || isNaN(parseInt(idKit))) {
+      return res.status(400).json({ error: "El id del kit es obligatorio" });
+    }
+
+    try {
+      const [kitExistente] = await conn.query(
+        'SELECT id FROM kits WHERE id = ?',
+        [idKit]
+      );
+
+      if (kitExistente.length === 0) {
+        return res.status(404).json({ error: "Kit no encontrado" });
+      }
+
+      const [result] = await conn.query(
+        'DELETE FROM kits WHERE id = ?',
+        [idKit]
+      );
+
+      if (result.affectedRows > 0) {
+        res.status(200).json({ message: "Kit eliminado correctamente" });
+      } else {
+        res.status(500).json({ error: "No se pudo eliminar el kit" });
+      }
+    } catch (error) {
+      console.error("Error al eliminar el kit:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  },
+
+  getBuscarKits: async (req, res) => {
+    const { query } = req.query;
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: "El parámetro 'query' es obligatorio" });
+    }
+
+    try {
+      const [kits] = await conn.query(`
+        SELECT 
+          k.id,
+          k.skuKit,
+          GROUP_CONCAT(CONCAT(p.sku, ' x', kc.cantidad) ORDER BY kc.orden SEPARATOR ', ') AS cartuchos
+        FROM kits k
+        LEFT JOIN kits_componentes kc ON k.id = kc.idKit
+        LEFT JOIN productos p ON kc.idSku = p.id
+        WHERE k.skuKit LIKE ?
+        GROUP BY k.id, k.skuKit
+        ORDER BY k.skuKit ASC
+        LIMIT 20
+      `, [`%${query}%`]);
+
+      res.status(200).json(kits);
+
+    } catch (error) {
+      console.error("Error al buscar kits:", error);
       res.status(500).json({ error: "Error interno del servidor" });
     }
   }

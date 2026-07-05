@@ -56,6 +56,7 @@ export const NavBar: React.FC = () => {
     { label: 'Cargar Usuario', value: '/cargarUsuario' },
     { label: 'Cargar cliente', value: '/cargarCliente' },
     { label: 'Actualizar clientes', value: '/actualizarCliente' },
+    { label: 'Actualizar Kits', value: '/actualizarKits' },
     { label: 'Cargar marca', value: '/cargarMarcas' },
     { label: 'Actualizar marca', value: '/actualizarMarca' },
     { label: 'Cargar Productos', value: '/cargarProductos' },

@@ -1,26 +1,27 @@
-// ListarProductos.tsx
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { FlechasNavigator } from './FlechasNavigator';
 import Loader from './Loader';
 
-interface ListarProductosProps {
+interface ListarKitsProps {
   endpoint: string;
-  onProductoSeleccionado: (producto: any) => void;
+  onKitSeleccionado: (kit: any) => void;
   campos: string[];
   inputRef?: React.RefObject<HTMLInputElement>;
   limpiarQuery?: () => void;
   value?: string;
   onClose?: () => void;
+  onChange?: (value: string) => void;
 }
 
-export const ListarProductos: React.FC<ListarProductosProps> = ({
+export const ListarKits: React.FC<ListarKitsProps> = ({
   endpoint,
-  onProductoSeleccionado,
+  onKitSeleccionado,
   campos,
   inputRef,
   limpiarQuery,
   value = '',
   onClose,
+  onChange,
 }) => {
   const [query, setQuery] = useState<string>(value);
   const [resultados, setResultados] = useState<any[]>([]);
@@ -55,6 +56,11 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
     const value = e.target.value;
     setQuery(value);
 
+    // Llamar al onChange del padre si existe
+    if (onChange) {
+      onChange(value);
+    }
+
     // Limpiar el timeout anterior si existe
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -68,47 +74,51 @@ export const ListarProductos: React.FC<ListarProductosProps> = ({
           setLoading(true);
           const response = await fetch(`${endpoint}?query=${value}`);
           const data = await response.json();
-          setResultados(data.filter((producto: any) => producto.sku.toLowerCase().includes(value.toLowerCase())));
+          setResultados(data);
         } catch (error) {
-          console.error('Error buscando productos:', error);
+          console.error('Error buscando kits:', error);
         } finally {
           setLoading(false);
         }
-      }, 1000); // 500 ms de retraso
+      }, 500); // 500 ms de retraso (más rápido que productos)
     } else {
       setResultados([]);
       setLoading(false);
     }
   };
 
-  const handleProductoSeleccionado = (producto: any) => {
-    if (producto) {
-      onProductoSeleccionado(producto);
+  const handleKitSeleccionado = (kit: any) => {
+    if (kit) {
+      onKitSeleccionado(kit);
       setResultados([]);
-      setQuery(producto.sku);
+      setQuery(kit.skuKit);
+      
+      // Llamar al onChange del padre con el valor seleccionado
+      if (onChange) {
+        onChange(kit.skuKit);
+      }
+      
       if (localInputRef.current && localInputRef.current.nextElementSibling) {
         (localInputRef.current.nextElementSibling as HTMLElement).focus();
       }
     }
   };
 
-
   return (
     <div ref={containerRef}>
       <input
-        id="skuInput"
         autoComplete='off'
         type="text"
         ref={localInputRef}
         value={query}
         onChange={handleInputChange}
-        placeholder="Buscar SKU"
+        placeholder="Buscar kit..."
         className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
       />
       {loading ? <Loader /> : (
         <FlechasNavigator
           resultados={resultados}
-          onSeleccionado={handleProductoSeleccionado}
+          onSeleccionado={handleKitSeleccionado}
           campos={campos}
         />
       )}
