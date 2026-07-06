@@ -169,6 +169,7 @@ export const kitsController = {
     }
   },
 
+  // ✅ CORREGIDO: Ahora incluye codigoBarras
   getObtenerKit: async (req, res) => {
     const { idKit } = req.params;
 
@@ -186,11 +187,13 @@ export const kitsController = {
         return res.status(404).json({ error: "Kit no encontrado" });
       }
 
+      // ✅ AGREGADO: p.codigoBarras
       const [componentes] = await conn.query(`
         SELECT 
           kc.idSku,
           kc.cantidad,
           p.sku AS skuCartucho,
+          p.codigoBarras,
           kc.orden
         FROM kits_componentes kc
         LEFT JOIN productos p ON kc.idSku = p.id

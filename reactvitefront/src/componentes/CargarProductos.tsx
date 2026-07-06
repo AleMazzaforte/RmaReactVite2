@@ -18,13 +18,19 @@ export const CargarProductos: React.FC = () => {
   const enviarFormulario = async () => {
     if (formRef.current) {
       const formData = new FormData(formRef.current);
+      
+      // 🆕 Normalizar código de barras: string limpio o null si está vacío
+      const cbRaw = (formData.get("codigoBarras") as string || "").trim();
+      const codigoBarras = cbRaw === "" ? null : cbRaw;
+
       const data = {
         sku: formData.get("sku") as string,
         marca: marcaSeleccionada ? marcaSeleccionada.nombre : "",
         descripcion: formData.get("descripcion") as string,
         rubro: formData.get("rubro") as string,
-        codigoBarras: formData.get("codigoBarras") as string,
-        peso: formData.get("pesoKgr") ? Number(formData.get("peso")) : null,
+        codigoBarras: codigoBarras, // ✅ string o null
+        // ✅ Corregido: la clave debe ser "pesoKgr" para que coincida con el backend
+        pesoKgr: formData.get("peso") ? Number(formData.get("peso")) : null,
         alto: formData.get("alto") ? Number(formData.get("alto")) : null,
         ancho: formData.get("ancho") ? Number(formData.get("ancho")) : null,
         largo: formData.get("largo") ? Number(formData.get("largo")) : null,
@@ -120,6 +126,7 @@ export const CargarProductos: React.FC = () => {
             />
           </div>
 
+          {/* 🆕 Código de barras mejorado */}
           <div>
             <label
               htmlFor="codigoBarras"
@@ -131,7 +138,11 @@ export const CargarProductos: React.FC = () => {
               name="codigoBarras"
               type="text"
               id="codigoBarras"
-              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={50}
+              placeholder="(solo números)"
+              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none font-mono tracking-wider"
             />
           </div>
 
@@ -179,7 +190,7 @@ export const CargarProductos: React.FC = () => {
             />
           </div>
 
-          {/* 🆕 Dimensiones y peso en grilla */}
+          {/* Dimensiones y peso en grilla */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Dimensiones y peso:

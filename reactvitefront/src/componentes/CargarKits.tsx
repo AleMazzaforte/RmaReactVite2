@@ -5,15 +5,19 @@ import Urls from "./utilidades/Urls";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Loader from "./utilidades/Loader";
 
+// ✅ Actualizado para incluir codigoBarras como string | null
 interface Producto {
   id: number;
   sku: string;
+  codigoBarras?: string | null;
 }
 
+// ✅ Actualizado para incluir codigoBarras
 interface Componente {
   idSku: number;
   sku: string;
   cantidad: number;
+  codigoBarras?: string | null;
 }
 
 const urlProductos = Urls.productos.listar;
@@ -22,7 +26,7 @@ const urlGuardarKit = Urls.kits.guardarKit;
 export const CargarKits: React.FC = () => {
   const [skuKit, setSkuKit] = useState("");
   const [componentes, setComponentes] = useState<Componente[]>([
-    { idSku: 0, sku: "", cantidad: 1 }
+    { idSku: 0, sku: "", cantidad: 1, codigoBarras: null }
   ]);
   const [loading, setLoading] = useState(false);
 
@@ -38,12 +42,14 @@ export const CargarKits: React.FC = () => {
     }
   }, []);
 
+  // ✅ Actualizado para guardar codigoBarras
   const handleProductoSeleccionado = (index: number) => (producto: Producto) => {
     const nuevosComponentes = [...componentes];
     nuevosComponentes[index] = {
       idSku: producto.id,
       sku: producto.sku,
-      cantidad: nuevosComponentes[index].cantidad
+      cantidad: nuevosComponentes[index].cantidad,
+      codigoBarras: producto.codigoBarras || null // ✅ Guardar CB como string o null
     };
     setComponentes(nuevosComponentes);
   };
@@ -58,7 +64,7 @@ export const CargarKits: React.FC = () => {
   };
 
   const agregarComponente = () => {
-    setComponentes([...componentes, { idSku: 0, sku: "", cantidad: 1 }]);
+    setComponentes([...componentes, { idSku: 0, sku: "", cantidad: 1, codigoBarras: null }]);
   };
 
   const eliminarComponente = (index: number) => {
@@ -76,7 +82,7 @@ export const CargarKits: React.FC = () => {
 
   const limpiarFormulario = () => {
     setSkuKit("");
-    setComponentes([{ idSku: 0, sku: "", cantidad: 1 }]);
+    setComponentes([{ idSku: 0, sku: "", cantidad: 1, codigoBarras: null }]);
     if (skuKitInputRef.current) {
       skuKitInputRef.current.value = "";
       skuKitInputRef.current.focus();
@@ -103,11 +109,13 @@ export const CargarKits: React.FC = () => {
       return;
     }
 
+    // ✅ Actualizado para enviar codigoBarras
     const datos = {
       skuKit: skuKit.trim(),
       componentes: componentesValidos.map((c) => ({
         idSku: c.idSku,
-        cantidad: c.cantidad
+        cantidad: c.cantidad,
+        codigoBarras: c.codigoBarras || null // ✅ Enviar CB como string o null
       }))
     };
 

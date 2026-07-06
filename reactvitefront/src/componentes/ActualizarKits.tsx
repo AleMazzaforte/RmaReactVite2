@@ -6,9 +6,11 @@ import Urls from "./utilidades/Urls";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Loader from "./utilidades/Loader";
 
+// ✅ Actualizado para incluir codigoBarras
 interface Producto {
   id: number;
   sku: string;
+  codigoBarras?: string | null;
 }
 
 interface Kit {
@@ -16,12 +18,15 @@ interface Kit {
   skuKit: string;
 }
 
+// ✅ Actualizado para incluir codigoBarras
 interface Componente {
   idSku: number;
   sku: string;
   cantidad: number;
+  codigoBarras?: string | null;
 }
 
+// ✅ Actualizado para incluir codigoBarras en los componentes
 interface KitDetalle {
   id: number;
   skuKit: string;
@@ -30,6 +35,7 @@ interface KitDetalle {
     skuCartucho: string;
     cantidad: number;
     orden: number;
+    codigoBarras?: string | null;
   }>;
 }
 
@@ -66,12 +72,14 @@ export const ActualizarKits: React.FC = () => {
     setSkuKit(value);
   };
 
+  // ✅ Actualizado para guardar codigoBarras
   const handleProductoSeleccionado = (index: number) => (producto: Producto) => {
     const nuevosComponentes = [...componentes];
     nuevosComponentes[index] = {
       idSku: producto.id,
       sku: producto.sku,
-      cantidad: nuevosComponentes[index].cantidad
+      cantidad: nuevosComponentes[index].cantidad,
+      codigoBarras: producto.codigoBarras || null // ✅ Guardar CB
     };
     setComponentes(nuevosComponentes);
   };
@@ -85,6 +93,7 @@ export const ActualizarKits: React.FC = () => {
     setComponentes(nuevosComponentes);
   };
 
+  // ✅ Actualizado para mapear codigoBarras
   const handleSeleccionarKitExistente = async (kit: Kit) => {
     try {
       const response = await fetch(urlObtenerKit(kit.id));
@@ -96,7 +105,8 @@ export const ActualizarKits: React.FC = () => {
         const nuevosComponentes: Componente[] = detalle.componentes.map(comp => ({
           idSku: comp.idSku,
           sku: comp.skuCartucho,
-          cantidad: comp.cantidad
+          cantidad: comp.cantidad,
+          codigoBarras: comp.codigoBarras || null // ✅ Mapear CB
         }));
 
         setComponentes(nuevosComponentes);
@@ -111,8 +121,9 @@ export const ActualizarKits: React.FC = () => {
     }
   };
 
+  // ✅ Actualizado para incluir codigoBarras
   const agregarComponente = () => {
-    setComponentes([...componentes, { idSku: 0, sku: "", cantidad: 1 }]);
+    setComponentes([...componentes, { idSku: 0, sku: "", cantidad: 1, codigoBarras: null }]);
   };
 
   const eliminarComponente = (index: number) => {
@@ -130,6 +141,7 @@ export const ActualizarKits: React.FC = () => {
     }
   };
 
+  // ✅ Actualizado para enviar codigoBarras
   const enviarFormulario = async () => {
     if (!kitSeleccionado) {
       sweetAlert.fire({
@@ -164,7 +176,8 @@ export const ActualizarKits: React.FC = () => {
       skuKit: skuKit.trim(),
       componentes: componentesValidos.map((c) => ({
         idSku: c.idSku,
-        cantidad: c.cantidad
+        cantidad: c.cantidad,
+        codigoBarras: c.codigoBarras || null // ✅ Enviar CB
       }))
     };
 

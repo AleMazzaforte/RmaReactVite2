@@ -138,8 +138,16 @@ const extraerIdsDeEtiqueta = (contenido: string): string[] => {
   return [...new Set(ids)];
 };
 
+// ─── Helper para normalizar códigos de barras ─────────────────────────────
+const normalizarCodigoBarras = (cb: string | number | null | undefined): string | null => {
+  if (cb === null || cb === undefined || cb === "" || cb === 0 || cb === "0") {
+    return null;
+  }
+  return String(cb).trim();
+};
+
 // ─── 🆕 Helpers de Scanner ─────────────────────────────────────────────────
-// Función helper fuera del componente
+
 const expandirOrdenParaVerificacion = (
   orden: Order, 
   kitsMap: Record<string, KitInfo> // 🆕 Agregar parámetro
@@ -245,21 +253,22 @@ const contarEscaneados = (
   scansPorOrden: Record<string, string[]>
 ): number => {
   const scans = scansPorOrden[numeroOperacion] || [];
-  return scans.filter((s) => s === codigoBarras).length;
+  const cbNormalizado = normalizarCodigoBarras(codigoBarras);
+  return scans.filter((s) => normalizarCodigoBarras(s) === cbNormalizado).length;
 };
 
 const getProgresoOrden = (
   orden: Order,
   scansPorOrden: Record<string, string[]>,
-  kitsMap?: Record<string, KitInfo> // 🆕 Agregar parámetro opcional
+  kitsMap?: Record<string, KitInfo>
 ): { total: number; verificados: number; items: (OrderItem & { verificados: number })[] } => {
-  // 🆕 Expandir orden si se pasa kitsMap
   const ordenProcesada = kitsMap ? expandirOrdenIndividual(orden, kitsMap) : orden;
   const scans = scansPorOrden[ordenProcesada.numeroOperacion] || [];
 
   const itemsConProgreso = ordenProcesada.items.map((item) => {
-    const verificados = item.codigoBarras
-      ? scans.filter((s) => s === item.codigoBarras).length
+    const cbItem = normalizarCodigoBarras(item.codigoBarras);
+    const verificados = cbItem
+      ? scans.filter((s) => normalizarCodigoBarras(s) === cbItem).length
       : 0;
     return {
       ...item,
@@ -622,90 +631,96 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
     setInputScan("");
   };
 
-  const handleScanKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
+ const handleScanKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
 
-    const codigo = inputScan.trim();
-    if (!codigo || !ordenActiva) return;
+  const codigo = inputScan.trim();
+  if (!codigo || !ordenActiva) return;
 
-    // Expandir la orden para verificación (incluye componentes de kits)
-    const itemsVerificacion = expandirOrdenParaVerificacion(ordenActiva, kitsMap);
+  // Expandir la orden para verificación (incluye componentes de kits)
+  const itemsVerificacion = expandirOrdenParaVerificacion(ordenActiva, kitsMap);
 
-    // 1️ Buscar coincidencia exacta de código de barras
-    const itemMatch = itemsVerificacion.find((item) => item.codigoBarras === codigo);
+  // 🆕 Normalizar el código escaneado
+  const codigoNormalizado = normalizarCodigoBarras(codigo);
 
-    if (!itemMatch) {
-      // 2️ Si no hay coincidencia exacta, verificar si el código escaneado es el SKU de un producto sin CB
-      const itemSinCB = itemsVerificacion.find(
-        (item) => item.sku === codigo && !item.codigoBarras
-      );
+  // 1️ Buscar coincidencia exacta de código de barras
+  const itemMatch = itemsVerificacion.find((item) => {
+    const cbItem = normalizarCodigoBarras(item.codigoBarras);
+    return cbItem && cbItem === codigoNormalizado;
+  });
 
-      if (itemSinCB) {
-        sweetAlert.fire({
-          title: "⚠️ Producto sin Código de Barras",
-          html: `El producto <strong>"${itemSinCB.sku}"</strong> está en la orden, pero no tiene código de barras registrado en el sistema.<br/><br/>Registrá el CB en la base de datos para poder escanearlo.`,
-          icon: "warning",
-          confirmButtonText: "Entendido"
-        });
-        setInputScan("");
-        return;
-      }
+  if (!itemMatch) {
+    // 2️ Si no hay coincidencia exacta, verificar si el código escaneado es el SKU de un producto sin CB
+    const itemSinCB = itemsVerificacion.find(
+      (item) => item.sku === codigo && !normalizarCodigoBarras(item.codigoBarras)
+    );
 
-      // 3️⃣ Verificar si hay ALGÚN producto en la orden sin CB (mensaje contextual)
-      const hayProductosSinCB = itemsVerificacion.some((item) => !item.codigoBarras);
-
-      if (hayProductosSinCB) {
-        sweetAlert.fire({
-          title: "❌ Código no reconocido",
-          html: `Este código no corresponde a ningún producto registrado de esta orden.<br/><br/>⚠️ <strong>Atención:</strong> Hay productos en esta orden sin código de barras. Verificá que estés escaneando el producto correcto o registrá los CB faltantes.`,
-          icon: "error",
-          confirmButtonText: "OK"
-        });
-      } else {
-        sweetAlert.error("❌ Este código de barras no corresponde a ningún producto de esta orden.");
-      }
-
+    if (itemSinCB) {
+      sweetAlert.fire({
+        title: "⚠️ Producto sin Código de Barras",
+        html: `El producto <strong>"${itemSinCB.sku}"</strong> está en la orden, pero no tiene código de barras registrado en el sistema.<br/><br/>Registrá el CB en la base de datos para poder escanearlo.`,
+        icon: "warning",
+        confirmButtonText: "Entendido"
+      });
       setInputScan("");
       return;
     }
 
-    // ✅ Código válido: Verificar si ya se escanearon todas las unidades de este componente
-    const yaEscaneados = contarEscaneados(codigo, ordenActiva.numeroOperacion, scansPorOrden);
+    // 3️⃣ Verificar si hay ALGÚN producto en la orden sin CB (mensaje contextual)
+    const hayProductosSinCB = itemsVerificacion.some((item) => !normalizarCodigoBarras(item.codigoBarras));
 
-    if (yaEscaneados >= itemMatch.quantity) {
-      sweetAlert.warning(
-        `⚠️ Ya escaneaste las ${itemMatch.quantity} unidad(es) de "${itemMatch.sku}".`
-      );
-      setInputScan("");
-      return;
+    if (hayProductosSinCB) {
+      sweetAlert.fire({
+        title: "❌ Código no reconocido",
+        html: `Este código no corresponde a ningún producto registrado de esta orden.<br/><br/>⚠️ <strong>Atención:</strong> Hay productos en esta orden sin código de barras. Verificá que estés escaneando el producto correcto o registrá los CB faltantes.`,
+        icon: "error",
+        confirmButtonText: "OK"
+      });
+    } else {
+      sweetAlert.error("❌ Este código de barras no corresponde a ningún producto de esta orden.");
     }
-
-    // ✅ Código válido y faltan unidades: agregar al array de scans
-    setScansPorOrden((prev) => ({
-      ...prev,
-      [ordenActiva.numeroOperacion]: [
-        ...(prev[ordenActiva.numeroOperacion] || []),
-        codigo,
-      ],
-    }));
 
     setInputScan("");
+    return;
+  }
 
-    // Verificar si la orden quedó completa después de este scan
-    const nuevoProgreso = getProgresoOrden(ordenActiva, {
-      ...scansPorOrden,
-      [ordenActiva.numeroOperacion]: [
-        ...(scansPorOrden[ordenActiva.numeroOperacion] || []),
-        codigo,
-      ],
-    });
+  // ✅ Código válido: Verificar si ya se escanearon todas las unidades de este componente
+  const yaEscaneados = contarEscaneados(codigo, ordenActiva.numeroOperacion, scansPorOrden);
 
-    if (nuevoProgreso.verificados === nuevoProgreso.total) {
-      sweetAlert.success(`✅ Orden #${ordenActiva.numeroOperacion} verificada completamente.`);
-      setOrdenEnScan(null);
-    }
-  };
+  if (yaEscaneados >= itemMatch.quantity) {
+    sweetAlert.warning(
+      `⚠️ Ya escaneaste las ${itemMatch.quantity} unidad(es) de "${itemMatch.sku}".`
+    );
+    setInputScan("");
+    return;
+  }
+
+  // ✅ Código válido y faltan unidades: agregar al array de scans
+  setScansPorOrden((prev) => ({
+    ...prev,
+    [ordenActiva.numeroOperacion]: [
+      ...(prev[ordenActiva.numeroOperacion] || []),
+      codigo,
+    ],
+  }));
+
+  setInputScan("");
+
+  // Verificar si la orden quedó completa después de este scan
+  const nuevoProgreso = getProgresoOrden(ordenActiva, {
+    ...scansPorOrden,
+    [ordenActiva.numeroOperacion]: [
+      ...(scansPorOrden[ordenActiva.numeroOperacion] || []),
+      codigo,
+    ],
+  });
+
+  if (nuevoProgreso.verificados === nuevoProgreso.total) {
+    sweetAlert.success(`✅ Orden #${ordenActiva.numeroOperacion} verificada completamente.`);
+    setOrdenEnScan(null);
+  }
+};
 
   const handleDeshacerUltimoScan = () => {
     if (!ordenEnScan) return;
@@ -1327,11 +1342,11 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
                       <div>
                         <p className="font-bold text-gray-800">{item.sku}</p>
                         <p className="text-sm text-gray-500">{item.description}</p>
-                        {item.codigoBarras && (
-                          <p className="text-xs text-gray-400 font-mono mt-1">
-                            CB: {item.codigoBarras}
-                          </p>
-                        )}
+                        {item.codigoBarras && normalizarCodigoBarras(item.codigoBarras) && (
+  <p className="text-xs text-gray-400 font-mono mt-1">
+    CB: {normalizarCodigoBarras(item.codigoBarras)}
+  </p>
+)}
                       </div>
                       <span
                         className={`text-sm font-bold px-2 py-1 rounded ${completo
@@ -1357,20 +1372,21 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
               })}
 
               {/* Items sin código de barras */}
-              {ordenActiva.items.some((i) => !i.codigoBarras) && (
-                <div className="p-3 bg-orange-50 border border-orange-300 rounded-lg">
-                  <p className="text-sm text-orange-700 font-medium">
-                    ⚠️ Los siguientes productos no tienen código de barras registrado:
-                  </p>
-                  <ul className="text-sm text-orange-600 mt-1 list-disc list-inside">
-                    {ordenActiva.items
-                      .filter((i) => !i.codigoBarras)
-                      .map((i, idx) => (
-                        <li key={idx}>{i.sku} ({i.quantity} un.)</li>
-                      ))}
-                  </ul>
-                </div>
-              )}
+              {/* Items sin código de barras */}
+{ordenActiva.items.some((i) => !normalizarCodigoBarras(i.codigoBarras)) && (
+  <div className="p-3 bg-orange-50 border border-orange-300 rounded-lg">
+    <p className="text-sm text-orange-700 font-medium">
+      ⚠️ Los siguientes productos no tienen código de barras registrado:
+    </p>
+    <ul className="text-sm text-orange-600 mt-1 list-disc list-inside">
+      {ordenActiva.items
+        .filter((i) => !normalizarCodigoBarras(i.codigoBarras))
+        .map((i, idx) => (
+          <li key={idx}>{i.sku} ({i.quantity} un.)</li>
+        ))}
+    </ul>
+  </div>
+)}
             </div>
 
             {/* Footer con botones */}

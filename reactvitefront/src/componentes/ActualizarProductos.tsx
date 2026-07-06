@@ -69,13 +69,13 @@ export const ActualizarProductos: React.FC = () => {
       if (descripcionInput) descripcionInput.value = producto.descripcion;
       if (rubroInput) rubroInput.value = producto.rubro;
       
+      // ✅ Normalizar valores: null/undefined → string vacío
       if (codigoBarrasInput) codigoBarrasInput.value = producto.codigoBarras || '';
-      if (pesoKgrInput) pesoKgrInput.value = producto.pesoKgr?.toString() || 'pedo al horno';
+      if (pesoKgrInput) pesoKgrInput.value = producto.pesoKgr?.toString() || '';
       if (altoInput) altoInput.value = producto.alto?.toString() || '';
       if (anchoInput) anchoInput.value = producto.ancho?.toString() || '';
       if (largoInput) largoInput.value = producto.largo?.toString() || '';
 
-      
       const nuevoEstadoActivo = Boolean(Number(producto.isActive));
       setIsActive(nuevoEstadoActivo);
       
@@ -92,6 +92,11 @@ export const ActualizarProductos: React.FC = () => {
   const actualizarProducto = async () => {
     if (formRef.current && productoSeleccionado) {
       const formData = new FormData(formRef.current);
+      
+      // ✅ Normalizar código de barras
+      const cbRaw = (formData.get("codigoBarras") as string || "").trim();
+      const codigoBarras = cbRaw === "" ? null : cbRaw;
+      
       const data = {
         id: productoSeleccionado.id,
         sku: productoSeleccionado.sku,
@@ -103,7 +108,8 @@ export const ActualizarProductos: React.FC = () => {
           productoSeleccionado.descripcion,
         rubro: (formData.get("rubro") as string) || productoSeleccionado.rubro,
         isActive: isActive,
-        codigoBarras: (formData.get("codigoBarras") as string) || null,
+        codigoBarras: codigoBarras,
+        // ✅ Convertir a número o null
         pesoKgr: formData.get("pesoKgr") ? parseFloat(formData.get("pesoKgr") as string) : null,
         alto: formData.get("alto") ? parseFloat(formData.get("alto") as string) : null,
         ancho: formData.get("ancho") ? parseFloat(formData.get("ancho") as string) : null,
@@ -263,6 +269,7 @@ export const ActualizarProductos: React.FC = () => {
             />
           </div>
 
+          {/* ✅ Código de barras con mejoras de UX */}
           <div>
             <label
               htmlFor="codigoBarras"
@@ -274,7 +281,11 @@ export const ActualizarProductos: React.FC = () => {
               type="text"
               id="codigoBarras"
               name="codigoBarras"
-              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={50}
+              placeholder="(solo números)"
+              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none font-mono tracking-wider"
             />
           </div>
 
@@ -322,7 +333,7 @@ export const ActualizarProductos: React.FC = () => {
             />
           </div>
 
-          {/* 🔄 Dimensiones y peso - grilla 4 columnas como en cargar */}
+          {/* ✅ Dimensiones y peso - grilla 4 columnas */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Dimensiones y peso:
