@@ -146,6 +146,25 @@ const normalizarCodigoBarras = (cb: string | number | null | undefined): string 
   return String(cb).trim();
 };
 
+// ─── Helper para agrupar items por SKU y sumar cantidades ──────────────
+const agruparItemsPorSKU = (items: ItemVerificacion[]): ItemVerificacion[] => {
+  const mapaAgrupado = new Map<string, ItemVerificacion>();
+
+  for (const item of items) {
+    const existente = mapaAgrupado.get(item.sku);
+    
+    if (existente) {
+      // Sumar cantidad al item existente
+      existente.quantity += item.quantity;
+    } else {
+      // Agregar nuevo item
+      mapaAgrupado.set(item.sku, { ...item });
+    }
+  }
+
+  return Array.from(mapaAgrupado.values());
+};
+
 // ─── 🆕 Helpers de Scanner ─────────────────────────────────────────────────
 
 const expandirOrdenParaVerificacion = (
@@ -190,7 +209,8 @@ const expandirOrdenParaVerificacion = (
     }
   }
 
-  return itemsVerificacion;
+  // 🆕 Agrupar items por SKU y sumar cantidades
+  return agruparItemsPorSKU(itemsVerificacion);
 };
 
 const expandirKitsEnOrdenes = (
@@ -248,7 +268,26 @@ const expandirOrdenIndividual = (
     }
   }
 
-  return { ...orden, items: itemsExpandidos };
+  // 🆕 Agrupar items por SKU y sumar cantidades
+  const itemsAgrupados = agruparItemsPorSKU(
+    itemsExpandidos.map((item) => ({
+      sku: item.sku,
+      codigoBarras: item.codigoBarras,
+      quantity: item.quantity,
+      esComponenteKit: false,
+      descripcion: item.description,
+    }))
+  );
+
+  return {
+    ...orden,
+    items: itemsAgrupados.map((item) => ({
+      sku: item.sku,
+      quantity: item.quantity,
+      description: item.descripcion || '',
+      codigoBarras: item.codigoBarras,
+    })),
+  };
 };
 
 const contarEscaneados = (
@@ -859,32 +898,54 @@ export const MercadoLibre = () => {
 
   // ── Helper local para desglosar Kits ────────────────────────────────────
 
-  const expandirKitsEnOrdenesLocal = (ordenes: Order[], kitsMapLocal: Record<string, KitInfo>): Order[] => {
-    return ordenes.map((orden) => {
-      const itemsExpandidos: OrderItem[] = [];
+const expandirKitsEnOrdenes = (
+  ordenes: Order[],
+  kitsMap: Record<string, KitInfo>
+): Order[] => {
+  return ordenes.map((orden) => {
+    const itemsExpandidos: OrderItem[] = [];
 
-      for (const item of orden.items) {
-        const kitInfo = kitsMapLocal[item.sku];
+    for (const item of orden.items) {
+      const kitInfo = kitsMap[item.sku];
 
-        if (kitInfo) {
-          for (const comp of kitInfo.componentes) {
-            for (let i = 0; i < comp.cantidad; i++) {
-              itemsExpandidos.push({
-                sku: comp.sku,
-                quantity: item.quantity,
-                description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
-                codigoBarras: comp.codigoBarras,
-              });
-            }
+      if (kitInfo) {
+        for (const comp of kitInfo.componentes) {
+          for (let i = 0; i < comp.cantidad; i++) {
+            itemsExpandidos.push({
+              sku: comp.sku,
+              quantity: item.quantity,
+              description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
+              codigoBarras: comp.codigoBarras,
+            });
           }
-        } else {
-          itemsExpandidos.push(item);
         }
+      } else {
+        itemsExpandidos.push(item);
       }
+    }
 
-      return { ...orden, items: itemsExpandidos };
-    });
-  };
+    // 🆕 Agrupar items por SKU y sumar cantidades
+    const itemsAgrupados = agruparItemsPorSKU(
+      itemsExpandidos.map((item) => ({
+        sku: item.sku,
+        codigoBarras: item.codigoBarras,
+        quantity: item.quantity,
+        esComponenteKit: false,
+        descripcion: item.description,
+      }))
+    );
+
+    return {
+      ...orden,
+      items: itemsAgrupados.map((item) => ({
+        sku: item.sku,
+        quantity: item.quantity,
+        description: item.descripcion || '',
+        codigoBarras: item.codigoBarras,
+      })),
+    };
+  });
+};
 
   const handleConsolidadoStock = () => {
     const allOrdersSinFull = allOrders.filter((o) => o.tipo_envio !== "full");
@@ -895,6 +956,52 @@ export const MercadoLibre = () => {
 
     PdfGenerarConsolidado(allOrdersExpandidas, selectedOrders, visiblesExpandidas);
   };
+
+  const expandirKitsEnOrdenesLocal = (ordenes: Order[], kitsMapLocal: Record<string, KitInfo>): Order[] => {
+  return ordenes.map((orden) => {
+    const itemsExpandidos: OrderItem[] = [];
+
+    for (const item of orden.items) {
+      const kitInfo = kitsMapLocal[item.sku];
+
+      if (kitInfo) {
+        for (const comp of kitInfo.componentes) {
+          for (let i = 0; i < comp.cantidad; i++) {
+            itemsExpandidos.push({
+              sku: comp.sku,
+              quantity: item.quantity,
+              description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
+              codigoBarras: comp.codigoBarras,
+            });
+          }
+        }
+      } else {
+        itemsExpandidos.push(item);
+      }
+    }
+
+    // 🆕 Agrupar items por SKU y sumar cantidades
+    const itemsAgrupados = agruparItemsPorSKU(
+      itemsExpandidos.map((item) => ({
+        sku: item.sku,
+        codigoBarras: item.codigoBarras,
+        quantity: item.quantity,
+        esComponenteKit: false,
+        descripcion: item.description,
+      }))
+    );
+
+    return {
+      ...orden,
+      items: itemsAgrupados.map((item) => ({
+        sku: item.sku,
+        quantity: item.quantity,
+        description: item.descripcion || '',
+        codigoBarras: item.codigoBarras,
+      })),
+    };
+  });
+};
 
   // ─── Drag & Drop ─────────────────────────────────────────────────────
 
