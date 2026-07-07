@@ -1,3 +1,4 @@
+// apiController.js
 import { conn } from "../bd/bd.js";
 import axios from "axios";
 import dotenv from "dotenv";
@@ -191,7 +192,6 @@ const getOrderDetails = async (orderId, accessToken) => {
 };
 
 
-
 const getVentas = async (req, res) => {
   try {
     const dias = parseInt(req.query.dias) || 7;
@@ -320,6 +320,7 @@ const getVentas = async (req, res) => {
         k.skuKit,
         kc.idSku,
         p.sku AS skuComponente,
+        p.descripcion AS descripcionComponente,
         p.codigoBarras,
         kc.cantidad,
         kc.orden
@@ -343,12 +344,11 @@ const getVentas = async (req, res) => {
           idSku: row.idSku,
           sku: row.skuComponente,
           cantidad: row.cantidad,
-          codigoBarras: row.codigoBarras
+          codigoBarras: row.codigoBarras,
+          descripcion: row.descripcionComponente || null
         });
       }
     }
-    console.log(" KITS MAP:", JSON.stringify(kitsMap, null, 2));
-console.log("📦 RESPONSE KITS:", Object.keys(kitsMap).length, "kits encontrados");
 
     // 🆕 2. Recolectar SKUs únicos de productos normales
     const skusUnicos = new Set();
@@ -379,7 +379,7 @@ console.log("📦 RESPONSE KITS:", Object.keys(kitsMap).length, "kits encontrado
     for (const order of enrichedOrders) {
       for (const item of order.items) {
         item.codigoBarras = mapaCodigosBarras[item.sku] || null;
-        
+
         const kitInfo = kitsMap[item.sku];
         if (kitInfo) {
           // Aplanar CBs según cantidad
@@ -448,3 +448,4 @@ const saveTokens = async (req, res) => {
 
 const apiController = { getVentas, saveTokens };
 export default apiController;
+

@@ -30,14 +30,13 @@ export interface Order {
   shipping_status?: string;
 }
 
-
-
 interface ItemVerificacion {
   sku: string;
   codigoBarras: string | null;
   quantity: number;
   esComponenteKit: boolean;
   skuKitOriginal?: string;
+  descripcion?: string;
 }
 
 interface KitInfo {
@@ -47,6 +46,7 @@ interface KitInfo {
     sku: string;
     cantidad: number;
     codigoBarras: string | null;
+    descripcion?: string | null;
   }>;
 }
 
@@ -54,7 +54,7 @@ interface ApiResponse {
   success: boolean;
   message: string;
   data?: Order[];
-  kits?: Record<string, KitInfo>; 
+  kits?: Record<string, KitInfo>;
 }
 
 // ─── Constantes ─────────────────────────────────────────────────────────────
@@ -149,29 +149,34 @@ const normalizarCodigoBarras = (cb: string | number | null | undefined): string 
 // ─── 🆕 Helpers de Scanner ─────────────────────────────────────────────────
 
 const expandirOrdenParaVerificacion = (
-  orden: Order, 
-  kitsMap: Record<string, KitInfo> // 🆕 Agregar parámetro
+  orden: Order,
+  kitsMap: Record<string, KitInfo>
 ): ItemVerificacion[] => {
   const itemsVerificacion: ItemVerificacion[] = [];
 
   for (const item of orden.items) {
-    const kitInfo = kitsMap[item.sku]; // ✅ Ahora usa el parámetro
+    const kitInfo = kitsMap[item.sku];
 
     if (kitInfo && item.codigosBarrasComponentes?.length) {
-      const skusAplanados: string[] = [];
+      const componentesExpandidos: Array<{ sku: string; descripcion: string; cb: string | null }> = [];
       for (const comp of kitInfo.componentes) {
         for (let i = 0; i < comp.cantidad; i++) {
-          skusAplanados.push(comp.sku);
+          componentesExpandidos.push({
+            sku: comp.sku,
+            descripcion: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
+            cb: comp.codigoBarras,
+          });
         }
       }
-      
-      skusAplanados.forEach((skuComp, index) => {
+
+      componentesExpandidos.forEach((comp, index) => {
         itemsVerificacion.push({
-          sku: skuComp,
+          sku: comp.sku,
           codigoBarras: item.codigosBarrasComponentes?.[index] || null,
           quantity: item.quantity,
           esComponenteKit: true,
           skuKitOriginal: item.sku,
+          descripcion: comp.descripcion,
         });
       });
     } else {
@@ -180,6 +185,7 @@ const expandirOrdenParaVerificacion = (
         codigoBarras: item.codigoBarras,
         quantity: item.quantity,
         esComponenteKit: false,
+        descripcion: item.description,
       });
     }
   }
@@ -187,16 +193,15 @@ const expandirOrdenParaVerificacion = (
   return itemsVerificacion;
 };
 
-// Lo mismo para expandirKitsEnOrdenes
 const expandirKitsEnOrdenes = (
-  ordenes: Order[], 
-  kitsMap: Record<string, KitInfo> // 🆕 Agregar parámetro
+  ordenes: Order[],
+  kitsMap: Record<string, KitInfo>
 ): Order[] => {
   return ordenes.map((orden) => {
     const itemsExpandidos: OrderItem[] = [];
 
     for (const item of orden.items) {
-      const kitInfo = kitsMap[item.sku]; // ✅ Ahora usa el parámetro
+      const kitInfo = kitsMap[item.sku];
 
       if (kitInfo) {
         for (const comp of kitInfo.componentes) {
@@ -204,7 +209,7 @@ const expandirKitsEnOrdenes = (
             itemsExpandidos.push({
               sku: comp.sku,
               quantity: item.quantity,
-              description: `[Kit] ${comp.sku} (de ${item.sku})`,
+              description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
               codigoBarras: comp.codigoBarras,
             });
           }
@@ -218,9 +223,8 @@ const expandirKitsEnOrdenes = (
   });
 };
 
-
 const expandirOrdenIndividual = (
-  orden: Order, 
+  orden: Order,
   kitsMap: Record<string, KitInfo>
 ): Order => {
   const itemsExpandidos: OrderItem[] = [];
@@ -234,7 +238,7 @@ const expandirOrdenIndividual = (
           itemsExpandidos.push({
             sku: comp.sku,
             quantity: item.quantity,
-            description: `[Kit] ${comp.sku} (de ${item.sku})`,
+            description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
             codigoBarras: comp.codigoBarras,
           });
         }
@@ -282,9 +286,6 @@ const getProgresoOrden = (
   return { total, verificados, items: itemsConProgreso };
 };
 
-
-
-
 // ─── Componente Columna ─────────────────────────────────────────────────────
 
 interface ColumnaOrdenesProps {
@@ -297,7 +298,6 @@ interface ColumnaOrdenesProps {
   selectedOrders: Set<string>;
   toggleOrderSelection: (orderId: string) => void;
   onToggleAll: (ids: string[]) => void;
-  // 🆕 Props de scanner
   modoScanner: boolean;
   onIniciarScan: (numeroOperacion: string) => void;
   scansPorOrden: Record<string, string[]>;
@@ -314,7 +314,6 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
   selectedOrders,
   toggleOrderSelection,
   onToggleAll,
-  // 🆕
   modoScanner,
   onIniciarScan,
   scansPorOrden,
@@ -323,7 +322,6 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
   const baseOrders = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
 
   const ordersFiltradas = baseOrders.filter((o) => {
-    // 🆕 En modo scanner, ocultar Envío Full (no las arma el usuario)
     if (modoScanner && o.tipo_envio === "full") return false;
     if (mostrarMultiples && o.items.length <= 1) return false;
     return true;
@@ -385,7 +383,6 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
       {/* Lista de órdenes */}
       <div className="space-y-4">
         {ordersFiltradas.map((order) => {
-          // 🆕 Calcular progreso si hay scans
           const progreso = modoScanner ? getProgresoOrden(order, scansPorOrden, kitsMap) : null;
           const completo = progreso ? progreso.verificados === progreso.total && progreso.total > 0 : false;
 
@@ -400,7 +397,6 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
                       ? "bg-amber-50 border-amber-200"
                       : "bg-white border-gray-200"
                 } ${modoScanner && !completo ? "cursor-pointer hover:ring-2 hover:ring-blue-300" : ""}`}
-              // 🆕 En modo scanner, clic en la card abre el escaneo
               onClick={() => {
                 if (modoScanner && !completo && order.tipo_envio !== "cancelada") {
                   onIniciarScan(order.numeroOperacion);
@@ -409,7 +405,6 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
             >
               <div className="absolute top-3 right-3">
                 {modoScanner ? (
-                  // 🆕 En modo scanner: indicador de estado
                   <span className={`text-lg ${completo ? "text-green-500" : "text-gray-400"}`}>
                     {completo ? "✅" : "🔍"}
                   </span>
@@ -461,23 +456,26 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
                 <p className="text-sm text-gray-700 font-medium">Items:</p>
                 <ul className="list-disc list-inside mt-1 text-sm text-gray-600">
                   {order.items.map((item, idx) => {
-                    // 🆕 Progreso del item individual
                     const itemProgreso = progreso?.items[idx];
                     const itemCompleto = itemProgreso ? itemProgreso.verificados >= itemProgreso.quantity : false;
+                    const esKit = !!kitsMap[item.sku];
 
                     return (
                       <li key={idx} className={itemCompleto ? "text-green-700 line-through" : ""}>
                         <span className="font-bold">{item.sku}</span> —{" "}
                         <span className="font-bold">{item.quantity} Un.</span> —{" "}
                         <span className="text-gray-500">{item.description}</span>
-                        {/* 🆕 Indicador de progreso del item */}
                         {modoScanner && itemProgreso && (
                           <span className={`ml-2 text-xs font-bold ${itemCompleto ? "text-green-600" : "text-blue-600"}`}>
                             [{itemProgreso.verificados}/{itemProgreso.quantity}]
                           </span>
                         )}
-                        {/* 🆕 Warning si no tiene CB */}
-                        {modoScanner && !item.codigoBarras && (
+                        {modoScanner && esKit && (
+                          <span className="ml-2 text-xs text-blue-600 font-bold">
+                            📦 Kit ({kitsMap[item.sku].componentes.length} componentes)
+                          </span>
+                        )}
+                        {modoScanner && !esKit && !item.codigoBarras && (
                           <span className="ml-2 text-xs text-orange-500 font-bold">
                             ⚠️ Sin CB
                           </span>
@@ -488,7 +486,6 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
                 </ul>
               </div>
 
-              {/* 🆕 Barra de progreso en modo scanner */}
               {modoScanner && progreso && progreso.total > 0 && (
                 <div className="mt-3">
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -514,23 +511,18 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
 // ─── Componente Principal ───────────────────────────────────────────────────
 
 export const MercadoLibre = () => {
-  // Días independientes
   const [diasFemex, setDiasFemex] = useState<number>(3);
   const [diasBlow, setDiasBlow] = useState<number>(3);
 
-  // Órdenes por empresa
   const [ordersFemex, setOrdersFemex] = useState<Order[]>([]);
   const [ordersBlow, setOrdersBlow] = useState<Order[]>([]);
 
-  // Filtrado por etiqueta por empresa
   const [ordenesVisiblesFemex, setOrdenesVisiblesFemex] = useState<Order[]>([]);
   const [ordenesVisiblesBlow, setOrdenesVisiblesBlow] = useState<Order[]>([]);
 
-  // Filtros +1 SKU por empresa
   const [mostrarMultiplesFemex, setMostrarMultiplesFemex] = useState(false);
   const [mostrarMultiplesBlow, setMostrarMultiplesBlow] = useState(false);
 
-  // Estado global compartido
   const [loading, setLoading] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [productosConDescuento, setProductosConDescuento] = useState<Record<string, number>>({});
@@ -539,32 +531,27 @@ export const MercadoLibre = () => {
   const [nombreArchivo, setNombreArchivo] = useState("");
   const [contenidoTxt, setContenidoTxt] = useState("");
 
-  // 🆕 Estados para drag & drop
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
 
-  // 🆕 Estados para scanner
   const [modoScanner, setModoScanner] = useState(false);
   const [ordenEnScan, setOrdenEnScan] = useState<string | null>(null);
   const [scansPorOrden, setScansPorOrden] = useState<Record<string, string[]>>({});
   const [inputScan, setInputScan] = useState("");
   const scannerInputRef = useRef<HTMLInputElement>(null);
-  
-const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
+
+  const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
 
   const urlGetVentas = Urls.apiMeli.getVentas;
 
-
-
-
-  // Todas las órdenes combinadas
   const allOrders = [...ordersFemex, ...ordersBlow];
 
-  // 🆕 Buscar la orden que está en escaneo
   const ordenActiva = allOrders.find((o) => o.numeroOperacion === ordenEnScan) || null;
   const progresoActivo = ordenActiva ? getProgresoOrden(ordenActiva, scansPorOrden, kitsMap) : null;
 
-  // 🆕 Enfocar input del scanner cuando se abre el modal
+  // 🆕 Calcular itemsVerificacion para el modal
+  const itemsVerificacion = ordenActiva ? expandirOrdenParaVerificacion(ordenActiva, kitsMap) : [];
+
   useEffect(() => {
     if (ordenEnScan && scannerInputRef.current) {
       setTimeout(() => scannerInputRef.current?.focus(), 100);
@@ -631,96 +618,104 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
     setInputScan("");
   };
 
- const handleScanKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-  if (e.key !== "Enter") return;
-  e.preventDefault();
+  const handleScanKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
 
-  const codigo = inputScan.trim();
-  if (!codigo || !ordenActiva) return;
+    const codigo = inputScan.trim();
+    if (!codigo || !ordenActiva) return;
 
-  // Expandir la orden para verificación (incluye componentes de kits)
-  const itemsVerificacion = expandirOrdenParaVerificacion(ordenActiva, kitsMap);
-
-  // 🆕 Normalizar el código escaneado
-  const codigoNormalizado = normalizarCodigoBarras(codigo);
-
-  // 1️ Buscar coincidencia exacta de código de barras
-  const itemMatch = itemsVerificacion.find((item) => {
-    const cbItem = normalizarCodigoBarras(item.codigoBarras);
-    return cbItem && cbItem === codigoNormalizado;
-  });
-
-  if (!itemMatch) {
-    // 2️ Si no hay coincidencia exacta, verificar si el código escaneado es el SKU de un producto sin CB
-    const itemSinCB = itemsVerificacion.find(
-      (item) => item.sku === codigo && !normalizarCodigoBarras(item.codigoBarras)
-    );
-
-    if (itemSinCB) {
+    // 🆕 Verificar si el código escaneado es un KIT
+    const kitInfo = kitsMap[codigo];
+    if (kitInfo) {
       sweetAlert.fire({
-        title: "⚠️ Producto sin Código de Barras",
-        html: `El producto <strong>"${itemSinCB.sku}"</strong> está en la orden, pero no tiene código de barras registrado en el sistema.<br/><br/>Registrá el CB en la base de datos para poder escanearlo.`,
-        icon: "warning",
+        title: "📦 Kit detectado",
+        html: `El código "<strong>${codigo}</strong>" corresponde a un KIT.<br/><br/>
+               Los kits no se escanean directamente. Escaneá los códigos de barras de sus componentes individuales:
+               <ul class="text-left mt-2 text-sm">
+                 ${kitInfo.componentes.map(c => `<li>${c.sku} ${c.descripcion ? `- ${c.descripcion}` : ''} (CB: ${c.codigoBarras || 'Sin CB'})</li>`).join('')}
+               </ul>`,
+        icon: "info",
         confirmButtonText: "Entendido"
       });
       setInputScan("");
       return;
     }
 
-    // 3️⃣ Verificar si hay ALGÚN producto en la orden sin CB (mensaje contextual)
-    const hayProductosSinCB = itemsVerificacion.some((item) => !normalizarCodigoBarras(item.codigoBarras));
+    const itemsVerif = expandirOrdenParaVerificacion(ordenActiva, kitsMap);
+    const codigoNormalizado = normalizarCodigoBarras(codigo);
 
-    if (hayProductosSinCB) {
-      sweetAlert.fire({
-        title: "❌ Código no reconocido",
-        html: `Este código no corresponde a ningún producto registrado de esta orden.<br/><br/>⚠️ <strong>Atención:</strong> Hay productos en esta orden sin código de barras. Verificá que estés escaneando el producto correcto o registrá los CB faltantes.`,
-        icon: "error",
-        confirmButtonText: "OK"
-      });
-    } else {
-      sweetAlert.error("❌ Este código de barras no corresponde a ningún producto de esta orden.");
+    const itemMatch = itemsVerif.find((item) => {
+      const cbItem = normalizarCodigoBarras(item.codigoBarras);
+      return cbItem && cbItem === codigoNormalizado;
+    });
+
+    if (!itemMatch) {
+      const itemSinCB = itemsVerif.find(
+        (item) => item.sku === codigo && !normalizarCodigoBarras(item.codigoBarras)
+      );
+
+      if (itemSinCB) {
+        sweetAlert.fire({
+          title: "⚠️ Producto sin Código de Barras",
+          html: `El producto <strong>"${itemSinCB.sku}"</strong> está en la orden, pero no tiene código de barras registrado en el sistema.<br/><br/>Registrá el CB en la base de datos para poder escanearlo.`,
+          icon: "warning",
+          confirmButtonText: "Entendido"
+        });
+        setInputScan("");
+        return;
+      }
+
+      const hayProductosSinCB = itemsVerif.some((item) => !normalizarCodigoBarras(item.codigoBarras));
+
+      if (hayProductosSinCB) {
+        sweetAlert.fire({
+          title: "❌ Código no reconocido",
+          html: `Este código no corresponde a ningún producto registrado de esta orden.<br/><br/>⚠️ <strong>Atención:</strong> Hay productos en esta orden sin código de barras. Verificá que estés escaneando el producto correcto o registrá los CB faltantes.`,
+          icon: "error",
+          confirmButtonText: "OK"
+        });
+      } else {
+        sweetAlert.error("❌ Este código de barras no corresponde a ningún producto de esta orden.");
+      }
+
+      setInputScan("");
+      return;
     }
 
+    const yaEscaneados = contarEscaneados(codigo, ordenActiva.numeroOperacion, scansPorOrden);
+
+    if (yaEscaneados >= itemMatch.quantity) {
+      sweetAlert.warning(
+        `⚠️ Ya escaneaste las ${itemMatch.quantity} unidad(es) de "${itemMatch.sku}".`
+      );
+      setInputScan("");
+      return;
+    }
+
+    setScansPorOrden((prev) => ({
+      ...prev,
+      [ordenActiva.numeroOperacion]: [
+        ...(prev[ordenActiva.numeroOperacion] || []),
+        codigo,
+      ],
+    }));
+
     setInputScan("");
-    return;
-  }
 
-  // ✅ Código válido: Verificar si ya se escanearon todas las unidades de este componente
-  const yaEscaneados = contarEscaneados(codigo, ordenActiva.numeroOperacion, scansPorOrden);
+    const nuevoProgreso = getProgresoOrden(ordenActiva, {
+      ...scansPorOrden,
+      [ordenActiva.numeroOperacion]: [
+        ...(scansPorOrden[ordenActiva.numeroOperacion] || []),
+        codigo,
+      ],
+    }, kitsMap);
 
-  if (yaEscaneados >= itemMatch.quantity) {
-    sweetAlert.warning(
-      `⚠️ Ya escaneaste las ${itemMatch.quantity} unidad(es) de "${itemMatch.sku}".`
-    );
-    setInputScan("");
-    return;
-  }
-
-  // ✅ Código válido y faltan unidades: agregar al array de scans
-  setScansPorOrden((prev) => ({
-    ...prev,
-    [ordenActiva.numeroOperacion]: [
-      ...(prev[ordenActiva.numeroOperacion] || []),
-      codigo,
-    ],
-  }));
-
-  setInputScan("");
-
-  // Verificar si la orden quedó completa después de este scan
-  const nuevoProgreso = getProgresoOrden(ordenActiva, {
-    ...scansPorOrden,
-    [ordenActiva.numeroOperacion]: [
-      ...(scansPorOrden[ordenActiva.numeroOperacion] || []),
-      codigo,
-    ],
-  });
-
-  if (nuevoProgreso.verificados === nuevoProgreso.total) {
-    sweetAlert.success(`✅ Orden #${ordenActiva.numeroOperacion} verificada completamente.`);
-    setOrdenEnScan(null);
-  }
-};
+    if (nuevoProgreso.verificados === nuevoProgreso.total) {
+      sweetAlert.success(`✅ Orden #${ordenActiva.numeroOperacion} verificada completamente.`);
+      setOrdenEnScan(null);
+    }
+  };
 
   const handleDeshacerUltimoScan = () => {
     if (!ordenEnScan) return;
@@ -754,39 +749,32 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
         axios.get<ApiResponse>(`${urlGetVentas}${diasBlow}&cuenta=2`),
       ]);
 
-      // Femex
       if (resFemex.status === "fulfilled") {
-  const data = resFemex.value.data;
+        const data = resFemex.value.data;
+        if (data.success && data.data) {
+          setOrdersFemex(data.data);
+          if (data.kits) {
+            setKitsMap(data.kits);
+            console.log("✅ KITS RECIBIDOS:", Object.keys(data.kits).length);
+          }
+        } else {
+          sweetAlert.error(`Femex: ${data.message || "Error desconocido"}`);
+          setOrdersFemex([]);
+        }
+      }
 
-  if (data.kits) {
-  setKitsMap(data.kits);
-  console.log("✅ KITS RECIBIDOS:", Object.keys(data.kits).length);
-  console.log("📋 EJEMPLO KIT:", data.kits[Object.keys(data.kits)[0]]);
-}
-  if (data.success && data.data) {
-    setOrdersFemex(data.data);
-    if (data.kits) { // 🆕
-      setKitsMap(data.kits);
-    }
-  } else {
-    sweetAlert.error(`Femex: ${data.message || "Error desconocido"}`);
-    setOrdersFemex([]);
-  }
-}
-
-      // Blow
       if (resBlow.status === "fulfilled") {
-  const data = resBlow.value.data;
-  if (data.success && data.data) {
-    setOrdersBlow(data.data);
-    if (data.kits) { // 🆕
-      setKitsMap(data.kits);
-    }
-  } else {
-    sweetAlert.error(`Blow: ${data.message || "Error desconocido"}`);
-    setOrdersBlow([]);
-  }
-}
+        const data = resBlow.value.data;
+        if (data.success && data.data) {
+          setOrdersBlow(data.data);
+          if (data.kits) {
+            setKitsMap(data.kits);
+          }
+        } else {
+          sweetAlert.error(`Blow: ${data.message || "Error desconocido"}`);
+          setOrdersBlow([]);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -870,43 +858,41 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
     });
   };
 
-  // ── Helper para desglosar Kits ────────────────────────────────────────────
+  // ── Helper local para desglosar Kits ────────────────────────────────────
 
-  const expandirKitsEnOrdenes = (ordenes: Order[], kitsMap: Record<string, any>): Order[] => {
-  return ordenes.map((orden) => {
-    const itemsExpandidos: OrderItem[] = [];
+  const expandirKitsEnOrdenesLocal = (ordenes: Order[], kitsMapLocal: Record<string, KitInfo>): Order[] => {
+    return ordenes.map((orden) => {
+      const itemsExpandidos: OrderItem[] = [];
 
-    for (const item of orden.items) {
-      const kitInfo = kitsMap[item.sku]; // 🆕 Usar kitsMap
+      for (const item of orden.items) {
+        const kitInfo = kitsMapLocal[item.sku];
 
-      if (kitInfo) {
-        for (const comp of kitInfo.componentes) {
-          for (let i = 0; i < comp.cantidad; i++) {
-            itemsExpandidos.push({
-              sku: comp.sku,
-              quantity: item.quantity,
-              description: `[Kit] ${comp.sku} (de ${item.sku})`,
-              codigoBarras: comp.codigoBarras,
-            });
+        if (kitInfo) {
+          for (const comp of kitInfo.componentes) {
+            for (let i = 0; i < comp.cantidad; i++) {
+              itemsExpandidos.push({
+                sku: comp.sku,
+                quantity: item.quantity,
+                description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
+                codigoBarras: comp.codigoBarras,
+              });
+            }
           }
+        } else {
+          itemsExpandidos.push(item);
         }
-      } else {
-        itemsExpandidos.push(item);
       }
-    }
 
-    return { ...orden, items: itemsExpandidos };
-  });
-};
+      return { ...orden, items: itemsExpandidos };
+    });
+  };
 
   const handleConsolidadoStock = () => {
     const allOrdersSinFull = allOrders.filter((o) => o.tipo_envio !== "full");
     const ordenesVisiblesCombinadas = [...ordenesVisiblesFemex, ...ordenesVisiblesBlow];
 
-    // 🆕 Expandimos los kits en las órdenes antes de generar el PDF
-    const allOrdersExpandidas = expandirKitsEnOrdenes(allOrdersSinFull, kitsMap);
-    const visiblesExpandidas = expandirKitsEnOrdenes(ordenesVisiblesCombinadas, kitsMap);
-
+    const allOrdersExpandidas = expandirKitsEnOrdenesLocal(allOrdersSinFull, kitsMap);
+    const visiblesExpandidas = expandirKitsEnOrdenesLocal(ordenesVisiblesCombinadas, kitsMap);
 
     PdfGenerarConsolidado(allOrdersExpandidas, selectedOrders, visiblesExpandidas);
   };
@@ -1160,7 +1146,6 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
           {loading ? "Cargando..." : "Obtener órdenes"}
         </button>
 
-        {/* 🆕 Toggle Modo Scanner */}
         <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-300 rounded cursor-pointer select-none whitespace-nowrap">
           <input
             type="checkbox"
@@ -1268,7 +1253,6 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
           onClick={(e) => {
-            // Cerrar si se hace clic fuera del modal
             if (e.target === e.currentTarget) handleCerrarScan();
           }}
         >
@@ -1329,24 +1313,39 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
             {/* Lista de items con progreso */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
               {progresoActivo?.items.map((item, idx) => {
+                const esKit = kitsMap[item.sku] !== undefined;
                 const completo = item.verificados >= item.quantity;
                 return (
                   <div
                     key={idx}
                     className={`p-3 rounded-lg border ${completo
                         ? "bg-green-50 border-green-300"
-                        : "bg-white border-gray-200"
+                        : esKit
+                          ? "bg-blue-50 border-blue-300"
+                          : "bg-white border-gray-200"
                       }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-bold text-gray-800">{item.sku}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-gray-800">{item.sku}</p>
+                          {esKit && (
+                            <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded">
+                              KIT
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500">{item.description}</p>
                         {item.codigoBarras && normalizarCodigoBarras(item.codigoBarras) && (
-  <p className="text-xs text-gray-400 font-mono mt-1">
-    CB: {normalizarCodigoBarras(item.codigoBarras)}
-  </p>
-)}
+                          <p className="text-xs text-gray-400 font-mono mt-1">
+                            CB: {normalizarCodigoBarras(item.codigoBarras)}
+                          </p>
+                        )}
+                        {esKit && !item.codigoBarras && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            📦 Escaneá los componentes individuales
+                          </p>
+                        )}
                       </div>
                       <span
                         className={`text-sm font-bold px-2 py-1 rounded ${completo
@@ -1357,7 +1356,6 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
                         {item.verificados}/{item.quantity}
                       </span>
                     </div>
-                    {/* Mini barra por item */}
                     <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                       <div
                         className={`h-1.5 rounded-full transition-all duration-300 ${completo ? "bg-green-500" : "bg-blue-400"
@@ -1371,22 +1369,21 @@ const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
                 );
               })}
 
-              {/* Items sin código de barras */}
-              {/* Items sin código de barras */}
-{ordenActiva.items.some((i) => !normalizarCodigoBarras(i.codigoBarras)) && (
-  <div className="p-3 bg-orange-50 border border-orange-300 rounded-lg">
-    <p className="text-sm text-orange-700 font-medium">
-      ⚠️ Los siguientes productos no tienen código de barras registrado:
-    </p>
-    <ul className="text-sm text-orange-600 mt-1 list-disc list-inside">
-      {ordenActiva.items
-        .filter((i) => !normalizarCodigoBarras(i.codigoBarras))
-        .map((i, idx) => (
-          <li key={idx}>{i.sku} ({i.quantity} un.)</li>
-        ))}
-    </ul>
-  </div>
-)}
+              {/* Items sin código de barras (usando itemsVerificacion, excluyendo kits) */}
+              {itemsVerificacion.some((i) => !normalizarCodigoBarras(i.codigoBarras) && !i.esComponenteKit) && (
+                <div className="p-3 bg-orange-50 border border-orange-300 rounded-lg">
+                  <p className="text-sm text-orange-700 font-medium">
+                    ⚠️ Los siguientes productos no tienen código de barras registrado:
+                  </p>
+                  <ul className="text-sm text-orange-600 mt-1 list-disc list-inside">
+                    {itemsVerificacion
+                      .filter((i) => !normalizarCodigoBarras(i.codigoBarras) && !i.esComponenteKit)
+                      .map((i, idx) => (
+                        <li key={idx}>{i.sku} ({i.quantity} un.)</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Footer con botones */}
