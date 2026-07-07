@@ -755,7 +755,6 @@ export const MercadoLibre = () => {
           setOrdersFemex(data.data);
           if (data.kits) {
             setKitsMap(data.kits);
-            console.log("✅ KITS RECIBIDOS:", Object.keys(data.kits).length);
           }
         } else {
           sweetAlert.error(`Femex: ${data.message || "Error desconocido"}`);
