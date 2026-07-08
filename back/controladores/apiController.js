@@ -39,7 +39,7 @@ const determinarEstadoEnvio = (shipping) => {
     etiqueta_impresa = true;
     shipping_status = substatus === 'unknown' ? status : substatus;
   }
-  else if (['printed', 'handling', 'shipped', 'delivered'].includes(substatus)) {
+  else if (['printed', 'handling', 'shipped', 'delivered', 'dropped_off', 'in_transit'].includes(substatus)) {
     etiqueta_impresa = true;
     shipping_status = substatus;
   }
@@ -247,60 +247,75 @@ const getVentas = async (req, res) => {
       const numeroOperacion = fullOrder.pack_id || fullOrder.id;
 
       if (!ordersByPack[numeroOperacion]) {
-        let tipo_envio = "desconocido";
-        let etiqueta_impresa = false;
-        let shipping_status = 'unknown';
+  let tipo_envio = "desconocido";
+  let etiqueta_impresa = false;
+  let shipping_status = 'unknown';
 
-        if (fullOrder.status === "cancelled") {
-          tipo_envio = "cancelada";
-          etiqueta_impresa = false;
-          shipping_status = 'cancelled';
-        } else if (
-          fullOrder.shipping?.id === null &&
-          (fullOrder.shipping_cost === null || fullOrder.shipping_cost === 0)
-        ) {
-          tipo_envio = "retiro_local";
-          etiqueta_impresa = false;
-          shipping_status = 'no_shipping';
-        } else if (fullOrder.tags?.includes("no_shipping")) {
-          tipo_envio = "retiro_local";
-          etiqueta_impresa = false;
-          shipping_status = 'no_shipping';
-        } else if (fullOrder.shipping?.id) {
-          try {
-            const shipmentRes = await axios.get(
-              `https://api.mercadolibre.com/shipments/${fullOrder.shipping.id}`,
-              { headers: { Authorization: `Bearer ${accessToken}` } }
-            );
-            const shipping = shipmentRes.data;
-            const estadoEnvio = determinarEstadoEnvio(shipping);
-            etiqueta_impresa = estadoEnvio.etiqueta_impresa;
-            shipping_status = estadoEnvio.shipping_status;
-            tipo_envio = determinarTipoEnvio(shipping);
-          } catch (err) {
-            console.warn(
-              `⚠️ No se pudo obtener shipment ${fullOrder.shipping.id}:`,
-              err.message
-            );
-            etiqueta_impresa = true;
-            tipo_envio = "desconocido";
-            shipping_status = 'error';
-          }
-        } else {
-          tipo_envio = "desconocido";
-          etiqueta_impresa = false;
-          shipping_status = 'unknown';
-        }
+  // ✅ 1. PRIMERO determinar el tipo de envío (si hay shipping)
+  if (fullOrder.shipping?.id) {
+    try {
+      const shipmentRes = await axios.get(
+        `https://api.mercadolibre.com/shipments/${fullOrder.shipping.id}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const shipping = shipmentRes.data;
 
-        ordersByPack[numeroOperacion] = crearOrdenBase(
-          fullOrder,
-          mlUserId,
-          numeroOperacion,
-          etiqueta_impresa,
-          tipo_envio,
-          shipping_status
-        );
+      const estadoEnvio = determinarEstadoEnvio(shipping);
+      etiqueta_impresa = estadoEnvio.etiqueta_impresa;
+      tipo_envio = determinarTipoEnvio(shipping);
+      
+      // ✅ 2. LUEGO verificar si está cancelada
+      if (fullOrder.status === "cancelled") {
+        shipping_status = 'cancelled';
+      } else {
+        shipping_status = estadoEnvio.shipping_status;
       }
+      
+    } catch (err) {
+      console.warn(
+        `⚠️ No se pudo obtener shipment ${fullOrder.shipping.id}:`,
+        err.message
+      );
+      etiqueta_impresa = true;
+      tipo_envio = "desconocido";
+      shipping_status = fullOrder.status === "cancelled" ? 'cancelled' : 'error';
+    }
+  }
+  // ✅ 3. Si no hay shipping, verificar otros casos
+  else if (
+    fullOrder.shipping?.id === null &&
+    (fullOrder.shipping_cost === null || fullOrder.shipping_cost === 0)
+  ) {
+    tipo_envio = "retiro_local";
+    etiqueta_impresa = false;
+    shipping_status = fullOrder.status === "cancelled" ? 'cancelled' : 'no_shipping';
+  } else if (fullOrder.tags?.includes("no_shipping")) {
+    tipo_envio = "retiro_local";
+    etiqueta_impresa = false;
+    shipping_status = fullOrder.status === "cancelled" ? 'cancelled' : 'no_shipping';
+  }
+  // ✅ 4. Si está cancelada pero no tiene shipping
+  else if (fullOrder.status === "cancelled") {
+    etiqueta_impresa = false;
+    shipping_status = 'cancelled';
+    tipo_envio = "desconocido"; // No hay forma de saberlo sin shipping
+  }
+  else {
+    tipo_envio = "desconocido";
+    etiqueta_impresa = false;
+    shipping_status = 'unknown';
+  }
+
+  ordersByPack[numeroOperacion] = crearOrdenBase(
+    fullOrder,
+    mlUserId,
+    numeroOperacion,
+    etiqueta_impresa,
+    tipo_envio,
+    shipping_status
+  );
+
+}
 
       for (const item of fullOrder.order_items || []) {
         ordersByPack[numeroOperacion].items.push({
@@ -395,6 +410,7 @@ const getVentas = async (req, res) => {
         }
       }
     }
+
 
     res.status(200).json({
       message: `Órdenes de los últimos ${dias} días para la cuenta ${cuenta}`,

@@ -118,6 +118,8 @@ const getShippingStatusLabel = (status?: string, tipoEnvio?: string): { label: s
     'handling': { label: '⚙️ En proceso', color: 'bg-yellow-100 text-yellow-800' },
     'shipped': { label: '🚚 Enviado', color: 'bg-purple-100 text-purple-800' },
     'delivered': { label: '✅ Entregado', color: 'bg-emerald-100 text-emerald-800' },
+    'dropped_off': { label: '📮 Despachado', color: 'bg-purple-100 text-purple-800' },
+    'in_transit': { label: '🚛 En tránsito', color: 'bg-purple-100 text-purple-800' },
     'not_visited': { label: '⚠️ No visitado', color: 'bg-orange-100 text-orange-800' },
     'cancelled': { label: '❌ Cancelado', color: 'bg-red-100 text-red-800' },
     'in_packing_list': { label: '📦 En lista de empaque', color: 'bg-indigo-100 text-indigo-800' },
@@ -1514,3 +1516,4 @@ const expandirKitsEnOrdenes = (
     </div>
   );
 };
+
