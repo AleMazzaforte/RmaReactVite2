@@ -7,6 +7,7 @@ import BotonCargarTxt from "./utilidades/BotonCargarTxt";
 import { generateEnviosPDF } from "./utilidades/pdfGenerators";
 import { printRetiroLocalHTML } from "./utilidades/printUtils";
 import { PdfGenerarConsolidado } from "./utilidades/pdfGenerarConsolidado";
+import { reproducirBeep } from "./utilidades/Beeper";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -130,14 +131,60 @@ const getShippingStatusLabel = (status?: string, tipoEnvio?: string): { label: s
   return statusMap[status || 'unknown'] || { label: 'Sin estado', color: 'bg-gray-100 text-gray-800' };
 };
 
-const extraerIdsDeEtiqueta = (contenido: string): string[] => {
-  const regex = /\^FO198,40\^A0N,30,30\^FD(\d+)\^FS/g;
-  const ids: string[] = [];
-  let match;
-  while ((match = regex.exec(contenido)) !== null) {
-    ids.push(match[1]);
+
+const resultado: Record<string, string | null> = {};
+
+const extraerIdsDeEtiqueta = (
+  contenido: string, 
+  
+): Record<string, string | null> => {
+  
+  // Iniciamos el resultado con lo que ya tuviéramos acumulado (o vacío si es la primera vez)
+  
+  
+  // 1. Dividimos el contenido en bloques individuales por cada etiqueta (^XA ... ^XZ)
+  const etiquetas = contenido.match(/\^XA[\s\S]*?\^XZ/g) || [];
+  
+  // 2. Expresiones regulares
+  const regexId = /\^FO198,40\^A0N,30,30\^FD(\d+)\^FS/;
+  const regexQR = /"id":"(\d+)"/;
+  const regexBarcode = /\^FO230,210\^BY3,,1\^BCN,160,N,N,N\^FD>:([\d]+)\^FS/;
+  const regexEnvioTexto = /\^FDEnvio:\s*([\d]+)\^FS/;
+  
+  // 3. Procesamos cada etiqueta de forma independiente
+  for (const etiqueta of etiquetas) {
+    const matchId = etiqueta.match(regexId);
+    
+    if (matchId) {
+      const idVenta = matchId[1];
+      let codigoEnvio: string | null = null;
+      
+      // Priorizamos el QR porque tiene el ID completo y unificado
+      const matchQR = etiqueta.match(regexQR);
+      if (matchQR) {
+        codigoEnvio = matchQR[1];
+      } else {
+        // Si no hay QR, intentamos con el código de barras de Mercado Envíos
+        const matchBarcode = etiqueta.match(regexBarcode);
+        if (matchBarcode) {
+          codigoEnvio = matchBarcode[1];
+        } else {
+          // Si tampoco, intentamos con el texto "Envio: "
+          const matchEnvio = etiqueta.match(regexEnvioTexto);
+          if (matchEnvio) {
+            codigoEnvio = matchEnvio[1];
+          }
+        }
+      }
+      
+      // Guardamos el resultado (evitando duplicados si el ID ya fue procesado)
+      if (!(idVenta in resultado)) {
+        resultado[idVenta] = codigoEnvio;
+      }
+    }
   }
-  return [...new Set(ids)];
+  
+  return resultado;
 };
 
 // ─── Helper para normalizar códigos de barras ─────────────────────────────
@@ -368,9 +415,9 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
     return true;
   });
 
-  const idsBase = baseOrders.map((o) => o.numeroOperacion);
+  const idsVisibles = ordersFiltradas.map((o) => o.numeroOperacion);
   const todasSeleccionadas =
-    idsBase.length > 0 && idsBase.every((id) => selectedOrders.has(id));
+    idsVisibles.length > 0 && idsVisibles.every((id) => selectedOrders.has(id));
 
   const cantidadMultiples = orders.filter((o) => o.items.length > 1).length;
 
@@ -407,12 +454,12 @@ const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
             />
             +1 SKU
           </label>
-          {!modoScanner && (
+                    {!modoScanner && (
             <label className="flex items-center gap-1.5 text-sm whitespace-nowrap cursor-pointer">
               <input
                 type="checkbox"
                 checked={todasSeleccionadas}
-                onChange={() => onToggleAll(idsBase)}
+                onChange={() => onToggleAll(idsVisibles)} // ✅ Cambiado aquí
                 className="w-4 h-4"
               />
               Seleccionar todas
@@ -593,11 +640,75 @@ export const MercadoLibre = () => {
   // 🆕 Calcular itemsVerificacion para el modal
   const itemsVerificacion = ordenActiva ? expandirOrdenParaVerificacion(ordenActiva, kitsMap) : [];
 
+  const [idsDelArchivo, setIdsDelArchivo] = useState<Record<string, string | null>>({});
+
   useEffect(() => {
     if (ordenEnScan && scannerInputRef.current) {
       setTimeout(() => scannerInputRef.current?.focus(), 100);
     }
   }, [ordenEnScan]);
+
+    // ─── 🆕 Listener global para escaneo rápido desde la pistola ──────────
+  const [bufferScan, setBufferScan] = useState("");
+  const bufferTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Solo activar si el modo scanner está ON y NO hay una orden abierta
+    if (!modoScanner || ordenEnScan !== null) return;
+
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Ignorar teclas especiales
+      if (e.key.length > 1 && e.key !== "Enter") return;
+      
+      // Ignorar si el foco está en un input (ej: días Femex/Blow)
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const codigo = bufferScan.trim();
+        
+        if (codigo) {
+          // Buscar match en los VALORES de idsDelArchivo
+          const entradaMatch = Object.entries(idsDelArchivo).find(
+            ([, valor]) => valor !== null && String(valor) === codigo
+          );
+
+          if (entradaMatch) {
+            const [idOrden] = entradaMatch;
+            // Buscar la orden en allOrders
+            const orden = allOrders.find(
+              (o) => String(o.numeroOperacion).endsWith(idOrden) || idOrden.endsWith(String(o.numeroOperacion))
+            );
+
+            if (orden && orden.tipo_envio !== "cancelada") {
+              handleIniciarScan(orden.numeroOperacion);
+            }
+          }
+        }
+        
+        setBufferScan("");
+        return;
+      }
+
+      // Acumular caracteres
+      setBufferScan((prev) => prev + e.key);
+
+      // Resetear el buffer si pasa más de 100ms entre teclas (humano vs pistola)
+      if (bufferTimeoutRef.current) {
+        clearTimeout(bufferTimeoutRef.current);
+      }
+      bufferTimeoutRef.current = setTimeout(() => {
+        setBufferScan("");
+      }, 100);
+    };
+
+    document.addEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyDown);
+      if (bufferTimeoutRef.current) clearTimeout(bufferTimeoutRef.current);
+    };
+  }, [modoScanner, ordenEnScan, bufferScan, idsDelArchivo, allOrders]);
 
   // ─── Cargar productos con descuento ─────────────────────────────────────
 
@@ -669,6 +780,7 @@ export const MercadoLibre = () => {
     // 🆕 Verificar si el código escaneado es un KIT
     const kitInfo = kitsMap[codigo];
     if (kitInfo) {
+      reproducirBeep('advertencia');
       sweetAlert.fire({
         title: "📦 Kit detectado",
         html: `El código "<strong>${codigo}</strong>" corresponde a un KIT.<br/><br/>
@@ -692,6 +804,7 @@ export const MercadoLibre = () => {
     });
 
     if (!itemMatch) {
+      reproducirBeep('error');
       const itemSinCB = itemsVerif.find(
         (item) => item.sku === codigo && !normalizarCodigoBarras(item.codigoBarras)
       );
@@ -727,12 +840,15 @@ export const MercadoLibre = () => {
     const yaEscaneados = contarEscaneados(codigo, ordenActiva.numeroOperacion, scansPorOrden);
 
     if (yaEscaneados >= itemMatch.quantity) {
+      reproducirBeep('advertencia');
       sweetAlert.warning(
         `⚠️ Ya escaneaste las ${itemMatch.quantity} unidad(es) de "${itemMatch.sku}".`
       );
       setInputScan("");
       return;
     }
+
+    reproducirBeep('exito');
 
     setScansPorOrden((prev) => ({
       ...prev,
@@ -753,7 +869,15 @@ export const MercadoLibre = () => {
     }, kitsMap);
 
     if (nuevoProgreso.verificados === nuevoProgreso.total) {
-      sweetAlert.success(`✅ Orden #${ordenActiva.numeroOperacion} verificada completamente.`);
+      setTimeout(() => reproducirBeep('exito'), 150);
+      sweetAlert.success(`✅ Orden #${ordenActiva.numeroOperacion} verificada completamente.`,
+        undefined,
+         {
+          timer: 3000,                // Se cierra en 3000 ms (3 segundos)
+          timerProgressBar: true,     // Muestra una barra de progreso visual en la parte inferior
+          showConfirmButton: false    // Oculta el botón "OK" para que no requiera clic
+        }
+      );
       setOrdenEnScan(null);
     }
   };
@@ -824,9 +948,11 @@ export const MercadoLibre = () => {
 
   const handleArchivoTxt = (content: string, fileName: string) => {
     setNombreArchivo(fileName);
-    const idsDelArchivo = extraerIdsDeEtiqueta(content);
+    const idsExtraidos = extraerIdsDeEtiqueta(content);
+    setIdsDelArchivo(idsExtraidos);
+    const idsKeys = Object.keys(idsExtraidos);
 
-    if (idsDelArchivo.length === 0) {
+    if (idsKeys.length === 0) {
       sweetAlert.warning("No se encontraron IDs de venta en el archivo. Verificá el formato del ZPL.");
       return;
     }
@@ -840,12 +966,12 @@ export const MercadoLibre = () => {
 
     const coincidentesFemex = ordersFemex.filter((o) => {
       const num = String(o.numeroOperacion);
-      return idsDelArchivo.some((id) => num.endsWith(id) || id.endsWith(num));
+      return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
     });
 
     const coincidentesBlow = ordersBlow.filter((o) => {
       const num = String(o.numeroOperacion);
-      return idsDelArchivo.some((id) => num.endsWith(id) || id.endsWith(num));
+      return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
     });
 
     const totalCoincidentes = coincidentesFemex.length + coincidentesBlow.length;
@@ -875,7 +1001,7 @@ export const MercadoLibre = () => {
       });
     }
 
-    const noEncontrados = idsDelArchivo.filter(
+    const noEncontrados = idsKeys.filter(
       (id) =>
         !allOrders.some((o) => {
           const num = String(o.numeroOperacion);
@@ -893,7 +1019,7 @@ export const MercadoLibre = () => {
     sweetAlert.fire({
       title: "Órdenes filtradas",
       html: mensaje,
-      icon: totalCoincidentes === idsDelArchivo.length ? "success" : "warning",
+      icon: totalCoincidentes === idsKeys.length ? "success" : "warning",
       confirmButtonText: "OK",
     });
   };

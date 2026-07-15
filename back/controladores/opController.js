@@ -14,18 +14,18 @@ const listarOp = {
 
     const connection = await conn.getConnection();
     try {
-      // Consulta que trae OPs + array de idSku asociados
+      // 1. Consulta que trae OPs + array de IDs de productos asociados
       const [results] = await connection.query(
         `SELECT 
-        op.id,
-        op.nombre,
-        op.fechaIngreso,
-        COALESCE(JSON_ARRAYAGG(opProd.idSku), JSON_ARRAY()) AS skus
-      FROM OP op
-      LEFT JOIN opProductos opProd ON op.id = opProd.idOp
-      WHERE LOWER(op.nombre) LIKE LOWER(?)
-      GROUP BY op.id, op.nombre, op.fechaIngreso
-      ORDER BY op.nombre ASC`,
+          op.id,
+          op.nombre,
+          op.fechaIngreso,
+          COALESCE(JSON_ARRAYAGG(opProd.idSku), JSON_ARRAY()) AS skus
+        FROM OP op
+        LEFT JOIN opProductos opProd ON op.id = opProd.idOp
+        WHERE LOWER(op.nombre) LIKE LOWER(?)
+        GROUP BY op.id, op.nombre, op.fechaIngreso
+        ORDER BY op.nombre ASC`,
         [`%${query}%`]
       );
 
@@ -33,33 +33,32 @@ const listarOp = {
         return res.status(404).json({ message: "No se encontraron OPs." });
       }
 
-      // Convertir el campo 'skus' de string JSON a array
+      // 2. Convertir el campo 'skus' de string JSON a array
       const opsConSkus = results.map(row => ({
         ...row,
         skus: Array.isArray(row.skus) ? row.skus : JSON.parse(row.skus || '[]')
       }));
 
-      // Expandir componentes de kits para cada OP
+      // 3. Expandir componentes de kits para cada OP
       for (const op of opsConSkus) {
         if (op.skus.length === 0) continue;
 
-        // Obtener componentes de los kits que están en esta OP
+        // Obtener componentes de los kits que están en esta OP.
+        // Se hace JOIN con 'productos' para identificar cuáles de esos IDs son kits,
+        // y luego se obtienen sus componentes desde 'kits_componentes'.
         const [kitsComponentes] = await connection.query(
-          `SELECT idSku1, idSku2, idSku3, idSku4 
-           FROM kits 
-           WHERE idSkuKit IN (?)`,
+          `SELECT kc.idSku 
+           FROM productos p
+           INNER JOIN kits k ON p.sku = k.skuKit
+           INNER JOIN kits_componentes kc ON k.id = kc.idKit
+           WHERE p.id IN (?)`,
           [op.skus]
         );
 
-        // Expandir todos los componentes (ignorar nulls)
-        const componentesDeKits = kitsComponentes.flatMap(kit => [
-          kit.idSku1,
-          kit.idSku2,
-          kit.idSku3,
-          kit.idSku4
-        ]).filter(id => id !== null && id !== undefined);
+        // Extraer solo los IDs de los componentes en un array plano
+        const componentesDeKits = kitsComponentes.map(row => row.idSku);
 
-        // Combinar productos directos + componentes de kits (sin duplicados)
+        // Combinar productos directos + componentes de kits (eliminando duplicados)
         op.skus = [...new Set([...op.skus, ...componentesDeKits])];
       }
 
