@@ -148,26 +148,47 @@ export const kitsController = {
   },
 
   getListarKits: async (req, res) => {
-    try {
-      const [kits] = await conn.query(`
-        SELECT 
-          k.id,
-          k.skuKit,
-          GROUP_CONCAT(CONCAT(p.sku, ' x', kc.cantidad) ORDER BY kc.orden SEPARATOR ', ') AS cartuchos
-        FROM kits k
-        LEFT JOIN kits_componentes kc ON k.id = kc.idKit
-        LEFT JOIN productos p ON kc.idSku = p.id
-        GROUP BY k.id, k.skuKit
-        ORDER BY k.id DESC
-      `);
+  try {
+    // 1. Obtenemos el término de búsqueda desde la URL (ej: ?query=algo)
+    const { query } = req.query;
 
-      res.status(200).json(kits);
+    // 2. Base de la consulta SQL
+    let sql = `
+      SELECT 
+        k.id,
+        k.skuKit,
+        GROUP_CONCAT(CONCAT(p.sku, ' x', kc.cantidad) ORDER BY kc.orden SEPARATOR ', ') AS cartuchos
+      FROM kits k
+      LEFT JOIN kits_componentes kc ON k.id = kc.idKit
+      LEFT JOIN productos p ON kc.idSku = p.id
+    `;
+    
+    const params = [];
 
-    } catch (error) {
-      console.error("Error al listar kits:", error);
-      res.status(500).json({ error: "Error interno del servidor" });
+    // 3. Si hay un término de búsqueda, agregamos la condición WHERE
+    if (query && query.trim() !== '') {
+      // Filtramos por el SKU del Kit. 
+      // (Si también quisieras buscar por los componentes, podrías agregar: OR p.sku LIKE ?)
+      sql += ` WHERE k.skuKit LIKE ? `;
+      params.push(`%${query}%`);
     }
-  },
+
+    // 4. Cerramos la consulta con el GROUP BY y ORDER BY
+    sql += `
+      GROUP BY k.id, k.skuKit
+      ORDER BY k.id DESC
+    `;
+
+    // 5. Ejecutamos la consulta pasando los parámetros de forma segura
+    const [kits] = await conn.query(sql, params);
+
+    res.status(200).json(kits);
+
+  } catch (error) {
+    console.error("Error al listar kits:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+},
 
   // ✅ CORREGIDO: Ahora incluye codigoBarras
   getObtenerKit: async (req, res) => {
