@@ -109,13 +109,12 @@ export const CargarKits: React.FC = () => {
       return;
     }
 
-    // ✅ Actualizado para enviar codigoBarras
     const datos = {
       skuKit: skuKit.trim(),
       componentes: componentesValidos.map((c) => ({
         idSku: c.idSku,
         cantidad: c.cantidad,
-        codigoBarras: c.codigoBarras || null // ✅ Enviar CB como string o null
+        codigoBarras: c.codigoBarras || null
       }))
     };
 
@@ -138,11 +137,12 @@ export const CargarKits: React.FC = () => {
         });
         limpiarFormulario();
       } else {
+        // ✅ CORRECCIÓN: Ahora lee tanto 'error' como 'message' del response del backend
         const errorData = await response.json().catch(() => ({}));
         sweetAlert.fire({
           icon: "error",
           title: "Error al guardar",
-          text: errorData.message || "No se pudo guardar el kit.",
+          text: errorData.error || errorData.message || "No se pudo guardar el kit.",
         });
       }
     } catch (error) {
@@ -213,7 +213,7 @@ export const CargarKits: React.FC = () => {
                 className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 mb-1"
                 title="Eliminar componente"
               >
-                
+
               </button>
             </div>
           ))}
@@ -230,11 +230,10 @@ export const CargarKits: React.FC = () => {
             type="button"
             onClick={enviarFormulario}
             disabled={loading}
-            className={`w-full py-2 px-4 font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black ${
-              loading
+            className={`w-full py-2 px-4 font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black ${loading
                 ? "bg-gray-400 text-gray-200 cursor-not-allowed"
                 : "bg-blue-600 text-white hover:bg-blue-800"
-            }`}
+              }`}
           >
             {loading ? "Guardando..." : "Guardar Kit"}
           </button>

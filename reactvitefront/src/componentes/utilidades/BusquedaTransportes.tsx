@@ -8,6 +8,12 @@ interface BusquedaTransportesProps {
   campos: string[];
 }
 
+interface Transporte {
+  nombre: "";
+  direccion?: "";
+  telefono?: number
+}
+
 export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoint, onTransporteSeleccionado, campos }) => {
   const [query, setQuery] = useState<string>('');
   const [resultados, setResultados] = useState<any[]>([]);
@@ -34,7 +40,7 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
             setLoading(true);
             const response = await fetch(`${endpoint}?query=${value}`);
             const data = await response.json();
-            const filtrados = data.filter((transporte: any) =>
+            const filtrados = data.filter((transporte: Transporte) =>
               transporte.nombre.toLowerCase().includes(value.toLowerCase())
             );
             setResultados(filtrados);
@@ -52,7 +58,7 @@ export const BusquedaTransportes: React.FC<BusquedaTransportesProps> = ({ endpoi
     [endpoint]
   );
 
-  const handleTransporteSeleccionado = (transporte: any) => {
+  const handleTransporteSeleccionado = (transporte: Transporte) => {
     if (transporte) {
       onTransporteSeleccionado(transporte);
       setResultados([]);

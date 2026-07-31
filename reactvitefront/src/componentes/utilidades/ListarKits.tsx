@@ -23,7 +23,7 @@ export const ListarKits: React.FC<ListarKitsProps> = ({
   onClose,
   onChange,
 }) => {
-  const [query, setQuery] = useState<string>(value);
+  const [query, setQuery] = useState<string>(value); // ✅ Iniciar en mayúsculas
   const [resultados, setResultados] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,7 +32,7 @@ export const ListarKits: React.FC<ListarKitsProps> = ({
   const localInputRef = inputRef || useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setQuery(value);
+    setQuery(value.toUpperCase());
   }, [value]);
 
   useEffect(() => {
@@ -53,34 +53,39 @@ export const ListarKits: React.FC<ListarKitsProps> = ({
   }, [onClose]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQuery(value);
+    // ✅ Convertir inmediatamente a mayúsculas
+    const valorUpper = e.target.value;
+    setQuery(valorUpper.toUpperCase());
 
-    // Llamar al onChange del padre si existe
     if (onChange) {
-      onChange(value);
+      onChange(valorUpper);
     }
 
-    // Limpiar el timeout anterior si existe
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
 
-    // Si hay valor en el input, proceder con el retraso
-    if (value) {
-      // Establecer un nuevo timeout para la búsqueda
+    if (valorUpper.trim()) {
       timerRef.current = setTimeout(async () => {
         try {
           setLoading(true);
-          const response = await fetch(`${endpoint}?query=${value}`);
+          // ✅ Enviar la query en mayúsculas a la BD para que coincida exactamente
+          const response = await fetch(`${endpoint}?query=${encodeURIComponent(valorUpper)}`);
           const data = await response.json();
-          setResultados(data);
+          
+          // ✅ Si no hay resultados, inyectamos un objeto "falso" para que FlechasNavigator despliegue el menú
+          if (data.length === 0) {
+            setResultados([{ id: -1, skuKit: "NO HAY COINCIDENCIAS", _esMensaje: true } as any]);
+          } else {
+            setResultados(data);
+          }
         } catch (error) {
           console.error('Error buscando kits:', error);
+          setResultados([]);
         } finally {
           setLoading(false);
         }
-      }, 500); // 500 ms de retraso (más rápido que productos)
+      }, 500);
     } else {
       setResultados([]);
       setLoading(false);
@@ -88,12 +93,16 @@ export const ListarKits: React.FC<ListarKitsProps> = ({
   };
 
   const handleKitSeleccionado = (kit: any) => {
+    // ✅ Ignorar la selección si el usuario hace clic o presiona Enter sobre el mensaje de "No hay coincidencias"
+    if (kit && kit._esMensaje) {
+      return; 
+    }
+
     if (kit) {
       onKitSeleccionado(kit);
       setResultados([]);
-      setQuery(kit.skuKit);
+      setQuery(kit.skuKit); // Asegurar mayúsculas al seleccionar
       
-      // Llamar al onChange del padre con el valor seleccionado
       if (onChange) {
         onChange(kit.skuKit);
       }
@@ -112,10 +121,12 @@ export const ListarKits: React.FC<ListarKitsProps> = ({
         ref={localInputRef}
         value={query}
         onChange={handleInputChange}
-        placeholder="Buscar kit..."
-        className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+        placeholder="BUSCAR KIT..." // ✅ Placeholder en mayúsculas
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none" 
       />
-      {loading ? <Loader /> : (
+      {loading ? (
+        <Loader />
+      ) : (
         <FlechasNavigator
           resultados={resultados}
           onSeleccionado={handleKitSeleccionado}

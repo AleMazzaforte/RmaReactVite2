@@ -9,6 +9,7 @@ import { printRetiroLocalHTML } from "./utilidades/printUtils";
 import { PdfGenerarConsolidado } from "./utilidades/pdfGenerarConsolidado";
 import { reproducirBeep } from "./utilidades/Beeper";
 
+
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
 interface OrderItem {
@@ -629,6 +630,8 @@ export const MercadoLibre = () => {
   const scannerInputRef = useRef<HTMLInputElement>(null);
 
   const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
+
+
 
   const urlGetVentas = Urls.apiMeli.getVentas;
 
@@ -1421,7 +1424,7 @@ const expandirKitsEnOrdenes = (
             >
               Imprimir constancias (retiro en local)
             </button>
-
+       
             <button
               onClick={registrarVentasConDescuento}
               disabled={selectedOrders.size === 0 || loadingDescuento}

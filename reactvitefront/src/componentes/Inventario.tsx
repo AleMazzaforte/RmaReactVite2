@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { StockManager } from "./utilidades/StockManager";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -16,6 +16,8 @@ import {
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Loader from "./utilidades/Loader";
 import Urls from "./utilidades/Urls";
+// Suppress TypeScript error for side-effect CSS import when no declaration file is present
+// @ts-ignore: CSS module declaration
 import "../estilos/Inventario.css";
 
 interface Producto {
@@ -30,6 +32,7 @@ interface Producto {
   fechaConteo: string | null;
   cantidadPorBulto: number;
   isActive?: number | boolean;
+  codigoBarras?: string;
 }
 
 interface ProductoConteo {
@@ -92,24 +95,145 @@ export const Inventario: React.FC = () => {
   const [productoAEditarBloque, setProductoAEditarBloque] = useState<Producto | null>(null);
   const [nuevoValorBloque, setNuevoValorBloque] = useState("");
   const [bloquesDisponibles, setBloquesDisponibles] = useState<string[]>([]);
+  const [productosConCB, setProductosConCB] = useState<Producto[]>([]);
 
-  // Cargar SKUs válidos
+  // Agrega esto después de declarar productosConCB
+
+
+  const { productos, setProductos, setLoading, bloques, loading, error } =
+    GetInventarioStock(urlPrepararInventario);
+
+  bloques.sort((a, b) => {
+    if (typeof a === "string") return 1;
+    if (typeof b === "string") return -1;
+    return a - b;
+  });
+  // ➕ ESTADOS Y REFS PARA EL ESCÁNER (Versión robusta)
+  const [idCalculadoraActiva, setIdCalculadoraActiva] = useState<number | null>(null);
+  const barcodeBuffer = useRef<string>("");
+  const firstKeyTime = useRef<number>(0);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Si hay una calculadora abierta, ignoramos para no romper la operación actual
+      if (idCalculadoraActiva !== null) return;
+
+      // 2. Ignorar teclas de control (Shift, Ctrl, Alt, etc.) que no sean Enter
+      if (e.key.length > 1 && e.key !== "Enter") return;
+
+      const now = Date.now();
+
+      if (e.key === "Enter") {
+        const totalTime = now - firstKeyTime.current;
+        const codigo = barcodeBuffer.current.toString().trim();
+
+        // ➕ AQUÍ ESTÁ LA LÍNEA QUE FALTABA:
+        if (codigo.length > 3 && totalTime < 300) {
+          procesarCodigoDeBarras(codigo);
+        } else if (codigo.length > 3) {
+          // Opcional: si quieres que funcione aunque sea lento (escaneo con lag)
+          // procesarCodigoDeBarras(codigo);
+        }
+
+        // Resetear SIEMPRE al presionar Enter
+        barcodeBuffer.current = "";
+        firstKeyTime.current = 0;
+        return;
+      }
+
+      // 3. Si es el primer carácter válido, iniciamos el timer
+      if (firstKeyTime.current === 0) {
+        firstKeyTime.current = now;
+      }
+
+      // 4. Acumular el carácter
+      barcodeBuffer.current += e.key;
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [productos, idCalculadoraActiva, productosConCB]);
+
+  const procesarCodigoDeBarras = (codigo: string) => {
+    const productoConCB = productosConCB.find(
+      (p) => {
+        const cb = p.codigoBarras?.toString().trim();
+        const sku = p.sku.toString().trim();
+        const codigoLimpio = codigo.toString().trim();
+        return cb === codigoLimpio || sku === codigoLimpio;
+      }
+    );
+
+    if (productoConCB) {
+      const productoInventario = productos.find(p => p.sku === productoConCB.sku);
+
+      if (productoInventario) {
+
+        // 1️⃣ Limpiar filtros automáticamente para asegurar que el producto sea visible en la tabla
+        setFiltro("");
+        setFiltroNoContado(false);
+        setFiltroConDiferencia(false);
+        setBloqueSeleccionado("");
+
+        // 2️⃣ Hacer scroll con un pequeño delay (150ms) para dar tiempo a React de renderizar la tabla sin filtros
+        setTimeout(() => {
+          const elemento = document.getElementById(`sku-${productoInventario.sku}`);
+          if (elemento) {
+
+            elemento.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            // Efecto visual de destello
+            const parent = elemento.parentElement;
+            if (parent) {
+              parent.style.backgroundColor = "#fef9c3"; // Amarillo suave
+              setTimeout(() => { parent.style.backgroundColor = ""; }, 1500);
+            }
+          } else {
+            console.warn("⚠️ No se encontró el elemento en el DOM. Revisa si el ID coincide.");
+          }
+        }, 150);
+
+        // 3️⃣ Abrir la calculadora
+        setIdCalculadoraActiva(productoInventario.id);
+      } else {
+        console.warn("⚠️ El producto existe en la lista general, pero no en el inventario actual.");
+      }
+    } else {
+      console.warn("❌ NO encontrado. Código:", codigo);
+      sweetAlert.warning("Código no encontrado", `El código "${codigo}" no está en el inventario.`);
+    }
+  };
+
+  // Cargar SKUs válidos y verificar datos iniciales
   useEffect(() => {
     const cargarDatosIniciales = async () => {
       try {
-        // Cargar SKUs válidos
+        // 1. Cargar SKUs y Códigos de Barras
         const responseSkus = await fetch(`${Urls.productos.listar}`);
         if (!responseSkus.ok) throw new Error("Error al obtener SKUs válidos");
+
         const dataSkus: Producto[] = await responseSkus.json();
+
+        // Guardar SKUs válidos
         const skus = dataSkus.map((p) => p.sku).filter(Boolean);
         setSkusValidos(new Set(skus));
 
-        // Cargar bloques disponibles
+        setProductosConCB(dataSkus);
+
+
+        // ➕ DEBUG: Verificar si el código de barras específico está en los datos cargados
+        const codigoBuscado = '7798181310799';
+        const productoConEseCB = dataSkus.find(
+          (p) => p.codigoBarras === codigoBuscado || p.sku === codigoBuscado
+        );
+
+        // 2. Cargar bloques disponibles
         const responseInventario = await fetch(`${urlPrepararInventario}`);
         if (!responseInventario.ok) throw new Error("Error al obtener inventario");
         const dataInventario: Producto[] = await responseInventario.json();
         const bloquesUnicos = [...new Set(dataInventario.map(p => p.idBloque).filter(b => b && b !== ""))] as string[];
         setBloquesDisponibles(bloquesUnicos.sort((a, b) => parseInt(a) - parseInt(b)));
+
       } catch (error) {
         console.error("Error cargando datos iniciales:", error);
         sweetAlert.error("Error", "No se pudieron cargar los datos iniciales");
@@ -219,14 +343,7 @@ export const Inventario: React.FC = () => {
     cargarReposiciones();
   }, []);
 
-  const { productos, setProductos, setLoading, bloques, loading, error } =
-    GetInventarioStock(urlPrepararInventario);
 
-  bloques.sort((a, b) => {
-    if (typeof a === "string") return 1;
-    if (typeof b === "string") return -1;
-    return a - b;
-  });
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.target.select();
@@ -1343,6 +1460,8 @@ export const Inventario: React.FC = () => {
                                 target: document.createElement("input"),
                               } as React.FocusEvent<HTMLInputElement>)
                             }
+                            forzarApertura={idCalculadoraActiva === producto.id}
+                            onCerrarCalculadora={() => setIdCalculadoraActiva(null)}
                           />
                         </td>
                         <td

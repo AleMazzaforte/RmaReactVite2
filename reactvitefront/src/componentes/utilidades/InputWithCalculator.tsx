@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Calculator } from "./Calculator";
 import { sweetAlert } from "./SweetAlertWrapper";
-import Urls from "./Urls"
+import Urls from "./Urls";
 
 interface InputWithLongTouchCalculatorProps {
   value: number | null;
@@ -12,9 +12,11 @@ interface InputWithLongTouchCalculatorProps {
   productosReposicion?: productosReposicion[];
   sku: string;
   onUpdateReposicion: (sku: string, cantidad: number) => void;
-  disabled?: boolean;              // ✅ Agregado
-  style?: React.CSSProperties;     // ✅ Agregado
-  className?: string;              // ✅ Agregado
+  disabled?: boolean;
+  style?: React.CSSProperties;
+  className?: string;
+  forzarApertura?: boolean;          // ➕ Agregado
+  onCerrarCalculadora?: () => void;  // ➕ Agregado
 }
 
 interface productosReposicion {
@@ -22,7 +24,7 @@ interface productosReposicion {
   cantidad: number;
 }
 
-let urlActualizarCantidadPorBulto = Urls.inventario.actualizarcantidadPorBulto
+let urlActualizarCantidadPorBulto = Urls.inventario.actualizarcantidadPorBulto;
 
 export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = ({
   value,
@@ -36,11 +38,20 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
   disabled = false,
   style,
   className = "",
+  forzarApertura,          // ➕ Desestructurado
+  onCerrarCalculadora,     // ➕ Desestructurado
 }) => {
   const [showCalculator, setShowCalculator] = useState(false);
   const longPressTimer = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const calculatorRef = useRef<HTMLDivElement>(null);
+
+  // ➕ EFECTO: Escuchar la orden del padre para abrirse
+  useEffect(() => {
+    if (forzarApertura) {
+      setShowCalculator(true);
+    }
+  }, [forzarApertura]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -49,6 +60,7 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
         !calculatorRef.current.contains(event.target as Node)
       ) {
         setShowCalculator(false);
+        onCerrarCalculadora?.(); // ➕ Avisar al padre que se cerró haciendo click afuera
       }
     };
 
@@ -61,7 +73,7 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
-  }, [showCalculator]);
+  }, [showCalculator, onCerrarCalculadora]);
 
   const handleTouchStart = () => {
     longPressTimer.current = window.setTimeout(() => {
@@ -80,33 +92,22 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
     const numericValue = result === "" ? null : Number(result);
     onChange(numericValue);
     setShowCalculator(false);
+    onCerrarCalculadora?.(); // ➕ Avisar al padre que se cerró con el botón de la calculadora
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    onChange(value === "" ? null : Number(value));
+    const val = e.target.value;
+    onChange(val === "" ? null : Number(val));
   };
 
-  const handleUpdateCantidadPorBulto = async (
-    id: number,
-    nuevaCantidad: number
-  ) => {
+  const handleUpdateCantidadPorBulto = async (id: number, nuevaCantidad: number) => {
     try {
       const response = await fetch(`${urlActualizarCantidadPorBulto}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          idProducto: id,
-          nuevaCantidad: nuevaCantidad,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idProducto: id, nuevaCantidad }),
       });
-
-      if (!response.ok) {
-        throw new Error("Error al actualizar cantidad por bulto");
-      }
-
+      if (!response.ok) throw new Error("Error al actualizar cantidad por bulto");
       return await response.json();
     } catch (error) {
       console.error("Error:", error);
@@ -141,9 +142,7 @@ export const InputWithCalculator: React.FC<InputWithLongTouchCalculatorProps> = 
       {showCalculator && (
         <div
           className="fixed inset-0 flex items-center justify-center z-50"
-          style={{
-            marginTop: "-10rem",
-          }}
+          style={{ marginTop: "-10rem" }}
         >
           <div
             ref={calculatorRef}

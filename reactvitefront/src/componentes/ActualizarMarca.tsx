@@ -3,6 +3,7 @@ import { ListarMarcas } from './utilidades/ListarMarcas';  // Importar el compon
 import { Contenedor } from './utilidades/Contenedor'; // Importar el componente Contenedor
 import Urls from "./utilidades/Urls";
 import { sweetAlert } from './utilidades/SweetAlertWrapper';
+import Loader from './utilidades/Loader';
 
 interface Marca {
     id: string;
@@ -161,6 +162,7 @@ export const ActualizarMarca: React.FC = () => {
 
     return (
         <div>
+            {loading && (<Loader />)}
             <Contenedor>
                 <h2 className='text-2xl font-semibold text-gray-700 text-center mb-8'>
                     Actualizar Marca

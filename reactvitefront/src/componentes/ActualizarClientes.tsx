@@ -19,6 +19,11 @@ interface Cliente {
   condicionDeEntrega: string;
   condicionDePago: string;
 }
+interface Transporte {
+  nombre: "";
+  direccion?: "";
+  telefono?: number
+}
 
 export const ActualizarClientes: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -42,8 +47,8 @@ export const ActualizarClientes: React.FC = () => {
     setTransporteSeleccionado(cliente.transporte); // Actualizar el transporte seleccionado
   };
 
-  const handleTransporteSeleccionado = (transporte: any) => {
-    setTransporteSeleccionado(transporte.nombre); // Asumimos que el transporte tiene un campo "nombre"
+  const handleTransporteSeleccionado = (transporte: Transporte) => {
+    setTransporteSeleccionado(transporte.nombre); 
   };
 
   const limpiarFormulario = () => {
