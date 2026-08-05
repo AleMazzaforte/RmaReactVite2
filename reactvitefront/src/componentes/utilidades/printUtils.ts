@@ -16,8 +16,6 @@ interface Order {
   buyer_full_name?: string;
 }
 
-
-
 export const printRetiroLocalHTML = (orders: Order[], selectedOrders: Set<string>) => {
   const selectedRetiroOrders = orders.filter(
     (o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local"
@@ -28,11 +26,8 @@ export const printRetiroLocalHTML = (orders: Order[], selectedOrders: Set<string
     return;
   }
 
-  // Sólo tomamos la **primera** orden (asumimos que se imprime de a una constancia a la vez)
-  // Si necesitas imprimir varias, habría que hacer una página por orden, pero tu HTML original es para una.
   const order = selectedRetiroOrders[0];
 
-  // Formatear productos como líneas de texto (sin inputs, porque en tu HTML original no son editables)
   const productosHtml = order.items.map(item =>
     `<label style="display: block; margin: 10px 0;">
         Artículo:
@@ -46,7 +41,7 @@ export const printRetiroLocalHTML = (orders: Order[], selectedOrders: Set<string
 
   const nombreCliente = order.buyer_full_name || order.buyer_nickname || "";
   const numeroOperacion = order.numeroOperacion;
-  const fechaHoy = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const fechaHoy = new Date().toISOString().slice(0, 10);
 
   const fullHtml = `
     <!DOCTYPE html>
@@ -55,6 +50,8 @@ export const printRetiroLocalHTML = (orders: Order[], selectedOrders: Set<string
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Recibo de venta - ${numeroOperacion}</title>
+        <!-- 🆕 Librería JsBarcode para generar el código de barras -->
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
         <style>
             main {
                 width: 750px;
@@ -97,11 +94,32 @@ export const printRetiroLocalHTML = (orders: Order[], selectedOrders: Set<string
                 margin-right: 5px;
                 vertical-align: middle;
             }
+            /* 🆕 Estilos para el contenedor del código de barras */
+            .barcode-section {
+                
+                padding: 5px;
+                margin: 10px auto;
+                max-width: 500px;
+                background: #fff;
+            }
+            .barcode-section h3 {
+                margin: 0 0 10px 0;
+                font-size: 1.3rem;
+                letter-spacing: 2px;
+            }
+            #barcode {
+                display: block;
+                margin: 0 auto;
+            }
+            .barcode-number {
+                font-family: monospace;
+                font-size: 1.5rem;
+                font-weight: bold;
+                margin-top: 10px;
+                letter-spacing: 3px;
+            }
             @media print {
-                body {
-                    margin: 0;
-                    padding: 0;
-                }
+                body { margin: 0; padding: 0; }
             }
         </style>
     </head>
@@ -146,7 +164,6 @@ export const printRetiroLocalHTML = (orders: Order[], selectedOrders: Set<string
             
             <div>Observaciones:</div>
             <label>
-                
                 <textarea name="observaciones" id="observaciones" cols="50" rows="2" class="campoDeEntrada"></textarea>
             </label>
             <br><br>
@@ -157,8 +174,34 @@ export const printRetiroLocalHTML = (orders: Order[], selectedOrders: Set<string
                 <div><input type="checkbox" class="check"><label>Rodri</label></div>
                 <div><input type="checkbox" class="check"><label>Magenta</label></div>
             </fieldset>
+
+            <!-- 🆕 SECCIÓN DEL CÓDIGO DE BARRAS -->
+            <div class="barcode-section">
+                <svg id="barcode"></svg>
+                <div class="barcode-number">${numeroOperacion}</div>
+            </div>
         </main>
-        <!-- Sin window.print() automático -->
+
+        <!-- 🆕 Script que genera el código de barras al cargar la página -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                try {
+                    JsBarcode("#barcode", "${numeroOperacion}", {
+                        format: "CODE128",
+                        width: 2,
+                        height: 80,
+                        displayValue: false,
+                        margin: 10,
+                        background: "#ffffff",
+                        lineColor: "#000000"
+                    });
+                } catch (e) {
+                    console.error("Error generando barcode:", e);
+                    document.getElementById("barcode").outerHTML = 
+                        '<div style="color:red;">Error al generar el código de barras</div>';
+                }
+            });
+        </script>
     </body>
     </html>
   `;

@@ -651,58 +651,73 @@ export const MercadoLibre = () => {
     }
   }, [ordenEnScan]);
 
-    // ─── 🆕 Listener global para escaneo rápido desde la pistola ──────────
+  // ─── 🆕 Listener global para escaneo rápido desde la pistola ──────────
   const [bufferScan, setBufferScan] = useState("");
   const bufferTimeoutRef = useRef<number | null>(null);
+  const firstKeyTime = useRef<number>(0);
 
   useEffect(() => {
-    // Solo activar si el modo scanner está ON y NO hay una orden abierta
     if (!modoScanner || ordenEnScan !== null) return;
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Ignorar teclas especiales
       if (e.key.length > 1 && e.key !== "Enter") return;
-      
-      // Ignorar si el foco está en un input (ej: días Femex/Blow)
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+
+      const now = Date.now();
 
       if (e.key === "Enter") {
-        e.preventDefault();
         const codigo = bufferScan.trim();
-        
-        if (codigo) {
-          // Buscar match en los VALORES de idsDelArchivo
+        const totalTime = now - firstKeyTime.current;
+
+        if (codigo && totalTime < 300) {
+          e.preventDefault();
+
+          let ordenEncontrada: Order | null = null;
+
+          // 1️⃣ Primero buscamos en el diccionario de etiquetas (órdenes con envío)
           const entradaMatch = Object.entries(idsDelArchivo).find(
             ([, valor]) => valor !== null && String(valor) === codigo
           );
-
           if (entradaMatch) {
             const [idOrden] = entradaMatch;
-            // Buscar la orden en allOrders
-            const orden = allOrders.find(
-              (o) => String(o.numeroOperacion).endsWith(idOrden) || idOrden.endsWith(String(o.numeroOperacion))
-            );
+            ordenEncontrada = allOrders.find(
+              (o) =>
+                String(o.numeroOperacion).endsWith(idOrden) ||
+                idOrden.endsWith(String(o.numeroOperacion))
+            ) || null;
+          }
 
-            if (orden && orden.tipo_envio !== "cancelada") {
-              handleIniciarScan(orden.numeroOperacion);
-            }
+          // 2️⃣ Si no hubo match por etiqueta, buscamos directamente por numeroOperacion
+          //    (Esto captura los retiros locales donde el CB = numeroOperacion)
+          if (!ordenEncontrada) {
+            ordenEncontrada = allOrders.find(
+              (o) => String(o.numeroOperacion) === codigo
+            ) || null;
+          }
+
+          if (ordenEncontrada && ordenEncontrada.tipo_envio !== "cancelada") {
+            handleIniciarScan(ordenEncontrada.numeroOperacion);
+          } else if (ordenEncontrada?.tipo_envio === "cancelada") {
+            sweetAlert.warning("Orden cancelada", "Esta orden está cancelada.");
           }
         }
-        
+
         setBufferScan("");
+        firstKeyTime.current = 0;
         return;
       }
 
-      // Acumular caracteres
+      if (firstKeyTime.current === 0) {
+        firstKeyTime.current = now;
+      }
+
       setBufferScan((prev) => prev + e.key);
 
-      // Resetear el buffer si pasa más de 100ms entre teclas (humano vs pistola)
       if (bufferTimeoutRef.current) {
         clearTimeout(bufferTimeoutRef.current);
       }
       bufferTimeoutRef.current = setTimeout(() => {
         setBufferScan("");
+        firstKeyTime.current = 0;
       }, 100);
     };
 

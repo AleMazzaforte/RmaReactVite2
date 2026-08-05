@@ -1,9 +1,5 @@
 import { conn } from "../bd/bd.js";
 
-// controllers/estadisticasController.js
-
-// controllers/estadisticasController.js
-
 export const getEstadisticasRMA = async (req, res) => {
   let connection;
   try {
@@ -68,13 +64,11 @@ export const getEstadisticasRMA = async (req, res) => {
       ),
       
       ventas_por_componentes AS (
-        SELECT idSku1 AS componente_id, unidades_kit_vendidas FROM kits k JOIN kits_vendidos kv ON k.idSkuKit = kv.kit_id WHERE idSku1 IS NOT NULL
-        UNION ALL
-        SELECT idSku2, unidades_kit_vendidas FROM kits k JOIN kits_vendidos kv ON k.idSkuKit = kv.kit_id WHERE idSku2 IS NOT NULL
-        UNION ALL
-        SELECT idSku3, unidades_kit_vendidas FROM kits k JOIN kits_vendidos kv ON k.idSkuKit = kv.kit_id WHERE idSku3 IS NOT NULL
-        UNION ALL
-        SELECT idSku4, unidades_kit_vendidas FROM kits k JOIN kits_vendidos kv ON k.idSkuKit = kv.kit_id WHERE idSku4 IS NOT NULL
+        SELECT 
+          kc.idSku AS componente_id,
+          kv.unidades_kit_vendidas * kc.cantidad AS unidades_kit_vendidas
+        FROM kits_vendidos kv
+        JOIN kits_componentes kc ON kc.idKit = kv.kit_id
       ),
       
       ventas_atribuidas AS (
