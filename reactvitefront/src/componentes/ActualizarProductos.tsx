@@ -282,7 +282,7 @@ export const ActualizarProductos: React.FC = () => {
               id="codigoBarras"
               name="codigoBarras"
               inputMode="text"
-              pattern="[0-9]*"
+              
               maxLength={50}
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none font-mono tracking-wider"
             />
