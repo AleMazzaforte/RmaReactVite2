@@ -281,10 +281,9 @@ export const ActualizarProductos: React.FC = () => {
               type="text"
               id="codigoBarras"
               name="codigoBarras"
-              inputMode="numeric"
+              inputMode="text"
               pattern="[0-9]*"
               maxLength={50}
-              placeholder="(solo números)"
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none font-mono tracking-wider"
             />
           </div>
