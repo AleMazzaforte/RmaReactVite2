@@ -1,601 +1,112 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { sweetAlert } from "./utilidades/SweetAlertWrapper";
 import Urls from "./utilidades/Urls";
 import Loader from "./utilidades/Loader";
-import BotonCargarTxt from "./utilidades/BotonCargarTxt";
-import { generateEnviosPDF } from "./utilidades/pdfGenerators";
-import { printRetiroLocalHTML } from "./utilidades/printUtils";
-import { PdfGenerarConsolidado } from "./utilidades/pdfGenerarConsolidado";
-import { reproducirBeep } from "./utilidades/Beeper";
+import BotonCargarTxt from "./utilidades/mercadoLibre/BotonCargarTxt";
+import { generateEnviosPDF } from "./utilidades/mercadoLibre/pdfGenerators";
+import { printRetiroLocalHTML } from "./utilidades/mercadoLibre/printUtils";
+import { PdfGenerarConsolidado } from "./utilidades/mercadoLibre/pdfGenerarConsolidado";
+import { reproducirBeep } from "./utilidades/mercadoLibre/Beeper";
+import { ColumnaOrdenes } from "./utilidades/mercadoLibre/ColumnaOrdenes";
+import type { Order, OrderItem, KitInfo, ApiResponse } from "./utilidades/mercadoLibre/mlTypes";
+import {
+  normalizarCodigoBarras,
+  agruparItemsPorSKU,
+  expandirOrdenParaVerificacion,
+  getProgresoOrden,
+  contarEscaneados,
+} from "./utilidades/mercadoLibre/mlHelpers";
 
+// Re-exportar para consumidores existentes
+export type { Order } from "./utilidades/mercadoLibre/mlTypes";
+export { getProgresoOrden } from "./utilidades/mercadoLibre/mlHelpers";
 
-// ─── Tipos ──────────────────────────────────────────────────────────────────
+// ─── Helpers (propios de este componente) ────────────────────────────────────
 
-interface OrderItem {
-  sku: string;
-  quantity: number;
-  description: string;
-  codigoBarras: string | null;
-  codigosBarrasComponentes?: string[]
-}
+const esRetiroLocalPendiente = (o: Order) =>
+  o.tipo_envio === "retiro_local" &&
+  o.shipping_status !== "delivered" &&
+  o.shipping_status !== "cancelled";
 
-export interface Order {
-  numeroOperacion: string;
-  buyer_nickname: string;
-  seller_nickname: string;
-  date_created: string;
-  etiqueta_impresa: boolean;
-  tipo_envio: string;
-  items: OrderItem[];
-  buyer_full_name?: string;
-  shipping_status?: string;
-}
-
-interface ItemVerificacion {
-  sku: string;
-  codigoBarras: string | null;
-  quantity: number;
-  esComponenteKit: boolean;
-  skuKitOriginal?: string;
-  descripcion?: string;
-}
-
-interface KitInfo {
-  id: number;
-  componentes: Array<{
-    idSku: number;
-    sku: string;
-    cantidad: number;
-    codigoBarras: string | null;
-    descripcion?: string | null;
-  }>;
-}
-
-interface ApiResponse {
-  success: boolean;
-  message: string;
-  data?: Order[];
-  kits?: Record<string, KitInfo>;
-}
-
-// ─── Constantes ─────────────────────────────────────────────────────────────
-
-const SELLER_FEMEX = "FEMEX";
-const SELLER_BLOW = "BLOW INK";
-
-const kitsConDescuento: Record<string, { skuDescuento: string | string[] }> = {
-  "KIT GI190 345ML": {
-    skuDescuento: ["GI190 N 135ML", "GI190 C 70ML", "GI190 M 70ML", "GI190 A 70ML"],
-  },
-  "KIT EP544 280ML": { skuDescuento: "EP544 N 70ML" },
-  "KIT EP664 400ML": {
-    skuDescuento: [
-      "EP664-EP673 N 100ML", "EP664-EP673 C 100ML",
-      "EP664-EP673 M 100ML", "EP664-EP673 A 100ML",
-    ],
-  },
-  "KIT EP673 600ML": {
-    skuDescuento: [
-      "EP664-EP673 N 100ML", "EP664-EP673 C 100ML",
-      "EP664-EP673 M 100ML", "EP664-EP673 A 100ML",
-      "EP673 LC 100ML", "EP673 LM 100ML",
-    ],
-  },
-  "KIT H901XL": { skuDescuento: ["H901XL N", "H901XL C"] },
-  "KIT EP73-EP117": { skuDescuento: ["EP117 N"] },
-  "KIT EP544-EP664 4L": { skuDescuento: "EP544-EP664-EP673 N" },
-  "KIT EP73-EP115": { skuDescuento: "EP115 N" },
-  "KIT EP73-EP90": { skuDescuento: "EP90 N" },
-};
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const formatDateToDisplay = (isoDateString: string): string => {
-  const date = new Date(isoDateString);
-  if (isNaN(date.getTime())) return "Fecha inválida";
-  return date.toLocaleString("es-AR", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
-  });
-};
-
-const getTipoEnvioLabel = (tipo: string): string => {
-  const labels: Record<string, string> = {
-    full: "Envío Full",
-    mercado_envios: "Mercado Envíos",
-    flex: "Flex",
-    vendedor: "Vendedor",
-    retiro_local: "Retiro en local",
-    cancelada: "❌ Cancelada",
-    desconocido: "Desconocido",
-  };
-  return labels[tipo] || tipo;
-};
-
-const getShippingStatusLabel = (status?: string, tipoEnvio?: string): { label: string; color: string } => {
-  const statusMap: Record<string, { label: string; color: string }> = {
-    'ready_to_print': { label: '📄 Etiqueta generada', color: 'bg-blue-100 text-blue-800' },
-    'printed': { label: '🖨️ Etiqueta impresa', color: 'bg-green-100 text-green-800' },
-    'handling': { label: '⚙️ En proceso', color: 'bg-yellow-100 text-yellow-800' },
-    'shipped': { label: '🚚 Enviado', color: 'bg-purple-100 text-purple-800' },
-    'delivered': { label: '✅ Entregado', color: 'bg-emerald-100 text-emerald-800' },
-    'dropped_off': { label: '📮 Despachado', color: 'bg-purple-100 text-purple-800' },
-    'in_transit': { label: '🚛 En tránsito', color: 'bg-purple-100 text-purple-800' },
-    'not_visited': { label: '⚠️ No visitado', color: 'bg-orange-100 text-orange-800' },
-    'cancelled': { label: '❌ Cancelado', color: 'bg-red-100 text-red-800' },
-    'in_packing_list': { label: '📦 En lista de empaque', color: 'bg-indigo-100 text-indigo-800' },
-    'error': { label: '⚠️ Error al obtener', color: 'bg-gray-100 text-gray-800' },
-    'unknown': { label: 'Sin estado', color: 'bg-gray-100 text-gray-800' },
-    'no_shipping': { label: '📭 Sin etiqueta', color: 'bg-amber-100 text-amber-800' }
-  };
-  return statusMap[status || 'unknown'] || { label: 'Sin estado', color: 'bg-gray-100 text-gray-800' };
-};
-
-
-const resultado: Record<string, string | null> = {};
-
-const extraerIdsDeEtiqueta = (
-  contenido: string, 
-  
-): Record<string, string | null> => {
-  
-  // Iniciamos el resultado con lo que ya tuviéramos acumulado (o vacío si es la primera vez)
-  
-  
-  // 1. Dividimos el contenido en bloques individuales por cada etiqueta (^XA ... ^XZ)
+const extraerIdsDeEtiqueta = (contenido: string): Record<string, string | null> => {
+  const resultado: Record<string, string | null> = {};
   const etiquetas = contenido.match(/\^XA[\s\S]*?\^XZ/g) || [];
-  
-  // 2. Expresiones regulares
+
   const regexId = /\^FO198,40\^A0N,30,30\^FD(\d+)\^FS/;
   const regexQR = /"id":"(\d+)"/;
   const regexBarcode = /\^FO230,210\^BY3,,1\^BCN,160,N,N,N\^FD>:([\d]+)\^FS/;
   const regexEnvioTexto = /\^FDEnvio:\s*([\d]+)\^FS/;
-  
-  // 3. Procesamos cada etiqueta de forma independiente
+
   for (const etiqueta of etiquetas) {
     const matchId = etiqueta.match(regexId);
-    
     if (matchId) {
       const idVenta = matchId[1];
       let codigoEnvio: string | null = null;
-      
-      // Priorizamos el QR porque tiene el ID completo y unificado
+
       const matchQR = etiqueta.match(regexQR);
       if (matchQR) {
         codigoEnvio = matchQR[1];
       } else {
-        // Si no hay QR, intentamos con el código de barras de Mercado Envíos
         const matchBarcode = etiqueta.match(regexBarcode);
         if (matchBarcode) {
           codigoEnvio = matchBarcode[1];
         } else {
-          // Si tampoco, intentamos con el texto "Envio: "
           const matchEnvio = etiqueta.match(regexEnvioTexto);
           if (matchEnvio) {
             codigoEnvio = matchEnvio[1];
           }
         }
       }
-      
-      // Guardamos el resultado (evitando duplicados si el ID ya fue procesado)
+
       if (!(idVenta in resultado)) {
         resultado[idVenta] = codigoEnvio;
       }
     }
   }
-  
   return resultado;
 };
 
-// ─── Helper para normalizar códigos de barras ─────────────────────────────
-const normalizarCodigoBarras = (cb: string | number | null | undefined): string | null => {
-  if (cb === null || cb === undefined || cb === "" || cb === 0 || cb === "0") {
-    return null;
-  }
-  return String(cb).trim();
-};
+const STORAGE_KEY = "ml_estado_dia";
+const getTodayString = () => new Date().toISOString().split("T")[0];
 
-// ─── Helper para agrupar items por SKU y sumar cantidades ──────────────
-const agruparItemsPorSKU = (items: ItemVerificacion[]): ItemVerificacion[] => {
-  const mapaAgrupado = new Map<string, ItemVerificacion>();
-
-  for (const item of items) {
-    const existente = mapaAgrupado.get(item.sku);
-    
-    if (existente) {
-      // Sumar cantidad al item existente
-      existente.quantity += item.quantity;
-    } else {
-      // Agregar nuevo item
-      mapaAgrupado.set(item.sku, { ...item });
-    }
-  }
-
-  return Array.from(mapaAgrupado.values());
-};
-
-// ─── 🆕 Helpers de Scanner ─────────────────────────────────────────────────
-
-const expandirOrdenParaVerificacion = (
-  orden: Order,
-  kitsMap: Record<string, KitInfo>
-): ItemVerificacion[] => {
-  const itemsVerificacion: ItemVerificacion[] = [];
-
-  for (const item of orden.items) {
-    const kitInfo = kitsMap[item.sku];
-
-    if (kitInfo && item.codigosBarrasComponentes?.length) {
-      const componentesExpandidos: Array<{ sku: string; descripcion: string; cb: string | null }> = [];
-      for (const comp of kitInfo.componentes) {
-        for (let i = 0; i < comp.cantidad; i++) {
-          componentesExpandidos.push({
-            sku: comp.sku,
-            descripcion: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
-            cb: comp.codigoBarras,
-          });
-        }
-      }
-
-      componentesExpandidos.forEach((comp, index) => {
-        itemsVerificacion.push({
-          sku: comp.sku,
-          codigoBarras: item.codigosBarrasComponentes?.[index] || null,
-          quantity: item.quantity,
-          esComponenteKit: true,
-          skuKitOriginal: item.sku,
-          descripcion: comp.descripcion,
-        });
-      });
-    } else {
-      itemsVerificacion.push({
-        sku: item.sku,
-        codigoBarras: item.codigoBarras,
-        quantity: item.quantity,
-        esComponenteKit: false,
-        descripcion: item.description,
-      });
-    }
-  }
-
-  // 🆕 Agrupar items por SKU y sumar cantidades
-  return agruparItemsPorSKU(itemsVerificacion);
-};
-
-const expandirKitsEnOrdenes = (
-  ordenes: Order[],
-  kitsMap: Record<string, KitInfo>
-): Order[] => {
-  return ordenes.map((orden) => {
-    const itemsExpandidos: OrderItem[] = [];
-
-    for (const item of orden.items) {
-      const kitInfo = kitsMap[item.sku];
-
-      if (kitInfo) {
-        for (const comp of kitInfo.componentes) {
-          for (let i = 0; i < comp.cantidad; i++) {
-            itemsExpandidos.push({
-              sku: comp.sku,
-              quantity: item.quantity,
-              description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
-              codigoBarras: comp.codigoBarras,
-            });
-          }
-        }
+const cargarEstadoInicial = () => {
+  try {
+    const guardado = localStorage.getItem(STORAGE_KEY);
+    if (guardado) {
+      const datos = JSON.parse(guardado);
+      // ✅ Si la fecha coincide con hoy, se cargan los datos (incluyendo allOrders)
+      if (datos.fecha === getTodayString()) {
+        return {
+          ordersFemex: datos.ordersFemex || [],
+          ordersBlow: datos.ordersBlow || [],
+          idsDelArchivoFemex: datos.idsDelArchivoFemex || {},
+          idsDelArchivoBlow: datos.idsDelArchivoBlow || {},
+          scansPorOrden: datos.scansPorOrden || {},
+          allOrders: datos.allOrders || [], // ✅ Agregado
+          esDiaActual: true,
+        };
       } else {
-        itemsExpandidos.push(item);
+        // ✅ Si hay una fecha anterior, se borra el localStorage automáticamente
+        localStorage.removeItem(STORAGE_KEY);
       }
     }
-
-    return { ...orden, items: itemsExpandidos };
-  });
-};
-
-const expandirOrdenIndividual = (
-  orden: Order,
-  kitsMap: Record<string, KitInfo>
-): Order => {
-  const itemsExpandidos: OrderItem[] = [];
-
-  for (const item of orden.items) {
-    const kitInfo = kitsMap[item.sku];
-
-    if (kitInfo) {
-      for (const comp of kitInfo.componentes) {
-        for (let i = 0; i < comp.cantidad; i++) {
-          itemsExpandidos.push({
-            sku: comp.sku,
-            quantity: item.quantity,
-            description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
-            codigoBarras: comp.codigoBarras,
-          });
-        }
-      }
-    } else {
-      itemsExpandidos.push(item);
-    }
+  } catch (e) {
+    console.error("Error al cargar estado del día:", e);
+    localStorage.removeItem(STORAGE_KEY);
   }
-
-  // 🆕 Agrupar items por SKU y sumar cantidades
-  const itemsAgrupados = agruparItemsPorSKU(
-    itemsExpandidos.map((item) => ({
-      sku: item.sku,
-      codigoBarras: item.codigoBarras,
-      quantity: item.quantity,
-      esComponenteKit: false,
-      descripcion: item.description,
-    }))
-  );
-
   return {
-    ...orden,
-    items: itemsAgrupados.map((item) => ({
-      sku: item.sku,
-      quantity: item.quantity,
-      description: item.descripcion || '',
-      codigoBarras: item.codigoBarras,
-    })),
+    ordersFemex: [],
+    ordersBlow: [],
+    idsDelArchivoFemex: {},
+    idsDelArchivoBlow: {},
+    scansPorOrden: {},
+    allOrders: [], // ✅ Agregado
+    esDiaActual: false,
   };
 };
 
-const contarEscaneados = (
-  codigoBarras: string,
-  numeroOperacion: string,
-  scansPorOrden: Record<string, string[]>
-): number => {
-  const scans = scansPorOrden[numeroOperacion] || [];
-  const cbNormalizado = normalizarCodigoBarras(codigoBarras);
-  return scans.filter((s) => normalizarCodigoBarras(s) === cbNormalizado).length;
-};
-
-const getProgresoOrden = (
-  orden: Order,
-  scansPorOrden: Record<string, string[]>,
-  kitsMap?: Record<string, KitInfo>
-): { total: number; verificados: number; items: (OrderItem & { verificados: number })[] } => {
-  const ordenProcesada = kitsMap ? expandirOrdenIndividual(orden, kitsMap) : orden;
-  const scans = scansPorOrden[ordenProcesada.numeroOperacion] || [];
-
-  const itemsConProgreso = ordenProcesada.items.map((item) => {
-    const cbItem = normalizarCodigoBarras(item.codigoBarras);
-    const verificados = cbItem
-      ? scans.filter((s) => normalizarCodigoBarras(s) === cbItem).length
-      : 0;
-    return {
-      ...item,
-      verificados: Math.min(verificados, item.quantity),
-    };
-  });
-
-  const total = ordenProcesada.items.reduce((sum, i) => sum + i.quantity, 0);
-  const verificados = itemsConProgreso.reduce((sum, i) => sum + i.verificados, 0);
-
-  return { total, verificados, items: itemsConProgreso };
-};
-
-// ─── Componente Columna ─────────────────────────────────────────────────────
-
-interface ColumnaOrdenesProps {
-  titulo: string;
-  orders: Order[];
-  ordenesVisibles: Order[];
-  setOrdenesVisibles: React.Dispatch<React.SetStateAction<Order[]>>;
-  mostrarMultiples: boolean;
-  setMostrarMultiples: (v: boolean) => void;
-  selectedOrders: Set<string>;
-  toggleOrderSelection: (orderId: string) => void;
-  onToggleAll: (ids: string[]) => void;
-  modoScanner: boolean;
-  onIniciarScan: (numeroOperacion: string) => void;
-  scansPorOrden: Record<string, string[]>;
-  kitsMap: Record<string, KitInfo>;
-}
-
-const ColumnaOrdenes: React.FC<ColumnaOrdenesProps> = ({
-  titulo,
-  orders,
-  ordenesVisibles,
-  setOrdenesVisibles,
-  mostrarMultiples,
-  setMostrarMultiples,
-  selectedOrders,
-  toggleOrderSelection,
-  onToggleAll,
-  modoScanner,
-  onIniciarScan,
-  scansPorOrden,
-  kitsMap,
-}) => {
-  const baseOrders = ordenesVisibles.length > 0 ? ordenesVisibles : orders;
-
-  const ordersFiltradas = baseOrders.filter((o) => {
-    if (modoScanner && o.tipo_envio === "full") return false;
-    if (mostrarMultiples && o.items.length <= 1) return false;
-    return true;
-  });
-
-  const idsVisibles = ordersFiltradas.map((o) => o.numeroOperacion);
-  const todasSeleccionadas =
-    idsVisibles.length > 0 && idsVisibles.every((id) => selectedOrders.has(id));
-
-  const cantidadMultiples = orders.filter((o) => o.items.length > 1).length;
-
-  if (orders.length === 0) return null;
-
-  return (
-    <div className="flex-1 min-w-0">
-      {/* Header de columna */}
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-2 sticky top-0 bg-white/90 backdrop-blur z-10 py-2 rounded">
-        <p className="text-gray-700">
-          <span className="font-bold text-lg">{titulo}</span> —{" "}
-          <span className="font-semibold">{orders.length}</span> órdenes
-          {mostrarMultiples && (
-            <span className="ml-2 text-xs text-blue-600">
-              (mostrando {cantidadMultiples} con +1 producto)
-            </span>
-          )}
-        </p>
-        <div className="flex items-center gap-3">
-          {ordenesVisibles.length > 0 && (
-            <button
-              onClick={() => setOrdenesVisibles([])}
-              className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition whitespace-nowrap"
-            >
-              ✕ Ver todas ({orders.length})
-            </button>
-          )}
-          <label className="flex items-center gap-1.5 text-sm whitespace-nowrap cursor-pointer">
-            <input
-              type="checkbox"
-              checked={mostrarMultiples}
-              onChange={(e) => setMostrarMultiples(e.target.checked)}
-              className="w-4 h-4"
-            />
-            +1 SKU
-          </label>
-                    {!modoScanner && (
-            <label className="flex items-center gap-1.5 text-sm whitespace-nowrap cursor-pointer">
-              <input
-                type="checkbox"
-                checked={todasSeleccionadas}
-                onChange={() => onToggleAll(idsVisibles)} // ✅ Cambiado aquí
-                className="w-4 h-4"
-              />
-              Seleccionar todas
-            </label>
-          )}
-        </div>
-      </div>
-
-      {/* Lista de órdenes */}
-      <div className="space-y-4">
-        {ordersFiltradas.map((order) => {
-          const progreso = modoScanner ? getProgresoOrden(order, scansPorOrden, kitsMap) : null;
-          const completo = progreso ? progreso.verificados === progreso.total && progreso.total > 0 : false;
-
-          return (
-            <div
-              key={order.numeroOperacion}
-              className={`rounded-lg p-4 shadow-sm relative border transition-all ${order.tipo_envio === "cancelada"
-                  ? "bg-gray-100 border-gray-300"
-                  : completo
-                    ? "bg-green-50 border-green-400 ring-2 ring-green-300"
-                    : order.tipo_envio === "retiro_local"
-                      ? "bg-amber-50 border-amber-200"
-                      : "bg-white border-gray-200"
-                } ${modoScanner && !completo ? "cursor-pointer hover:ring-2 hover:ring-blue-300" : ""}`}
-              onClick={() => {
-                if (modoScanner && !completo && order.tipo_envio !== "cancelada") {
-                  onIniciarScan(order.numeroOperacion);
-                }
-              }}
-            >
-              <div className="absolute top-3 right-3">
-                {modoScanner ? (
-                  <span className={`text-lg ${completo ? "text-green-500" : "text-gray-400"}`}>
-                    {completo ? "✅" : "🔍"}
-                  </span>
-                ) : (
-                  <input
-                    type="checkbox"
-                    checked={selectedOrders.has(order.numeroOperacion)}
-                    onChange={() => toggleOrderSelection(order.numeroOperacion)}
-                    className="w-5 h-5 cursor-pointer"
-                  />
-                )}
-              </div>
-
-              <div className="flex justify-between items-start pr-8">
-                <h3 className="text-base font-semibold text-gray-800">
-                  Orden #{order.numeroOperacion}
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">
-                    <span className="font-semibold">
-                      {getTipoEnvioLabel(order.tipo_envio)}
-                    </span>
-                  </span>
-                  {(() => {
-                    const statusInfo = getShippingStatusLabel(order.shipping_status, order.tipo_envio);
-                    return (
-                      <span
-                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusInfo.color}`}
-                        title={`Status: ${order.shipping_status || 'desconocido'}`}
-                      >
-                        {statusInfo.label}
-                      </span>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-600 mt-1">
-                <span className="font-medium">Comprador:</span>{" "}
-                {order.buyer_full_name} ({order.buyer_nickname})
-              </p>
-
-              <p className="text-sm text-gray-600 mt-1">
-                <span className="font-medium">Fecha:</span>{" "}
-                {formatDateToDisplay(order.date_created)}
-              </p>
-
-              <div className="mt-2">
-                <p className="text-sm text-gray-700 font-medium">Items:</p>
-                <ul className="list-disc list-inside mt-1 text-sm text-gray-600">
-                  {order.items.map((item, idx) => {
-                    const itemProgreso = progreso?.items[idx];
-                    const itemCompleto = itemProgreso ? itemProgreso.verificados >= itemProgreso.quantity : false;
-                    const esKit = !!kitsMap[item.sku];
-
-                    return (
-                      <li key={idx} className={itemCompleto ? "text-green-700 line-through" : ""}>
-                        <span className="font-bold">{item.sku}</span> —{" "}
-                        <span className="font-bold">{item.quantity} Un.</span> —{" "}
-                        <span className="text-gray-500">{item.description}</span>
-                        {modoScanner && itemProgreso && (
-                          <span className={`ml-2 text-xs font-bold ${itemCompleto ? "text-green-600" : "text-blue-600"}`}>
-                            [{itemProgreso.verificados}/{itemProgreso.quantity}]
-                          </span>
-                        )}
-                        {modoScanner && esKit && (
-                          <span className="ml-2 text-xs text-blue-600 font-bold">
-                            📦 Kit ({kitsMap[item.sku].componentes.length} componentes)
-                          </span>
-                        )}
-                        {modoScanner && !esKit && !item.codigoBarras && (
-                          <span className="ml-2 text-xs text-orange-500 font-bold">
-                            ⚠️ Sin CB
-                          </span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-
-              {modoScanner && progreso && progreso.total > 0 && (
-                <div className="mt-3">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-300 ${completo ? "bg-green-500" : "bg-blue-500"
-                        }`}
-                      style={{ width: `${(progreso.verificados / progreso.total) * 100}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1 text-right">
-                    {progreso.verificados}/{progreso.total} verificados
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
+const ESTADO_INICIAL = cargarEstadoInicial();
 
 // ─── Componente Principal ───────────────────────────────────────────────────
 
@@ -603,47 +114,58 @@ export const MercadoLibre = () => {
   const [diasFemex, setDiasFemex] = useState<number>(3);
   const [diasBlow, setDiasBlow] = useState<number>(3);
 
-  const [ordersFemex, setOrdersFemex] = useState<Order[]>([]);
-  const [ordersBlow, setOrdersBlow] = useState<Order[]>([]);
-
   const [ordenesVisiblesFemex, setOrdenesVisiblesFemex] = useState<Order[]>([]);
   const [ordenesVisiblesBlow, setOrdenesVisiblesBlow] = useState<Order[]>([]);
+
+  const [mostrarFiltradasFemex, setMostrarFiltradasFemex] = useState(false);
+  const [mostrarFiltradasBlow, setMostrarFiltradasBlow] = useState(false);
 
   const [mostrarMultiplesFemex, setMostrarMultiplesFemex] = useState(false);
   const [mostrarMultiplesBlow, setMostrarMultiplesBlow] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
-  const [productosConDescuento, setProductosConDescuento] = useState<Record<string, number>>({});
-  const [loadingDescuento, setLoadingDescuento] = useState(true);
 
-  const [nombreArchivo, setNombreArchivo] = useState("");
-  const [contenidoTxt, setContenidoTxt] = useState("");
+  const [ordersFemex, setOrdersFemex] = useState<Order[]>(ESTADO_INICIAL.ordersFemex);
+  const [ordersBlow, setOrdersBlow] = useState<Order[]>(ESTADO_INICIAL.ordersBlow);
+  const [idsDelArchivoFemex, setIdsDelArchivoFemex] = useState<Record<string, string | null>>(ESTADO_INICIAL.idsDelArchivoFemex);
+  const [idsDelArchivoBlow, setIdsDelArchivoBlow] = useState<Record<string, string | null>>(ESTADO_INICIAL.idsDelArchivoBlow);
+  const [scansPorOrden, setScansPorOrden] = useState<Record<string, string[]>>(ESTADO_INICIAL.scansPorOrden);
 
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
 
   const [modoScanner, setModoScanner] = useState(false);
   const [ordenEnScan, setOrdenEnScan] = useState<string | null>(null);
-  const [scansPorOrden, setScansPorOrden] = useState<Record<string, string[]>>({});
+
   const [inputScan, setInputScan] = useState("");
   const scannerInputRef = useRef<HTMLInputElement>(null);
 
   const [kitsMap, setKitsMap] = useState<Record<string, KitInfo>>({});
 
-
-
-  const urlGetVentas = Urls.apiMeli.getVentas;
-
+  // allOrders se deriva del estado, pero también se guarda en localStorage
   const allOrders = [...ordersFemex, ...ordersBlow];
-
   const ordenActiva = allOrders.find((o) => o.numeroOperacion === ordenEnScan) || null;
   const progresoActivo = ordenActiva ? getProgresoOrden(ordenActiva, scansPorOrden, kitsMap) : null;
-
-  // 🆕 Calcular itemsVerificacion para el modal
   const itemsVerificacion = ordenActiva ? expandirOrdenParaVerificacion(ordenActiva, kitsMap) : [];
 
-  const [idsDelArchivo, setIdsDelArchivo] = useState<Record<string, string | null>>({});
+  // ─── Cálculo de órdenes pendientes de despacho ──────────────────────────
+  const estadosFinalizados = ['shipped', 'delivered', 'dropped_off', 'in_transit', 'cancelled', "Sin estado",
+    "out_for_delivery"];
+
+  const pendientesMercadoEnvio = allOrders.filter(o =>
+    (o.tipo_envio === 'mercado_envios') &&
+    (o.shipping_status === 'printed' || o.shipping_status === 'ready_to_print')
+  ).length;
+
+  const pendientesFlex = allOrders.filter(o =>
+    o.tipo_envio === 'flex' &&
+    !estadosFinalizados.includes(o.shipping_status || '')
+  ).length;
+  // ────────────────────────────────────────────────────────────────────────
+
+  // console.log(allOrders);
+
 
   useEffect(() => {
     if (ordenEnScan && scannerInputRef.current) {
@@ -651,10 +173,14 @@ export const MercadoLibre = () => {
     }
   }, [ordenEnScan]);
 
-  // ─── 🆕 Listener global para escaneo rápido desde la pistola ──────────
-  const [bufferScan, setBufferScan] = useState("");
-  const bufferTimeoutRef = useRef<number | null>(null);
+  // ─── 🆕 Listener global para escaneo rápido (Corregido con useRef) ──────────
+  const bufferScanRef = useRef<string>("");
   const firstKeyTime = useRef<number>(0);
+
+  const handleIniciarScan = useCallback((numeroOperacion: string) => {
+    setOrdenEnScan(numeroOperacion);
+    setInputScan("");
+  }, []);
 
   useEffect(() => {
     if (!modoScanner || ordenEnScan !== null) return;
@@ -665,31 +191,31 @@ export const MercadoLibre = () => {
       const now = Date.now();
 
       if (e.key === "Enter") {
-        const codigo = bufferScan.trim();
+        const codigo = bufferScanRef.current.trim();
         const totalTime = now - firstKeyTime.current;
 
         if (codigo && totalTime < 300) {
           e.preventDefault();
 
           let ordenEncontrada: Order | null = null;
+          const todosLosIds = { ...idsDelArchivoFemex, ...idsDelArchivoBlow };
+          const todasLasOrdenes = [...ordersFemex, ...ordersBlow];
 
-          // 1️⃣ Primero buscamos en el diccionario de etiquetas (órdenes con envío)
-          const entradaMatch = Object.entries(idsDelArchivo).find(
+          const entradaMatch = Object.entries(todosLosIds).find(
             ([, valor]) => valor !== null && String(valor) === codigo
           );
+
           if (entradaMatch) {
             const [idOrden] = entradaMatch;
-            ordenEncontrada = allOrders.find(
+            ordenEncontrada = todasLasOrdenes.find(
               (o) =>
                 String(o.numeroOperacion).endsWith(idOrden) ||
                 idOrden.endsWith(String(o.numeroOperacion))
             ) || null;
           }
 
-          // 2️⃣ Si no hubo match por etiqueta, buscamos directamente por numeroOperacion
-          //    (Esto captura los retiros locales donde el CB = numeroOperacion)
           if (!ordenEncontrada) {
-            ordenEncontrada = allOrders.find(
+            ordenEncontrada = todasLasOrdenes.find(
               (o) => String(o.numeroOperacion) === codigo
             ) || null;
           }
@@ -698,63 +224,135 @@ export const MercadoLibre = () => {
             handleIniciarScan(ordenEncontrada.numeroOperacion);
           } else if (ordenEncontrada?.tipo_envio === "cancelada") {
             sweetAlert.warning("Orden cancelada", "Esta orden está cancelada.");
+          } else {
+            sweetAlert.warning(
+              "Orden no encontrada",
+              `El código "${codigo}" no coincide con ninguna orden cargada.`
+            );
           }
         }
 
-        setBufferScan("");
+        bufferScanRef.current = "";
         firstKeyTime.current = 0;
         return;
       }
 
-      if (firstKeyTime.current === 0) {
-        firstKeyTime.current = now;
+      if (e.key.length === 1) {
+        if (firstKeyTime.current === 0) {
+          firstKeyTime.current = now;
+        }
+        bufferScanRef.current += e.key;
       }
-
-      setBufferScan((prev) => prev + e.key);
-
-      if (bufferTimeoutRef.current) {
-        clearTimeout(bufferTimeoutRef.current);
-      }
-      bufferTimeoutRef.current = setTimeout(() => {
-        setBufferScan("");
-        firstKeyTime.current = 0;
-      }, 100);
     };
 
-    document.addEventListener("keydown", handleGlobalKeyDown);
+    window.addEventListener("keydown", handleGlobalKeyDown);
+
     return () => {
-      document.removeEventListener("keydown", handleGlobalKeyDown);
-      if (bufferTimeoutRef.current) clearTimeout(bufferTimeoutRef.current);
+      window.removeEventListener("keydown", handleGlobalKeyDown);
     };
-  }, [modoScanner, ordenEnScan, bufferScan, idsDelArchivo, allOrders]);
+  }, [modoScanner, ordenEnScan, idsDelArchivoFemex, idsDelArchivoBlow, ordersFemex, ordersBlow, handleIniciarScan]);
 
-  // ─── Cargar productos con descuento ─────────────────────────────────────
-
+  // ─── 🔄 3. Recalcular filtro automáticamente cuando cambian órdenes o IDs ───
   useEffect(() => {
-    const fetchProductosConDescuento = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get<{ id: number; sku: string }[]>(
-          Urls.ProductosConDescuento.listar
-        );
-        const mapa = response.data.reduce((acc, prod) => {
-          acc[prod.sku] = prod.id;
-          return acc;
-        }, {} as Record<string, number>);
-        setProductosConDescuento(mapa);
-      } catch (error) {
-        console.error("Error al cargar productos con descuento:", error);
-        sweetAlert.error("No se pudieron cargar los productos con descuento");
-      } finally {
-        setLoadingDescuento(false);
-        setLoading(false);
+    if (Object.keys(idsDelArchivoFemex).length > 0 && ordersFemex.length > 0) {
+      const idsKeys = Object.keys(idsDelArchivoFemex);
+      const coincidentesFemex = ordersFemex.filter((o: Order) => {
+        if (esRetiroLocalPendiente(o)) return true;
+
+        const num = String(o.numeroOperacion);
+        return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
+      });
+      setOrdenesVisiblesFemex(coincidentesFemex);
+    }
+
+    if (Object.keys(idsDelArchivoBlow).length > 0 && ordersBlow.length > 0) {
+      const idsKeys = Object.keys(idsDelArchivoBlow);
+      const coincidentesBlow = ordersBlow.filter((o: Order) => {
+        if (esRetiroLocalPendiente(o)) return true;
+
+        const num = String(o.numeroOperacion);
+        return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
+      });
+      setOrdenesVisiblesBlow(coincidentesBlow);
+    }
+  }, [ordersFemex, ordersBlow, idsDelArchivoFemex, idsDelArchivoBlow]);
+
+  // ─── Toggle para mostrar/ocultar filtro ───
+  const toggleFiltro = () => {
+    const nuevoEstadoFemex = !mostrarFiltradasFemex;
+    const nuevoEstadoBlow = !mostrarFiltradasBlow;
+
+    setMostrarFiltradasFemex(nuevoEstadoFemex);
+    setMostrarFiltradasBlow(nuevoEstadoBlow);
+
+    if (nuevoEstadoFemex && Object.keys(idsDelArchivoFemex).length > 0) {
+      const idsKeys = Object.keys(idsDelArchivoFemex);
+      const coincidentes = ordersFemex.filter((o: Order) => {
+        if (esRetiroLocalPendiente(o)) return true;
+
+        const num = String(o.numeroOperacion);
+        return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
+      });
+      setOrdenesVisiblesFemex(coincidentes);
+    }
+
+    if (nuevoEstadoBlow && Object.keys(idsDelArchivoBlow).length > 0) {
+      const idsKeys = Object.keys(idsDelArchivoBlow);
+      const coincidentes = ordersBlow.filter((o: Order) => {
+        if (esRetiroLocalPendiente(o)) return true;
+
+        const num = String(o.numeroOperacion);
+        return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
+      });
+      setOrdenesVisiblesBlow(coincidentes);
+    }
+  };
+
+  // ─── 🔄 1. Reconstrucción automática de vistas al recargar ───
+  useEffect(() => {
+    if (ESTADO_INICIAL.esDiaActual) {
+      if (ESTADO_INICIAL.ordersFemex.length > 0 && Object.keys(ESTADO_INICIAL.idsDelArchivoFemex).length > 0) {
+        const idsKeys = Object.keys(ESTADO_INICIAL.idsDelArchivoFemex);
+        const coincidentes = ESTADO_INICIAL.ordersFemex.filter((o: Order) => {
+          if (esRetiroLocalPendiente(o)) return true;
+
+          const num = String(o.numeroOperacion);
+          return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
+        });
+        setOrdenesVisiblesFemex(coincidentes);
+        if (coincidentes.length > 0) setMostrarFiltradasFemex(true);
       }
-    };
-    fetchProductosConDescuento();
+
+      if (ESTADO_INICIAL.ordersBlow.length > 0 && Object.keys(ESTADO_INICIAL.idsDelArchivoBlow).length > 0) {
+        const idsKeys = Object.keys(ESTADO_INICIAL.idsDelArchivoBlow);
+        const coincidentes = ESTADO_INICIAL.ordersBlow.filter((o: Order) => {
+          if (esRetiroLocalPendiente(o)) return true;
+
+          const num = String(o.numeroOperacion);
+          return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
+        });
+        setOrdenesVisiblesBlow(coincidentes);
+        if (coincidentes.length > 0) setMostrarFiltradasBlow(true);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Selección ──────────────────────────────────────────────────────────
+  // ─── 💾 2. Persistencia automática en localStorage ───
+  useEffect(() => {
+    const estadoParaGuardar = {
+      fecha: getTodayString(),
+      ordersFemex,
+      ordersBlow,
+      idsDelArchivoFemex,
+      idsDelArchivoBlow,
+      scansPorOrden,
+      allOrders: [...ordersFemex, ...ordersBlow], // ✅ Se guarda allOrders actualizado
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(estadoParaGuardar));
+  }, [ordersFemex, ordersBlow, idsDelArchivoFemex, idsDelArchivoBlow, scansPorOrden]);
 
+  // ─── Selección ──────────────────────────────────────────────────────────
   const toggleOrderSelection = (orderId: string) => {
     const newSelected = new Set(selectedOrders);
     if (newSelected.has(orderId)) {
@@ -777,12 +375,6 @@ export const MercadoLibre = () => {
   };
 
   // ─── 🆕 Lógica de Scanner ──────────────────────────────────────────────
-
-  const handleIniciarScan = (numeroOperacion: string) => {
-    setOrdenEnScan(numeroOperacion);
-    setInputScan("");
-  };
-
   const handleCerrarScan = () => {
     setOrdenEnScan(null);
     setInputScan("");
@@ -795,7 +387,6 @@ export const MercadoLibre = () => {
     const codigo = inputScan.trim();
     if (!codigo || !ordenActiva) return;
 
-    // 🆕 Verificar si el código escaneado es un KIT
     const kitInfo = kitsMap[codigo];
     if (kitInfo) {
       reproducirBeep('advertencia');
@@ -859,9 +450,7 @@ export const MercadoLibre = () => {
 
     if (yaEscaneados >= itemMatch.quantity) {
       reproducirBeep('advertencia');
-      sweetAlert.warning(
-        `⚠️ Ya escaneaste las ${itemMatch.quantity} unidad(es) de "${itemMatch.sku}".`
-      );
+      sweetAlert.warning(`⚠️ Ya escaneaste las ${itemMatch.quantity} unidad(es) de "${itemMatch.sku}".`);
       setInputScan("");
       return;
     }
@@ -890,10 +479,10 @@ export const MercadoLibre = () => {
       setTimeout(() => reproducirBeep('exito'), 150);
       sweetAlert.success(`✅ Orden #${ordenActiva.numeroOperacion} verificada completamente.`,
         undefined,
-         {
-          timer: 3000,                // Se cierra en 3000 ms (3 segundos)
-          timerProgressBar: true,     // Muestra una barra de progreso visual en la parte inferior
-          showConfirmButton: false    // Oculta el botón "OK" para que no requiera clic
+        {
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false
         }
       );
       setOrdenEnScan(null);
@@ -912,7 +501,6 @@ export const MercadoLibre = () => {
   };
 
   // ─── Fetch de órdenes (paralelo) ───────────────────────────────────────
-
   const handleFetchOrders = async () => {
     if (diasFemex < 1 || diasFemex > 30 || diasBlow < 1 || diasBlow > 30) {
       sweetAlert.warning("Ingresá valores entre 1 y 30 días.");
@@ -921,15 +509,11 @@ export const MercadoLibre = () => {
 
     setLoading(true);
     setSelectedOrders(new Set());
-    setOrdenesVisiblesFemex([]);
-    setOrdenesVisiblesBlow([]);
-    setMostrarMultiplesFemex(false);
-    setMostrarMultiplesBlow(false);
 
     try {
       const [resFemex, resBlow] = await Promise.allSettled([
-        axios.get<ApiResponse>(`${urlGetVentas}${diasFemex}&cuenta=1`),
-        axios.get<ApiResponse>(`${urlGetVentas}${diasBlow}&cuenta=2`),
+        axios.get<ApiResponse>(`${Urls.apiMeli.getVentas}${diasFemex}&cuenta=1`),
+        axios.get<ApiResponse>(`${Urls.apiMeli.getVentas}${diasBlow}&cuenta=2`),
       ]);
 
       if (resFemex.status === "fulfilled") {
@@ -937,7 +521,19 @@ export const MercadoLibre = () => {
         if (data.success && data.data) {
           setOrdersFemex(data.data);
           if (data.kits) {
-            setKitsMap(data.kits);
+
+            // Si viene como array, lo convertimos a Record usando el SKU como clave
+            const kitsProcesados = Array.isArray(data.kits)
+              ? data.kits.reduce((acc: any, kit: any) => {
+                acc[kit.sku] = kit;
+                return acc;
+              }, {})
+              : data.kits; // Si ya es un objeto, lo deja igual
+
+            setKitsMap(prev => {
+              const nuevoMap = { ...prev, ...kitsProcesados };
+              return nuevoMap;
+            });
           }
         } else {
           sweetAlert.error(`Femex: ${data.message || "Error desconocido"}`);
@@ -950,7 +546,17 @@ export const MercadoLibre = () => {
         if (data.success && data.data) {
           setOrdersBlow(data.data);
           if (data.kits) {
-            setKitsMap(data.kits);
+            const kitsProcesados = Array.isArray(data.kits)
+              ? data.kits.reduce((acc: any, kit: any) => {
+                acc[kit.sku] = kit;
+                return acc;
+              }, {})
+              : data.kits;
+
+            setKitsMap(prev => {
+              const nuevoMap = { ...prev, ...kitsProcesados };
+              return nuevoMap;
+            });
           }
         } else {
           sweetAlert.error(`Blow: ${data.message || "Error desconocido"}`);
@@ -963,11 +569,24 @@ export const MercadoLibre = () => {
   };
 
   // ─── Carga de archivo de etiquetas ─────────────────────────────────────
+  const detectarEmpresaDesdeArchivo = (contenido: string): 'femex' | 'blow' | null => {
+    const ID_FEMEX = "259559491";
+    const ID_BLOW = "1235385416";
+
+    if (contenido.includes(ID_FEMEX)) return 'femex';
+    if (contenido.includes(ID_BLOW)) return 'blow';
+    return null;
+  };
 
   const handleArchivoTxt = (content: string, fileName: string) => {
-    setNombreArchivo(fileName);
+    const empresa = detectarEmpresaDesdeArchivo(content);
+
+    if (!empresa) {
+      sweetAlert.warning("No se pudo detectar la empresa del archivo.", "El archivo no contiene los identificadores de FEMEX o BLOW.");
+      return;
+    }
+
     const idsExtraidos = extraerIdsDeEtiqueta(content);
-    setIdsDelArchivo(idsExtraidos);
     const idsKeys = Object.keys(idsExtraidos);
 
     if (idsKeys.length === 0) {
@@ -975,123 +594,146 @@ export const MercadoLibre = () => {
       return;
     }
 
-    if (ordersFemex.length === 0 && ordersBlow.length === 0) {
-      sweetAlert.warning(
-        `Se encontraron ${idsDelArchivo.length} IDs en el archivo, pero no hay órdenes cargadas. Primero obtené las órdenes.`
-      );
-      return;
-    }
+    if (empresa === 'femex') {
+      setIdsDelArchivoFemex(prev => {
+        const nuevosIds = { ...prev, ...idsExtraidos };
 
-    const coincidentesFemex = ordersFemex.filter((o) => {
-      const num = String(o.numeroOperacion);
-      return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
-    });
+        if (ordersFemex.length > 0) {
+          const todosLosIdsKeys = Object.keys(nuevosIds);
+          const coincidentes = ordersFemex.filter((o) => {
+            const num = String(o.numeroOperacion);
+            return todosLosIdsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
+          });
 
-    const coincidentesBlow = ordersBlow.filter((o) => {
-      const num = String(o.numeroOperacion);
-      return idsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
-    });
+          setOrdenesVisiblesFemex(prevOrdenes => {
+            const combinadas = [...prevOrdenes, ...coincidentes];
+            const sinDuplicados = combinadas.filter((orden, index, self) =>
+              index === self.findIndex((o) => o.numeroOperacion === orden.numeroOperacion)
+            );
+            setMostrarFiltradasFemex(true);
+            return sinDuplicados;
+          });
+        }
 
-    const totalCoincidentes = coincidentesFemex.length + coincidentesBlow.length;
-
-    if (totalCoincidentes === 0) {
-      sweetAlert.warning(
-        `Se encontraron ${idsDelArchivo.length} IDs en el archivo, pero ninguna coincide con las órdenes cargadas.`
-      );
-      setContenidoTxt("");
-      setNombreArchivo("");
-      return;
-    }
-
-    if (coincidentesFemex.length > 0) {
-      setOrdenesVisiblesFemex((prev) => {
-        const existentes = new Set(prev.map((o) => o.numeroOperacion));
-        const nuevas = coincidentesFemex.filter((o) => !existentes.has(o.numeroOperacion));
-        return [...prev, ...nuevas];
+        return nuevosIds;
       });
-    }
 
-    if (coincidentesBlow.length > 0) {
-      setOrdenesVisiblesBlow((prev) => {
-        const existentes = new Set(prev.map((o) => o.numeroOperacion));
-        const nuevas = coincidentesBlow.filter((o) => !existentes.has(o.numeroOperacion));
-        return [...prev, ...nuevas];
-      });
-    }
+      if (ordersFemex.length === 0) {
+        sweetAlert.warning(`Se encontraron ${idsKeys.length} IDs en el archivo, pero no hay órdenes de FEMEX cargadas. Primero obtené las órdenes.`);
+        return;
+      }
 
-    const noEncontrados = idsKeys.filter(
-      (id) =>
-        !allOrders.some((o) => {
+      const noEncontrados = idsKeys.filter(
+        (id) => !ordersFemex.some((o) => {
           const num = String(o.numeroOperacion);
           return num.endsWith(id) || id.endsWith(num);
         })
-    );
+      );
 
-    let mensaje = `✅ Se filtraron ${totalCoincidentes} órdenes a partir de "${fileName}".`;
-    if (coincidentesFemex.length > 0) mensaje += `<br/>📦 Femex: ${coincidentesFemex.length}`;
-    if (coincidentesBlow.length > 0) mensaje += `<br/>📦 Blow: ${coincidentesBlow.length}`;
-    if (noEncontrados.length > 0) {
-      mensaje += `<br/><br/>⚠️ ${noEncontrados.length} IDs no se encontraron.`;
+      let mensaje = `✅ Se agregaron etiquetas de FEMEX a partir de "${fileName}".`;
+      if (noEncontrados.length > 0) {
+        mensaje += `<br/><br/>⚠️ ${noEncontrados.length} IDs de FEMEX no se encontraron en las órdenes cargadas.`;
+      }
+
+      sweetAlert.fire({
+        title: " FEMEX - Etiquetas acumuladas",
+        html: mensaje,
+        icon: "success",
+        confirmButtonText: "OK",
+      });
+
+    } else {
+      setIdsDelArchivoBlow(prev => {
+        const nuevosIds = { ...prev, ...idsExtraidos };
+
+        if (ordersBlow.length > 0) {
+          const todosLosIdsKeys = Object.keys(nuevosIds);
+          const coincidentes = ordersBlow.filter((o) => {
+            const num = String(o.numeroOperacion);
+            return todosLosIdsKeys.some((id) => num.endsWith(id) || id.endsWith(num));
+          });
+
+          setOrdenesVisiblesBlow(prevOrdenes => {
+            const combinadas = [...prevOrdenes, ...coincidentes];
+            const sinDuplicados = combinadas.filter((orden, index, self) =>
+              index === self.findIndex((o) => o.numeroOperacion === orden.numeroOperacion)
+            );
+            setMostrarFiltradasBlow(true);
+            return sinDuplicados;
+          });
+        }
+
+        return nuevosIds;
+      });
+
+      if (ordersBlow.length === 0) {
+        sweetAlert.warning(`Se encontraron ${idsKeys.length} IDs en el archivo, pero no hay órdenes de BLOW cargadas. Primero obtené las órdenes.`);
+        return;
+      }
+
+      const noEncontrados = idsKeys.filter(
+        (id) => !ordersBlow.some((o) => {
+          const num = String(o.numeroOperacion);
+          return num.endsWith(id) || id.endsWith(num);
+        })
+      );
+
+      let mensaje = `✅ Se agregaron etiquetas de BLOW a partir de "${fileName}".`;
+      if (noEncontrados.length > 0) {
+        mensaje += `<br/><br/>⚠️ ${noEncontrados.length} IDs de BLOW no se encontraron en las órdenes cargadas.`;
+      }
+
+      sweetAlert.fire({
+        title: "📦 BLOW - Etiquetas acumuladas",
+        html: mensaje,
+        icon: "success",
+        confirmButtonText: "OK",
+      });
     }
-
-    sweetAlert.fire({
-      title: "Órdenes filtradas",
-      html: mensaje,
-      icon: totalCoincidentes === idsKeys.length ? "success" : "warning",
-      confirmButtonText: "OK",
-    });
   };
 
-  // ── Helper local para desglosar Kits ────────────────────────────────────
-
-const expandirKitsEnOrdenes = (
-  ordenes: Order[],
-  kitsMap: Record<string, KitInfo>
-): Order[] => {
-  return ordenes.map((orden) => {
-    const itemsExpandidos: OrderItem[] = [];
-
-    for (const item of orden.items) {
-      const kitInfo = kitsMap[item.sku];
-
-      if (kitInfo) {
-        for (const comp of kitInfo.componentes) {
-          for (let i = 0; i < comp.cantidad; i++) {
-            itemsExpandidos.push({
-              sku: comp.sku,
-              quantity: item.quantity,
-              description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
-              codigoBarras: comp.codigoBarras,
-            });
+  const expandirKitsEnOrdenesLocal = (ordenes: Order[], kitsMapLocal: Record<string, KitInfo>): Order[] => {
+    return ordenes.map((orden) => {
+      const itemsExpandidos: OrderItem[] = [];
+      for (const item of orden.items) {
+        const kitInfo = kitsMapLocal[item.sku];
+        if (kitInfo) {
+          for (const comp of kitInfo.componentes) {
+            for (let i = 0; i < comp.cantidad; i++) {
+              itemsExpandidos.push({
+                sku: comp.sku,
+                quantity: item.quantity,
+                description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
+                codigoBarras: comp.codigoBarras,
+              });
+            }
           }
+        } else {
+          itemsExpandidos.push(item);
         }
-      } else {
-        itemsExpandidos.push(item);
       }
-    }
 
-    // 🆕 Agrupar items por SKU y sumar cantidades
-    const itemsAgrupados = agruparItemsPorSKU(
-      itemsExpandidos.map((item) => ({
-        sku: item.sku,
-        codigoBarras: item.codigoBarras,
-        quantity: item.quantity,
-        esComponenteKit: false,
-        descripcion: item.description,
-      }))
-    );
+      const itemsAgrupados = agruparItemsPorSKU(
+        itemsExpandidos.map((item) => ({
+          sku: item.sku,
+          codigoBarras: item.codigoBarras,
+          quantity: item.quantity,
+          esComponenteKit: false,
+          descripcion: item.description,
+        }))
+      );
 
-    return {
-      ...orden,
-      items: itemsAgrupados.map((item) => ({
-        sku: item.sku,
-        quantity: item.quantity,
-        description: item.descripcion || '',
-        codigoBarras: item.codigoBarras,
-      })),
-    };
-  });
-};
+      return {
+        ...orden,
+        items: itemsAgrupados.map((item) => ({
+          sku: item.sku,
+          quantity: item.quantity,
+          description: item.descripcion || '',
+          codigoBarras: item.codigoBarras,
+        })),
+      };
+    });
+  };
 
   const handleConsolidadoStock = () => {
     const allOrdersSinFull = allOrders.filter((o) => o.tipo_envio !== "full");
@@ -1103,54 +745,7 @@ const expandirKitsEnOrdenes = (
     PdfGenerarConsolidado(allOrdersExpandidas, selectedOrders, visiblesExpandidas);
   };
 
-  const expandirKitsEnOrdenesLocal = (ordenes: Order[], kitsMapLocal: Record<string, KitInfo>): Order[] => {
-  return ordenes.map((orden) => {
-    const itemsExpandidos: OrderItem[] = [];
-
-    for (const item of orden.items) {
-      const kitInfo = kitsMapLocal[item.sku];
-
-      if (kitInfo) {
-        for (const comp of kitInfo.componentes) {
-          for (let i = 0; i < comp.cantidad; i++) {
-            itemsExpandidos.push({
-              sku: comp.sku,
-              quantity: item.quantity,
-              description: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
-              codigoBarras: comp.codigoBarras,
-            });
-          }
-        }
-      } else {
-        itemsExpandidos.push(item);
-      }
-    }
-
-    // 🆕 Agrupar items por SKU y sumar cantidades
-    const itemsAgrupados = agruparItemsPorSKU(
-      itemsExpandidos.map((item) => ({
-        sku: item.sku,
-        codigoBarras: item.codigoBarras,
-        quantity: item.quantity,
-        esComponenteKit: false,
-        descripcion: item.description,
-      }))
-    );
-
-    return {
-      ...orden,
-      items: itemsAgrupados.map((item) => ({
-        sku: item.sku,
-        quantity: item.quantity,
-        description: item.descripcion || '',
-        codigoBarras: item.codigoBarras,
-      })),
-    };
-  });
-};
-
   // ─── Drag & Drop ─────────────────────────────────────────────────────
-
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1203,148 +798,12 @@ const expandirKitsEnOrdenes = (
     });
   };
 
-  // ─── Registrar ventas con descuento ─────────────────────────────────────
-
-  const registrarVentasConDescuento = async () => {
-    if (selectedOrders.size === 0) {
-      sweetAlert.warning("Seleccioná al menos una orden.");
-      return;
-    }
-
-    const ordenesSeleccionadas = allOrders.filter((o) => selectedOrders.has(o.numeroOperacion));
-
-    const ordenesCanceladasSeleccionadas = ordenesSeleccionadas.filter(
-      (o) => o.tipo_envio === "cancelada"
-    );
-    if (ordenesCanceladasSeleccionadas.length > 0) {
-      setLoading(true);
-      try {
-        const numerosOperacionCanceladas = ordenesCanceladasSeleccionadas.map(
-          (o) => o.numeroOperacion
-        );
-        const response = await axios.post(Urls.ProductosConDescuento.verificarExistencia, {
-          numerosOperacion: numerosOperacionCanceladas,
-        });
-        const { existentes } = response.data;
-
-        if (existentes.length > 0) {
-          setLoading(false);
-          const result = await sweetAlert.fire({
-            title: "¿Eliminar órdenes canceladas?",
-            html: `Hay <strong>${existentes.length}</strong> órdenes canceladas ya registradas.<br/>¿Deseas eliminarlas?`,
-            icon: "question",
-            showCancelButton: true,
-            confirmButtonText: "Sí, eliminar",
-            cancelButtonText: "No",
-            reverseButtons: true,
-            customClass: {
-              popup: "animate-swal-shake !border !border-blue-500",
-              confirmButton: "bg-red-600 text-white",
-              cancelButton: "bg-gray-300 text-black",
-            },
-          });
-
-          if (result.isConfirmed) {
-            setLoading(true);
-            await axios.post(Urls.ProductosConDescuento.eliminarOrdenes, {
-              numerosOperacion: existentes,
-            });
-            sweetAlert.success(`✅ ${existentes.length} órdenes eliminadas.`);
-          }
-        }
-      } catch (error) {
-        console.error("Error en verificación/borrado:", error);
-        sweetAlert.error("Error al procesar órdenes canceladas.");
-        setLoading(false);
-        return;
-      }
-      setLoading(false);
-    }
-
-    const acumulador: Record<
-      string,
-      { idSku: number; canalVenta: string; numeroOperacion: string; fecha: string; cantidad: number }
-    > = {};
-
-    for (const orden of ordenesSeleccionadas) {
-      const fechaISO = new Date(orden.date_created).toISOString().split("T")[0];
-      const numeroOperacion = orden.numeroOperacion;
-      const canalVenta = orden.seller_nickname;
-
-      for (const item of orden.items) {
-        const { sku, quantity } = item;
-
-        const acumular = (skuDescuento: string, qty: number) => {
-          const idSku = productosConDescuento[skuDescuento];
-          if (idSku == null) return;
-          if (orden.tipo_envio === "cancelada") return;
-
-          const clave = `${numeroOperacion}-${idSku}`;
-          if (acumulador[clave]) {
-            acumulador[clave].cantidad += qty;
-          } else {
-            acumulador[clave] = { idSku, canalVenta, numeroOperacion, fecha: fechaISO, cantidad: qty };
-          }
-        };
-
-        if (productosConDescuento[sku] !== undefined) {
-          acumular(sku, quantity);
-        }
-
-        const kitInfo = kitsConDescuento[sku];
-        if (kitInfo) {
-          const skus = Array.isArray(kitInfo.skuDescuento)
-            ? kitInfo.skuDescuento
-            : [kitInfo.skuDescuento];
-          skus.forEach((s) => acumular(s, quantity));
-        }
-      }
-    }
-
-    const ventasParaGuardar = Object.values(acumulador);
-
-    if (ventasParaGuardar.length === 0) {
-      sweetAlert.info("Ninguna orden seleccionada tiene productos con descuento.");
-      return;
-    }
-
-    const ventasParaGuardarComoString = ventasParaGuardar.map((venta) => ({
-      ...venta,
-      numeroOperacion: String(venta.numeroOperacion),
-    }));
-
-    sweetAlert.confirm(
-      `¿Registrar ${ventasParaGuardar.length} items con descuento?`,
-      async () => {
-        setLoading(true);
-        try {
-          const response = await axios.post(
-            Urls.ProductosConDescuento.guardarVenta,
-            ventasParaGuardarComoString
-          );
-          const { count, message } = response.data;
-          if (count > 0) {
-            sweetAlert.success(`✅ ${count} ventas registradas.`);
-          } else {
-            sweetAlert.info(`ℹ️ ${message || "Ya estaban registradas."}`);
-          }
-        } catch (error) {
-          sweetAlert.error("Error al registrar ventas.");
-        } finally {
-          setLoading(false);
-        }
-      }
-    );
-  };
-
   // ─── Render ─────────────────────────────────────────────────────────────
-
   const hayOrdenes = ordersFemex.length > 0 || ordersBlow.length > 0;
 
   return (
     <div
-      className={`p-6 max-w-[1600px] mx-auto relative transition-all duration-200 ${isDragging ? "ring-4 ring-blue-400 ring-offset-2 bg-blue-50/50 rounded-xl" : ""
-        }`}
+      className={`p-6 max-w-[1600px] mx-auto relative transition-all duration-200 ${isDragging ? "ring-4 ring-blue-400 ring-offset-2 bg-blue-50/50 rounded-xl" : ""}`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -1362,115 +821,157 @@ const expandirKitsEnOrdenes = (
 
       {loading && <Loader />}
 
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Órdenes de Mercado Libre</h2>
+       {/* Fila 1: Título y contadores */}
+  <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-gray-100">
+    <div className="flex items-center gap-3">
+      <h2 className="text-2xl font-bold text-gray-800">Órdenes de Mercado Libre</h2>
+      <div className="flex gap-2 text-sm">
+        <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full font-medium">
+          Mercado Envíos: <span className="font-bold">{pendientesMercadoEnvio}</span>
+        </span>
+        <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full font-medium">
+          Envíos Flex: <span className="font-bold">{pendientesFlex}</span>
+        </span>
+      </div>
+    </div>
+  </div>
 
-      {/* ── Controles superiores ─────────────────────────────────────────── */}
-      <div className="mb-6 flex flex-wrap items-end gap-4">
-        <label className="text-gray-700 font-medium whitespace-nowrap">
-          <span className="text-blue-700">Femex</span> días:
-          <input
-            type="number"
-            min="1"
-            max="30"
-            value={diasFemex}
-            onChange={(e) => setDiasFemex(Number(e.target.value))}
-            className="ml-2 w-16 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-          />
-        </label>
+      {/* Fila 2: Controles */}
+      <div className="flex flex-wrap items-end gap-3">
 
-        <label className="text-gray-700 font-medium whitespace-nowrap">
-          <span className="text-orange-600">Blow</span> días:
-          <input
-            type="number"
-            min="1"
-            max="30"
-            value={diasBlow}
-            onChange={(e) => setDiasBlow(Number(e.target.value))}
-            className="ml-2 w-16 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-          />
-        </label>
+        {/* GRUPO 1: Días + Obtener órdenes */}
+        <div className="flex items-end gap-3 p-2.5 bg-gray-50 border border-gray-200 rounded-xl">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Femex días</span>
+            <input
+              type="number"
+              min="1"
+              max="30"
+              value={diasFemex}
+              onChange={(e) => setDiasFemex(Number(e.target.value))}
+              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Blow días</span>
+            <input
+              type="number"
+              min="1"
+              max="30"
+              value={diasBlow}
+              onChange={(e) => setDiasBlow(Number(e.target.value))}
+              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white"
+            />
+          </label>
+          <button
+            onClick={handleFetchOrders}
+            disabled={loading}
+            className={`px-5 py-2.5 rounded-lg font-medium text-white shadow-sm transition-all duration-200 whitespace-nowrap ${loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700 hover:shadow-md active:scale-[0.98]"
+              }`}
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Cargando...
+              </span>
+            ) : (
+              "Obtener órdenes"
+            )}
+          </button>
+        </div>
 
-        <button
-          onClick={handleFetchOrders}
-          disabled={loading}
-          className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-        >
-          {loading ? "Cargando..." : "Obtener órdenes"}
-        </button>
+        {/* GRUPO 2: Mostrar filtradas + Modo Scanner */}
+        <div className="flex items-center gap-2 p-2.5 bg-indigo-50/50 border border-indigo-200 rounded-xl">
+          {(Object.keys(idsDelArchivoFemex).length > 0 || Object.keys(idsDelArchivoBlow).length > 0) && hayOrdenes && (
+            <button
+              onClick={toggleFiltro}
+              className={`px-4 py-2.5 rounded-lg font-medium shadow-sm transition-all duration-200 whitespace-nowrap border ${mostrarFiltradasFemex || mostrarFiltradasBlow
+                  ? "bg-indigo-100 border-indigo-300 text-indigo-800 hover:bg-indigo-200"
+                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              title={mostrarFiltradasFemex ? "Mostrar todas las órdenes" : "Mostrar solo órdenes con etiqueta"}
+            >
+              {mostrarFiltradasFemex || mostrarFiltradasBlow ? (
+                <span className="flex items-center gap-1.5">👁️ Mostrar todas</span>
+              ) : (
+                <span className="flex items-center gap-1.5">🔍 Mostrar filtradas</span>
+              )}
+            </button>
+          )}
 
-        <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-300 rounded cursor-pointer select-none whitespace-nowrap">
-          <input
-            type="checkbox"
-            checked={modoScanner}
-            onChange={(e) => {
-              setModoScanner(e.target.checked);
-              if (!e.target.checked) {
+          <button
+            onClick={() => {
+              setModoScanner(!modoScanner);
+              if (modoScanner) {
                 setOrdenEnScan(null);
                 setInputScan("");
               }
             }}
-            className="w-4 h-4 accent-indigo-600"
-          />
-          <span className="text-indigo-700 font-medium">🔍 Modo Scanner</span>
-        </label>
+            className={`px-4 py-2.5 rounded-lg font-medium shadow-sm transition-all duration-200 whitespace-nowrap border ${modoScanner
+                ? "bg-indigo-100 border-indigo-300 text-indigo-800 hover:bg-indigo-200"
+                : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+              }`}
+            title={modoScanner ? "Desactivar modo scanner" : "Activar modo scanner"}
+          >
+            {modoScanner ? (
+              <span className="flex items-center gap-1.5">📡 Scanner activo</span>
+            ) : (
+              <span className="flex items-center gap-1.5">📡 Modo Scanner</span>
+            )}
+          </button>
+        </div>
 
+        {/* GRUPO 3: Botones de impresión */}
         {!modoScanner && (
-          <>
+          <div className="flex items-center gap-2 p-1.5 bg-indigo-50/50 border border-indigo-200 rounded-xl">
             <button
               onClick={() => generateEnviosPDF(allOrders, selectedOrders)}
-              disabled={
-                !allOrders.some(
-                  (o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio !== "retiro_local"
-                )
-              }
-              className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
+              disabled={!allOrders.some((o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio !== "retiro_local")}
+              className="px-4 py-3 bg-blue-600 m-1 text-white rounded-lg font-medium shadow-sm transition-all duration-200 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed hover:bg-blue-700 hover:shadow-md active:scale-[0.98] whitespace-nowrap text-sm"
             >
-              Imprimir envíos
+              🖨️ Imprimir envíos
             </button>
 
             <button
               onClick={() => printRetiroLocalHTML(allOrders, selectedOrders)}
-              disabled={
-                !allOrders.some(
-                  (o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local"
-                )
-              }
-              className="px-4 py-2 bg-amber-600 text-white rounded disabled:bg-gray-400"
+              disabled={!allOrders.some((o) => selectedOrders.has(o.numeroOperacion) && o.tipo_envio === "retiro_local")}
+              className="px-4 py-3 bg-amber-600 text-white rounded-lg font-medium shadow-sm transition-all duration-200 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed hover:bg-amber-700 hover:shadow-md active:scale-[0.98] whitespace-nowrap text-sm"
             >
-              Imprimir constancias (retiro en local)
+              📄 Imprimir constancias
             </button>
-       
-            <button
-              onClick={registrarVentasConDescuento}
-              disabled={selectedOrders.size === 0 || loadingDescuento}
-              className={`px-4 py-2 rounded font-medium text-white transition whitespace-nowrap ${selectedOrders.size === 0 || loadingDescuento
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-purple-600 hover:bg-purple-700"
-                }`}
-            >
-              {loadingDescuento ? "Cargando..." : `Registrar ${selectedOrders.size} con descuento`}
-            </button>
-          </>
+          </div>
         )}
 
-        <BotonCargarTxt onFileRead={handleArchivoTxt} label="Cargar etiquetas (.txt)" />
-        <button
-          onClick={handleConsolidadoStock}
-          disabled={allOrders.length === 0}
-          className="px-4 py-2 bg-green-600 text-white rounded disabled:bg-gray-400"
-        >
-          Consolidado de stock
-        </button>
+        {/* GRUPO 4: Cargar TXT + Consolidado */}
+        <div className="flex items-center gap-2 p-2.5 bg-green-50/50 border border-green-200 rounded-xl mb-5">
+          <BotonCargarTxt
+            onFileRead={handleArchivoTxt}
+            label="📁 Cargar etiquetas (.txt)"
+          />
+          <button
+            onClick={handleConsolidadoStock}
+            disabled={allOrders.length === 0}
+            className="px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium shadow-sm transition-all duration-200 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed hover:bg-green-700 hover:shadow-md active:scale-[0.98] whitespace-nowrap text-sm"
+          >
+            📊 Consolidado de stock
+          </button>
+        </div>
+
       </div>
 
-      {/* ── Columnas ─────────────────────────────────────────────────────── */}
       {hayOrdenes && (
         <div className="flex gap-6">
           <ColumnaOrdenes
             titulo="Femex"
             orders={ordersFemex}
             ordenesVisibles={ordenesVisiblesFemex}
-            setOrdenesVisibles={setOrdenesVisiblesFemex}
+            mostrarFiltradas={mostrarFiltradasFemex}
+            setMostrarFiltradas={setMostrarFiltradasFemex}
             mostrarMultiples={mostrarMultiplesFemex}
             setMostrarMultiples={setMostrarMultiplesFemex}
             selectedOrders={selectedOrders}
@@ -1486,7 +987,8 @@ const expandirKitsEnOrdenes = (
             titulo="Blow"
             orders={ordersBlow}
             ordenesVisibles={ordenesVisiblesBlow}
-            setOrdenesVisibles={setOrdenesVisiblesBlow}
+            mostrarFiltradas={mostrarFiltradasBlow}
+            setMostrarFiltradas={setMostrarFiltradasBlow}
             mostrarMultiples={mostrarMultiplesBlow}
             setMostrarMultiples={setMostrarMultiplesBlow}
             selectedOrders={selectedOrders}
@@ -1500,7 +1002,6 @@ const expandirKitsEnOrdenes = (
         </div>
       )}
 
-      {/* ── 🆕 Modal de Escaneo ──────────────────────────────────────────── */}
       {ordenEnScan && ordenActiva && (
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
@@ -1509,7 +1010,6 @@ const expandirKitsEnOrdenes = (
           }}
         >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col overflow-hidden">
-            {/* Header del modal */}
             <div className="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-bold">🔍 Escaneando Orden #{ordenActiva.numeroOperacion}</h3>
@@ -1525,7 +1025,6 @@ const expandirKitsEnOrdenes = (
               </button>
             </div>
 
-            {/* Input de escaneo */}
             <div className="px-6 py-4 border-b bg-indigo-50">
               <label className="block text-sm font-medium text-indigo-700 mb-2">
                 Escaneá el código de barras:
@@ -1542,7 +1041,6 @@ const expandirKitsEnOrdenes = (
               />
             </div>
 
-            {/* Progreso general */}
             {progresoActivo && (
               <div className="px-6 py-3 border-b bg-gray-50">
                 <div className="flex justify-between text-sm text-gray-600 mb-1">
@@ -1554,15 +1052,12 @@ const expandirKitsEnOrdenes = (
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
                     className="bg-indigo-500 h-3 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${(progresoActivo.verificados / progresoActivo.total) * 100}%`,
-                    }}
+                    style={{ width: `${(progresoActivo.verificados / progresoActivo.total) * 100}%` }}
                   />
                 </div>
               </div>
             )}
 
-            {/* Lista de items con progreso */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
               {progresoActivo?.items.map((item, idx) => {
                 const esKit = kitsMap[item.sku] !== undefined;
@@ -1570,21 +1065,14 @@ const expandirKitsEnOrdenes = (
                 return (
                   <div
                     key={idx}
-                    className={`p-3 rounded-lg border ${completo
-                        ? "bg-green-50 border-green-300"
-                        : esKit
-                          ? "bg-blue-50 border-blue-300"
-                          : "bg-white border-gray-200"
-                      }`}
+                    className={`p-3 rounded-lg border ${completo ? "bg-green-50 border-green-300" : esKit ? "bg-blue-50 border-blue-300" : "bg-white border-gray-200"}`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-gray-800">{item.sku}</p>
                           {esKit && (
-                            <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded">
-                              KIT
-                            </span>
+                            <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded">KIT</span>
                           )}
                         </div>
                         <p className="text-sm text-gray-500">{item.description}</p>
@@ -1594,34 +1082,23 @@ const expandirKitsEnOrdenes = (
                           </p>
                         )}
                         {esKit && !item.codigoBarras && (
-                          <p className="text-xs text-blue-600 mt-1">
-                            📦 Escaneá los componentes individuales
-                          </p>
+                          <p className="text-xs text-blue-600 mt-1">📦 Escaneá los componentes individuales</p>
                         )}
                       </div>
-                      <span
-                        className={`text-sm font-bold px-2 py-1 rounded ${completo
-                            ? "bg-green-200 text-green-800"
-                            : "bg-blue-100 text-blue-800"
-                          }`}
-                      >
+                      <span className={`text-sm font-bold px-2 py-1 rounded ${completo ? "bg-green-200 text-green-800" : "bg-blue-100 text-blue-800"}`}>
                         {item.verificados}/{item.quantity}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                       <div
-                        className={`h-1.5 rounded-full transition-all duration-300 ${completo ? "bg-green-500" : "bg-blue-400"
-                          }`}
-                        style={{
-                          width: `${(item.verificados / item.quantity) * 100}%`,
-                        }}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${completo ? "bg-green-500" : "bg-blue-400"}`}
+                        style={{ width: `${(item.verificados / item.quantity) * 100}%` }}
                       />
                     </div>
                   </div>
                 );
               })}
 
-              {/* Items sin código de barras (usando itemsVerificacion, excluyendo kits) */}
               {itemsVerificacion.some((i) => !normalizarCodigoBarras(i.codigoBarras) && !i.esComponenteKit) && (
                 <div className="p-3 bg-orange-50 border border-orange-300 rounded-lg">
                   <p className="text-sm text-orange-700 font-medium">
@@ -1638,7 +1115,6 @@ const expandirKitsEnOrdenes = (
               )}
             </div>
 
-            {/* Footer con botones */}
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
               <button
                 onClick={handleDeshacerUltimoScan}
@@ -1660,4 +1136,3 @@ const expandirKitsEnOrdenes = (
     </div>
   );
 };
-

@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { Order } from "../MercadoLibre";
+import { Order } from "./mlTypes";
 
 export const PdfGenerarConsolidado = (
   allOrders: Order[],
@@ -43,7 +43,7 @@ export const PdfGenerarConsolidado = (
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 10;
   const rowHeight = 7;
-  
+
   // Anchos de columnas
   const colCantidad = 20;
   const colSku = 50;
@@ -85,7 +85,7 @@ export const PdfGenerarConsolidado = (
     doc.setFontSize(9);
     doc.text(String(item.cantidad), margin + 2, y);
     doc.text(item.sku, margin + colCantidad + 2, y);
-    
+
     // Descripción con recorte si es muy larga
     const descMaxWidth = colDescripcion - 4;
     const descLines = doc.splitTextToSize(item.descripcion, descMaxWidth);

@@ -65,6 +65,7 @@ export const ActualizarProductos: React.FC = () => {
         'input[name="largo"]'
       ) as HTMLInputElement;
 
+      // ✅ Pre-llenar todos los inputs con los valores de la BD
       if (skuInput) skuInput.value = producto.sku;
       if (descripcionInput) descripcionInput.value = producto.descripcion;
       if (rubroInput) rubroInput.value = producto.rubro;
@@ -93,13 +94,16 @@ export const ActualizarProductos: React.FC = () => {
     if (formRef.current && productoSeleccionado) {
       const formData = new FormData(formRef.current);
       
+      // ✅ Obtener el SKU (puede ser el mismo o uno nuevo)
+      const skuFinal = (formData.get("sku") as string)?.trim() || productoSeleccionado.sku;
+      
       // ✅ Normalizar código de barras
       const cbRaw = (formData.get("codigoBarras") as string || "").trim();
       const codigoBarras = cbRaw === "" ? null : cbRaw;
       
       const data = {
         id: productoSeleccionado.id,
-        sku: productoSeleccionado.sku,
+        sku: skuFinal,
         marca: marcaSeleccionada
           ? marcaSeleccionada.nombre
           : productoSeleccionado.marca,
@@ -109,7 +113,6 @@ export const ActualizarProductos: React.FC = () => {
         rubro: (formData.get("rubro") as string) || productoSeleccionado.rubro,
         isActive: isActive,
         codigoBarras: codigoBarras,
-        // ✅ Convertir a número o null
         pesoKgr: formData.get("pesoKgr") ? parseFloat(formData.get("pesoKgr") as string) : null,
         alto: formData.get("alto") ? parseFloat(formData.get("alto") as string) : null,
         ancho: formData.get("ancho") ? parseFloat(formData.get("ancho") as string) : null,
@@ -131,7 +134,7 @@ export const ActualizarProductos: React.FC = () => {
         if (response.ok) {
           sweetAlert.success(
             "¡Producto actualizado exitosamente!",
-            `El producto con SKU "${data.sku}" se ha actualizado correctamente`
+            `El producto con SKU "${skuFinal}" se ha actualizado correctamente`
           ).then(() => {
             if (formRef.current) {
               formRef.current.reset();
@@ -206,8 +209,10 @@ export const ActualizarProductos: React.FC = () => {
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (productoSeleccionado) {
+      const skuFinal = (new FormData(formRef.current!).get("sku") as string)?.trim() || productoSeleccionado.sku;
       sweetAlert.fire({
-        title: `¿Quiere actualizar el producto con SKU "${productoSeleccionado.sku}"?`,
+        title: `¿Quiere actualizar el producto?`,
+        text: skuFinal !== productoSeleccionado.sku ? `El SKU cambiará de "${productoSeleccionado.sku}" a "${skuFinal}"` : undefined,
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "Sí, actualizar",
@@ -215,6 +220,7 @@ export const ActualizarProductos: React.FC = () => {
       }).then((result) => {
         if (result.isConfirmed) {
           actualizarProducto();
+          
         }
       });
     }
@@ -257,10 +263,10 @@ export const ActualizarProductos: React.FC = () => {
         >
           <div>
             <label
-              htmlFor="sku"
+              htmlFor="buscarSku"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              SKU:
+              Buscar Producto por SKU:
             </label>
             <ListarProductos
               endpoint={urlProductos}
@@ -269,7 +275,24 @@ export const ActualizarProductos: React.FC = () => {
             />
           </div>
 
-          {/* ✅ Código de barras con mejoras de UX */}
+          {/* ✅ SKU - Input único editable que se pre-llena con el valor de la BD */}
+          <div>
+            <label
+              htmlFor="sku"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              SKU:
+            </label>
+            <input
+              type="text"
+              id="sku"
+              name="sku"
+              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none"
+              placeholder="SKU nuevo"
+            />
+          </div>
+
+          {/* ✅ Código de barras */}
           <div>
             <label
               htmlFor="codigoBarras"
@@ -282,7 +305,7 @@ export const ActualizarProductos: React.FC = () => {
               id="codigoBarras"
               name="codigoBarras"
               inputMode="text"
-              
+              autoComplete="off"
               maxLength={50}
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring focus:ring-blue-300 focus:outline-none font-mono tracking-wider"
             />
@@ -426,15 +449,25 @@ export const ActualizarProductos: React.FC = () => {
             <button
               type="submit"
               id="botonActualizar"
-              className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-black"
+              disabled={!productoSeleccionado}
+              className={`w-full py-2 px-4 font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black ${
+                productoSeleccionado 
+                  ? "bg-blue-600 text-white hover:bg-blue-700" 
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
             >
               {loading ? "Cargando..." : "Actualizar producto"}
             </button>
             <button
               type="button"
               id="botonEliminar"
+              disabled={!productoSeleccionado}
               onClick={handleEliminarProducto}
-              className="w-full py-2 px-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-black focus:ring focus:ring-black"
+              className={`w-full py-2 px-4 font-semibold rounded-lg focus:outline-black focus:ring focus:ring-black ${
+                productoSeleccionado 
+                  ? "bg-red-600 text-white hover:bg-red-700" 
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
             >
               {loading ? "Cargando..." : "Eliminar producto"}
             </button>
