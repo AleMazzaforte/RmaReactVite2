@@ -22,42 +22,49 @@ export const agruparItemsPorSKU = (items: ItemVerificacion[]): ItemVerificacion[
     return Array.from(mapaAgrupado.values());
 };
 
-export const expandirOrdenParaVerificacion = (orden: Order, kitsMap: Record<string, KitInfo>): ItemVerificacion[] => {
-    const itemsVerificacion: ItemVerificacion[] = [];
-    for (const item of orden.items) {
-        const kitInfo = kitsMap[item.sku];
-        if (kitInfo) {
-            const componentesExpandidos: Array<{ sku: string; descripcion: string; cb: string | null }> = [];
-            for (const comp of kitInfo.componentes) {
-                for (let i = 0; i < comp.cantidad; i++) {
-                    componentesExpandidos.push({
-                        sku: comp.sku,
-                        descripcion: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
-                        cb: comp.codigoBarras,
-                    });
-                }
-            }
-            componentesExpandidos.forEach((comp, index) => {
-                itemsVerificacion.push({
-                    sku: comp.sku,
-                    codigoBarras: item.codigosBarrasComponentes?.[index] || comp.cb || null,
-                    quantity: item.quantity,
-                    esComponenteKit: true,
-                    skuKitOriginal: item.sku,
-                    descripcion: comp.descripcion,
-                });
-            });
-        } else {
-            itemsVerificacion.push({
-                sku: item.sku,
-                codigoBarras: item.codigoBarras,
-                quantity: item.quantity,
-                esComponenteKit: false,
-                descripcion: item.description,
-            });
+export const expandirOrdenParaVerificacion = (
+  orden: Order,
+  kitsMap: Record<string, KitInfo>
+): ItemVerificacion[] => {
+  const itemsVerificacion: ItemVerificacion[] = [];
+
+  for (const item of orden.items) {
+    const kitInfo = kitsMap[item.sku];
+
+    if (kitInfo) {
+      const componentesExpandidos: Array<{ sku: string; descripcion: string; cb: string | null }> = [];
+      for (const comp of kitInfo.componentes) {
+        for (let i = 0; i < comp.cantidad; i++) {
+          componentesExpandidos.push({
+            sku: comp.sku,
+            descripcion: comp.descripcion || `[Kit] ${comp.sku} (de ${item.sku})`,
+            cb: comp.codigoBarras,
+          });
         }
+      }
+
+      componentesExpandidos.forEach((comp, index) => {
+        itemsVerificacion.push({
+          sku: comp.sku,
+          codigoBarras: item.codigosBarrasComponentes?.[index] || comp.cb || null,
+          quantity: item.quantity,
+          esComponenteKit: true,
+          skuKitOriginal: item.sku,
+          descripcion: comp.descripcion,
+        });
+      });
+    } else {
+      itemsVerificacion.push({
+        sku: item.sku,
+        codigoBarras: item.codigoBarras,
+        quantity: item.quantity,
+        esComponenteKit: false,
+        descripcion: item.description,
+      });
     }
-    return agruparItemsPorSKU(itemsVerificacion);
+  }
+
+  return agruparItemsPorSKU(itemsVerificacion);
 };
 
 export const expandirOrdenIndividual = (orden: Order, kitsMap: Record<string, KitInfo>): Order => {

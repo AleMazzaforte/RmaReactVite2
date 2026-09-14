@@ -150,7 +150,7 @@ export const MercadoLibre = () => {
   const itemsVerificacion = ordenActiva ? expandirOrdenParaVerificacion(ordenActiva, kitsMap) : [];
 
   // ─── Cálculo de órdenes pendientes de despacho ──────────────────────────
-  const estadosFinalizados = ['shipped', 'delivered', 'dropped_off', 'in_transit', 'cancelled', "Sin estado",
+  const estadosFinalizados = ['shipped', 'delivered', 'dropped_off', 'in_transit', 'cancelled', "Sin estado", "pending_pickup",
     "out_for_delivery"];
 
   const pendientesMercadoEnvio = allOrders.filter(o =>
@@ -159,13 +159,12 @@ export const MercadoLibre = () => {
   ).length;
 
   const pendientesFlex = allOrders.filter(o =>
-    o.tipo_envio === 'flex' &&
+    o.tipo_envio === 'flex' && o.shipping_status != "rescheduled_by_meli" &&
     !estadosFinalizados.includes(o.shipping_status || '')
   ).length;
+
+  const redespachoFlex = allOrders.filter(o => o.tipo_envio === 'flex' && o.shipping_status === "rescheduled_by_meli").length; 
   // ────────────────────────────────────────────────────────────────────────
-
-  // console.log(allOrders);
-
 
   useEffect(() => {
     if (ordenEnScan && scannerInputRef.current) {
@@ -832,6 +831,11 @@ export const MercadoLibre = () => {
         <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full font-medium">
           Envíos Flex: <span className="font-bold">{pendientesFlex}</span>
         </span>
+        {redespachoFlex != 0 && (
+          <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full font-medium">
+          Flex no entregados: <span className="font-bold"> {redespachoFlex}</span>
+        </span>
+        )}
       </div>
     </div>
   </div>
@@ -1099,20 +1103,28 @@ export const MercadoLibre = () => {
                 );
               })}
 
-              {itemsVerificacion.some((i) => !normalizarCodigoBarras(i.codigoBarras) && !i.esComponenteKit) && (
-                <div className="p-3 bg-orange-50 border border-orange-300 rounded-lg">
-                  <p className="text-sm text-orange-700 font-medium">
-                    ⚠️ Los siguientes productos no tienen código de barras registrado:
-                  </p>
-                  <ul className="text-sm text-orange-600 mt-1 list-disc list-inside">
-                    {itemsVerificacion
-                      .filter((i) => !normalizarCodigoBarras(i.codigoBarras) && !i.esComponenteKit)
-                      .map((i, idx) => (
-                        <li key={idx}>{i.sku} ({i.quantity} un.)</li>
-                      ))}
-                  </ul>
-                </div>
-              )}
+              {itemsVerificacion.some((i) => 
+  !normalizarCodigoBarras(i.codigoBarras) && 
+  !i.esComponenteKit && 
+  !kitsMap[i.sku]
+) && (
+  <div className="p-3 bg-orange-50 border border-orange-300 rounded-lg">
+    <p className="text-sm text-orange-700 font-medium">
+      ⚠️ Los siguientes productos no tienen código de barras registrado:
+    </p>
+    <ul className="text-sm text-orange-600 mt-1 list-disc list-inside">
+      {itemsVerificacion
+        .filter((i) => 
+          !normalizarCodigoBarras(i.codigoBarras) && 
+          !i.esComponenteKit && 
+          !kitsMap[i.sku]
+        )
+        .map((i, idx) => (
+          <li key={idx}>{i.sku} ({i.quantity} un.)</li>
+        ))}
+    </ul>
+  </div>
+)}
             </div>
 
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
