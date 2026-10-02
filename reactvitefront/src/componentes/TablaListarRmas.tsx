@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ListarOp } from './utilidades/ListarOp';
 import { ListarProductos } from './utilidades/ListarProductos';
 import Urls from './utilidades/Urls';
+import FechaInput from './utilidades/FechaInput';
 
 // Definición de la interfaz Rma para tipar los datos
 interface Rma {
@@ -186,11 +187,10 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
                   />
                 </td>
                 <td className="border py-1 text-sm text-center">
-                  <input
-                    type="text"
+                  <FechaInput
+                    id={`solicita-${rma.idRma || index}`}
                     value={rma.solicita}
-                    className="block w-full py-1 text-sm rounded-lg text-center"
-                    onChange={(e) => handleChange(index, 'solicita', e.target.value)}
+                    onChange={(value) => handleChange(index, 'solicita', value)}
                   />
                 </td>
                 <td className="border py-1 text-sm text-center">
@@ -205,19 +205,17 @@ export const TablaListarRmas: React.FC<TablaRmasProps> = ({ rmas, handleActualiz
                   />
                 </td>
                 <td className="border py-1 text-sm text-center">
-                  <input
-                    type="text"
+                  <FechaInput
+                    id={`seEntrega-${rma.idRma || index}`}
                     value={rma.seEntrega}
-                    className="block w-full py-1 text-sm rounded-lg text-center"
-                    onChange={(e) => handleChange(index, 'seEntrega', e.target.value)}
+                    onChange={(value) => handleChange(index, 'seEntrega', value)}
                   />
                 </td>
                 <td className="border py-1 text-sm text-center">
-                  <input
-                    type="text"
+                  <FechaInput
+                    id={`seRecibe-${rma.idRma || index}`}
                     value={rma.seRecibe}
-                    className="block w-full py-1 text-sm rounded-lg text-center"
-                    onChange={(e) => handleChange(index, 'seRecibe', e.target.value)}
+                    onChange={(value) => handleChange(index, 'seRecibe', value)}
                   />
                 </td>
                 <td className="border py-1 text-sm text-center">

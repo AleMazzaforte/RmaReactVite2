@@ -151,7 +151,7 @@ export const MercadoLibre = () => {
 
   // ─── Cálculo de órdenes pendientes de despacho ──────────────────────────
   const estadosFinalizados = ['shipped', 'delivered', 'dropped_off', 'in_transit', 'cancelled', "Sin estado", "pending_pickup",
-    "out_for_delivery"];
+    "out_for_delivery", "pending"];
 
   const pendientesMercadoEnvio = allOrders.filter(o =>
     (o.tipo_envio === 'mercado_envios') &&
@@ -164,6 +164,7 @@ export const MercadoLibre = () => {
   ).length;
 
   const redespachoFlex = allOrders.filter(o => o.tipo_envio === 'flex' && o.shipping_status === "rescheduled_by_meli").length; 
+  
   // ────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -955,7 +956,7 @@ export const MercadoLibre = () => {
         <div className="flex items-center gap-2 p-2.5 bg-green-50/50 border border-green-200 rounded-xl mb-5">
           <BotonCargarTxt
             onFileRead={handleArchivoTxt}
-            label="📁 Cargar etiquetas (.txt)"
+            label="Cargar etiquetas (.txt)"
           />
           <button
             onClick={handleConsolidadoStock}

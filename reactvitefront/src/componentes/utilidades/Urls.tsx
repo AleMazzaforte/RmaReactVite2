@@ -1,7 +1,5 @@
 // src/utilidades/Urls.ts
 
-import { ProductosConDescuento } from "../ProductosConDescuento";
-
 const isLocalhost = window.location.hostname === "localhost";
 const base = isLocalhost ? "http://localhost:8080" : "https://rma-back.vercel.app";
 

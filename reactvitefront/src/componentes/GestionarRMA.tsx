@@ -57,184 +57,184 @@ export const GestionarRMA = (): JSX.Element => {
   const [rmaInforme, setRmaInfornme] = useState<RmaInforme[]>([])
   // Estados para el reporte
   const [reporteVisible, setReporteVisible] = useState<boolean>(false);
-  const [reporteResumen, setReporteResumen] = useState<Array<{sku: string, marca: string, cantidad: number}>>([]);
-  const [reporteFechas, setReporteFechas] = useState<{desde: string, hasta: string} | null>(null);
+  const [reporteResumen, setReporteResumen] = useState<Array<{ sku: string, marca: string, cantidad: number }>>([]);
+  const [reporteFechas, setReporteFechas] = useState<{ desde: string, hasta: string } | null>(null);
   const [reporteGeneralVisible, setReporteGeneralVisible] = useState<boolean>(false);
-const [reporteGeneralResumen, setReporteGeneralResumen] = useState<Array<{sku: string, marca: string, cantidad: number}>>([]);
-const [modalContexto, setModalContexto] = useState<'cliente' | 'general'>('cliente');
+  const [reporteGeneralResumen, setReporteGeneralResumen] = useState<Array<{ sku: string, marca: string, cantidad: number }>>([]);
+  const [modalContexto, setModalContexto] = useState<'cliente' | 'general'>('cliente');
   // Estados para el modal de fechas 
-const [modalFechasVisible, setModalFechasVisible] = useState<boolean>(false);
-const [fechaDesde, setFechaDesde] = useState<string>('');
-const [fechaHasta, setFechaHasta] = useState<string>('');
-const [errorFechas, setErrorFechas] = useState<string>('');
+  const [modalFechasVisible, setModalFechasVisible] = useState<boolean>(false);
+  const [fechaDesde, setFechaDesde] = useState<string>('');
+  const [fechaHasta, setFechaHasta] = useState<string>('');
+  const [errorFechas, setErrorFechas] = useState<string>('');
 
-// Helper: parsea "DD/MM/YYYY" → Date (para comparar)
+  // Helper: parsea "DD/MM/YYYY" → Date (para comparar)
   const parsearFechaSolicita = (fecha: string): Date | null => {
-  if (!fecha || fecha.length !== 10) return null;
-  const [d, m, y] = fecha.split('/');
-  const parsed = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-  return isNaN(parsed.getTime()) ? null : parsed;
+    if (!fecha || fecha.length !== 10) return null;
+    const [d, m, y] = fecha.split('/');
+    const parsed = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    return isNaN(parsed.getTime()) ? null : parsed;
   };
 
   const generarResumen = (desde: string, hasta: string) => {
-  // Convertimos las fechas de input (YYYY-MM-DD) a objetos Date para comparar
-  const fechaDesde = new Date(desde);
-  const fechaHasta = new Date(hasta);
-  // Ajustamos hasta para que incluya todo el día (23:59:59)
-  fechaHasta.setHours(23, 59, 59, 999);
+    // Convertimos las fechas de input (YYYY-MM-DD) a objetos Date para comparar
+    const fechaDesde = new Date(desde);
+    const fechaHasta = new Date(hasta);
+    // Ajustamos hasta para que incluya todo el día (23:59:59)
+    fechaHasta.setHours(23, 59, 59, 999);
 
-  // Filtramos y agrupamos
-  const agrupado = rmas
-    .filter(rma => {
-      const fecha = parsearFechaSolicita(rma.solicita);
-      return fecha && fecha >= fechaDesde && fecha <= fechaHasta;
-    })
-    .reduce((acc, rma) => {
-      const key = `${rma.modelo}|${rma.marca}`; // Clave única SKU+Marca
-      if (!acc[key]) {
-        acc[key] = { sku: rma.modelo, marca: rma.marca, cantidad: 0 };
-      }
-      acc[key].cantidad += Number(rma.cantidad) || 0;
-      return acc;
-    }, {} as Record<string, {sku: string, marca: string, cantidad: number}>);
+    // Filtramos y agrupamos
+    const agrupado = rmas
+      .filter(rma => {
+        const fecha = parsearFechaSolicita(rma.solicita);
+        return fecha && fecha >= fechaDesde && fecha <= fechaHasta;
+      })
+      .reduce((acc, rma) => {
+        const key = `${rma.modelo}|${rma.marca}`; // Clave única SKU+Marca
+        if (!acc[key]) {
+          acc[key] = { sku: rma.modelo, marca: rma.marca, cantidad: 0 };
+        }
+        acc[key].cantidad += Number(rma.cantidad) || 0;
+        return acc;
+      }, {} as Record<string, { sku: string, marca: string, cantidad: number }>);
 
-  // Convertimos a array y ordenamos por cantidad (desc)
-  const resultado = Object.values(agrupado).sort((a, b) => b.cantidad - a.cantidad);
-  
-  setReporteResumen(resultado);
-  setReporteFechas({ desde, hasta });
-  setReporteVisible(true);
+    // Convertimos a array y ordenamos por cantidad (desc)
+    const resultado = Object.values(agrupado).sort((a, b) => b.cantidad - a.cantidad);
 
-  // Feedback visual
-  sweetAlert.fire({
-    title: "✅ Reporte generado",
-    text: `Se encontraron ${resultado.length} SKUs en el período.`,
-    icon: "success",
-    timer: 1500,
-    showConfirmButton: false
-  });
-};
+    setReporteResumen(resultado);
+    setReporteFechas({ desde, hasta });
+    setReporteVisible(true);
 
-const abrirModalReporte = () => {
-  setFechaDesde('');
-  setFechaHasta('');
-  setErrorFechas('');
-  setModalContexto('cliente');
-  setModalFechasVisible(true);
-};
-
-const cerrarModalFechas = () => {
-  setModalFechasVisible(false);
-  setErrorFechas('');
-};
-
-const manejarGenerarReporte = () => {
-  // Validaciones
-  if (!fechaDesde || !fechaHasta) {
-    setErrorFechas('Seleccioná ambas fechas');
-    return;
-  }
-  if (new Date(fechaDesde) > new Date(fechaHasta)) {
-    setErrorFechas('"Desde" no puede ser mayor que "Hasta"');
-    return;
-  }
-  
-  // Todo OK → cerrar modal y generar
-  cerrarModalFechas();
-   if (modalContexto === 'general') {
-    handleGenerarReporteGeneral(fechaDesde, fechaHasta);
-  } else {
-    generarResumen(fechaDesde, fechaHasta);
-  }
-};
-
-const exportarResumenExcel = () => {
-  if (reporteResumen.length === 0 || !cliente) {
-    return sweetAlert.fire({
-      title: "Sin datos",
-      text: "No hay información para exportar.",
-      icon: "info",
-      confirmButtonColor: "#3085d6"
-    });
-  }
-
-  try {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Resumen RMA");
-
-    // Columnas
-    worksheet.columns = [
-      { header: "SKU", key: "sku", width: 30 },
-      { header: "Cantidad Total", key: "cantidad", width: 20 }
-    ];
-
-    // Datos
-    reporteResumen.forEach(item => {
-      worksheet.addRow({
-        sku: item.sku,
-        cantidad: item.cantidad
-      });
-    });
-
-    // Estilos header
-    worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
-    worksheet.getRow(1).fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF4A90E2" }
-    };
-    worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
-
-    // Alinear cantidades a la derecha
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.getCell(3).alignment = { horizontal: "right" };
-        row.getCell(3).font = { bold: true };
-      }
-    });
-
-    // Nombre del archivo: resumen-rma-[Cliente]-[fecha].xlsx
-    const nombreCliente = cliente.nombre
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    
-    const hoy = new Date();
-    const fechaArchivo = `${hoy.getFullYear()}${String(hoy.getMonth()+1).padStart(2,'0')}${String(hoy.getDate()).padStart(2,'0')}`;
-    const nombreArchivo = `resumen-rma-${nombreCliente}-${fechaArchivo}.xlsx`;
-
-    // Descargar
-    workbook.xlsx.writeBuffer().then(buffer => {
-      const blob = new Blob([buffer], { 
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = nombreArchivo;
-      link.click();
-      URL.revokeObjectURL(url);
-    });
-
+    // Feedback visual
     sweetAlert.fire({
-      title: "📥 Exportado",
-      text: `Archivo "${nombreArchivo}" generado.`,
+      title: "✅ Reporte generado",
+      text: `Se encontraron ${resultado.length} SKUs en el período.`,
       icon: "success",
-      timer: 2000,
+      timer: 1500,
       showConfirmButton: false
     });
+  };
 
-  } catch (error) {
-    console.error("Error al exportar:", error);
-    sweetAlert.fire({
-      title: "Error",
-      text: "No se pudo generar el Excel.",
-      icon: "error",
-      confirmButtonColor: "#d33"
-    });
-  }
-};
+  const abrirModalReporte = () => {
+    setFechaDesde('');
+    setFechaHasta('');
+    setErrorFechas('');
+    setModalContexto('cliente');
+    setModalFechasVisible(true);
+  };
+
+  const cerrarModalFechas = () => {
+    setModalFechasVisible(false);
+    setErrorFechas('');
+  };
+
+  const manejarGenerarReporte = () => {
+    // Validaciones
+    if (!fechaDesde || !fechaHasta) {
+      setErrorFechas('Seleccioná ambas fechas');
+      return;
+    }
+    if (new Date(fechaDesde) > new Date(fechaHasta)) {
+      setErrorFechas('"Desde" no puede ser mayor que "Hasta"');
+      return;
+    }
+
+    // Todo OK → cerrar modal y generar
+    cerrarModalFechas();
+    if (modalContexto === 'general') {
+      handleGenerarReporteGeneral(fechaDesde, fechaHasta);
+    } else {
+      generarResumen(fechaDesde, fechaHasta);
+    }
+  };
+
+  const exportarResumenExcel = () => {
+    if (reporteResumen.length === 0 || !cliente) {
+      return sweetAlert.fire({
+        title: "Sin datos",
+        text: "No hay información para exportar.",
+        icon: "info",
+        confirmButtonColor: "#3085d6"
+      });
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Resumen RMA");
+
+      // Columnas
+      worksheet.columns = [
+        { header: "SKU", key: "sku", width: 30 },
+        { header: "Cantidad Total", key: "cantidad", width: 20 }
+      ];
+
+      // Datos
+      reporteResumen.forEach(item => {
+        worksheet.addRow({
+          sku: item.sku,
+          cantidad: item.cantidad
+        });
+      });
+
+      // Estilos header
+      worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      worksheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF4A90E2" }
+      };
+      worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+
+      // Alinear cantidades a la derecha
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          row.getCell(3).alignment = { horizontal: "right" };
+          row.getCell(3).font = { bold: true };
+        }
+      });
+
+      // Nombre del archivo: resumen-rma-[Cliente]-[fecha].xlsx
+      const nombreCliente = cliente.nombre
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      const hoy = new Date();
+      const fechaArchivo = `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, '0')}${String(hoy.getDate()).padStart(2, '0')}`;
+      const nombreArchivo = `resumen-rma-${nombreCliente}-${fechaArchivo}.xlsx`;
+
+      // Descargar
+      workbook.xlsx.writeBuffer().then(buffer => {
+        const blob = new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = nombreArchivo;
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+
+      sweetAlert.fire({
+        title: "📥 Exportado",
+        text: `Archivo "${nombreArchivo}" generado.`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error("Error al exportar:", error);
+      sweetAlert.fire({
+        title: "Error",
+        text: "No se pudo generar el Excel.",
+        icon: "error",
+        confirmButtonColor: "#d33"
+      });
+    }
+  };
 
   const handleClienteSeleccionado = (cliente: Cliente) => {
     setLoading(true);
@@ -271,7 +271,7 @@ const exportarResumenExcel = () => {
       setLoading(false);
     }
   };
-  
+
 
   const cambiarCliente = () => {
     setMostrarFormulario(true);
@@ -320,7 +320,7 @@ const exportarResumenExcel = () => {
       }
     } catch (error) {
       console.error("Error al actualizar el RMA:", error);
-    }finally {
+    } finally {
       setLoading(false);
     }
 
@@ -384,7 +384,7 @@ const exportarResumenExcel = () => {
         icon: "error",
         confirmButtonColor: "#d33",
       });
-    }finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -428,261 +428,261 @@ const exportarResumenExcel = () => {
   };
 
   const handleInformeMensual = async () => {
-  setLoading(true);
-  try {
-    // 1. Calcular fechas: primer día del mes actual hasta hoy
-    const hoy = new Date();
-    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    
-    // Formatear a YYYY-MM-DD para enviar a la API
-    const formatoFecha = (fecha: Date) => {
-      const year = fecha.getFullYear();
-      const month = String(fecha.getMonth() + 1).padStart(2, '0');
-      const day = String(fecha.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
+    setLoading(true);
+    try {
+      // 1. Calcular fechas: primer día del mes actual hasta hoy
+      const hoy = new Date();
+      const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
-    const desde = formatoFecha(primerDiaMes);
-    const hasta = formatoFecha(hoy);
+      // Formatear a YYYY-MM-DD para enviar a la API
+      const formatoFecha = (fecha: Date) => {
+        const year = fecha.getFullYear();
+        const month = String(fecha.getMonth() + 1).padStart(2, '0');
+        const day = String(fecha.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
 
-    // 2. Petición al backend con las fechas como query params
-    const response = await Axios.get<RmaInforme[]>(
-      `${Urls.rma.informeMensual}?desde=${desde}&hasta=${hasta}`
-    );
+      const desde = formatoFecha(primerDiaMes);
+      const hasta = formatoFecha(hoy);
 
-    // 3. Validar y guardar la respuesta
-    if (response.status === 200 && response.data.length > 0) {
-      setRmaInfornme(response.data);
-      sweetAlert.fire({
-        title: "Informe listo",
-        text: `Se encontraron ${response.data.length} SKUs en el período.`,
-        icon: "success",
-        confirmButtonColor: "#3085d6",
-      });
-    } else {
-      // Si la respuesta está vacía
+      // 2. Petición al backend con las fechas como query params
+      const response = await Axios.get<RmaInforme[]>(
+        `${Urls.rma.informeMensual}?desde=${desde}&hasta=${hasta}`
+      );
+
+      // 3. Validar y guardar la respuesta
+      if (response.status === 200 && response.data.length > 0) {
+        setRmaInfornme(response.data);
+        sweetAlert.fire({
+          title: "Informe listo",
+          text: `Se encontraron ${response.data.length} SKUs en el período.`,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
+      } else {
+        // Si la respuesta está vacía
+        setRmaInfornme([]);
+        sweetAlert.fire({
+          title: "Sin datos",
+          text: "No hay RMA registrados en el período seleccionado.",
+          icon: "info",
+          confirmButtonColor: "#3085d6",
+        });
+      }
+    } catch (error) {
+      console.error("Error al generar informe mensual:", error);
       setRmaInfornme([]);
       sweetAlert.fire({
+        title: "Error",
+        text: "No se pudo generar el informe. Verificá la conexión o intentá más tarde.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportarReporteGeneralExcel = () => {
+    if (reporteGeneralResumen.length === 0) {
+      return sweetAlert.fire({
         title: "Sin datos",
-        text: "No hay RMA registrados en el período seleccionado.",
+        text: "No hay información para exportar.",
         icon: "info",
         confirmButtonColor: "#3085d6",
       });
     }
-  } catch (error) {
-    console.error("Error al generar informe mensual:", error);
-    setRmaInfornme([]);
-    sweetAlert.fire({
-      title: "Error",
-      text: "No se pudo generar el informe. Verificá la conexión o intentá más tarde.",
-      icon: "error",
-      confirmButtonColor: "#d33",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
 
-const exportarReporteGeneralExcel = () => {
-  if (reporteGeneralResumen.length === 0) {
-    return sweetAlert.fire({
-      title: "Sin datos",
-      text: "No hay información para exportar.",
-      icon: "info",
-      confirmButtonColor: "#3085d6",
-    });
-  }
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Resumen RMA General");
 
-  try {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Resumen RMA General");
+      worksheet.columns = [
+        { header: "SKU", key: "sku", width: 30 },
+        { header: "Marca", key: "marca", width: 20 },
+        { header: "Cantidad Total", key: "cantidad", width: 20 },
+      ];
 
-    worksheet.columns = [
-      { header: "SKU", key: "sku", width: 30 },
-      { header: "Marca", key: "marca", width: 20 },
-      { header: "Cantidad Total", key: "cantidad", width: 20 },
-    ];
+      reporteGeneralResumen.forEach(item => {
+        const row = worksheet.addRow({
+          sku: item.sku,
+          marca: item.marca,
+          cantidad: Number(item.cantidad) // 1. Asegurar que sea número
+        });
 
-    reporteGeneralResumen.forEach(item => {
-  const row = worksheet.addRow({ 
-    sku: item.sku, 
-    marca: item.marca, 
-    cantidad: Number(item.cantidad) // 1. Asegurar que sea número
-  });
-  
-  // 2. Aplicar formato numérico a la celda de cantidad (columna 3)
-  row.getCell('cantidad').numFmt = '0'; 
-});
-
-    worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
-    worksheet.getRow(1).fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF4A90E2" },
-    };
-    worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
-
-    const hoy = new Date();
-    const fechaArchivo = `${hoy.getFullYear()}${String(hoy.getMonth()+1).padStart(2,'0')}${String(hoy.getDate()).padStart(2,'0')}`;
-    const nombreArchivo = `resumen-rma-general-${fechaArchivo}.xlsx`;
-
-    workbook.xlsx.writeBuffer().then(buffer => {
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        // 2. Aplicar formato numérico a la celda de cantidad (columna 3)
+        row.getCell('cantidad').numFmt = '0';
       });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = nombreArchivo;
-      link.click();
-      URL.revokeObjectURL(url);
-    });
 
-    sweetAlert.fire({
-      title: "📥 Exportado",
-      text: `Archivo "${nombreArchivo}" generado.`,
-      icon: "success",
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  } catch (error) {
-    console.error("Error al exportar:", error);
-    sweetAlert.fire({
-      title: "Error",
-      text: "No se pudo generar el Excel.",
-      icon: "error",
-      confirmButtonColor: "#d33",
-    });
-  }
-};
+      worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      worksheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF4A90E2" },
+      };
+      worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
 
-const handleCerrarResumen = () => {
-  setRmaInfornme([]);
-};
+      const hoy = new Date();
+      const fechaArchivo = `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, '0')}${String(hoy.getDate()).padStart(2, '0')}`;
+      const nombreArchivo = `resumen-rma-general-${fechaArchivo}.xlsx`;
 
-const hayResumenActivo = reporteVisible || reporteGeneralVisible || rmaInforme.length > 0;
-
-const handleGenerarReporteGeneral = async (desde: string, hasta: string) => {
-  setLoading(true);
-  try {
-    const response = await Axios.get<Array<{sku: string, marca: string, cantidad: number}>>(
-      `${Urls.rma.reporteGeneral}?desde=${desde}&hasta=${hasta}`
-    );
-
-    if (response.status === 200) {
-      setReporteGeneralResumen(response.data);
-      setReporteFechas({ desde, hasta });
-      setReporteGeneralVisible(true);
+      workbook.xlsx.writeBuffer().then(buffer => {
+        const blob = new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = nombreArchivo;
+        link.click();
+        URL.revokeObjectURL(url);
+      });
 
       sweetAlert.fire({
-        title: response.data.length > 0 ? "✅ Reporte generado" : "Sin datos",
-        text: response.data.length > 0
-          ? `Se encontraron ${response.data.length} SKUs en el período.`
-          : "No hay RMA registrados en el período seleccionado.",
-        icon: response.data.length > 0 ? "success" : "info",
-        timer: 1500,
+        title: "📥 Exportado",
+        text: `Archivo "${nombreArchivo}" generado.`,
+        icon: "success",
+        timer: 2000,
         showConfirmButton: false,
       });
+    } catch (error) {
+      console.error("Error al exportar:", error);
+      sweetAlert.fire({
+        title: "Error",
+        text: "No se pudo generar el Excel.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
-  } catch (error) {
-    console.error("Error al generar reporte general:", error);
-    sweetAlert.fire({
-      title: "Error",
-      text: "No se pudo generar el reporte.",
-      icon: "error",
-      confirmButtonColor: "#d33",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-const handleExportarExcel = async (marcaFiltro?: string) => {
-  // Filtrar por marca si se especifica, sino usar todos
-  const datosFiltrados = marcaFiltro 
-    ? rmaInforme.filter(item => item.marca === marcaFiltro)
-    : rmaInforme;
+  const handleCerrarResumen = () => {
+    setRmaInfornme([]);
+  };
 
-  if (datosFiltrados.length === 0) {
-    return sweetAlert.fire({
-      title: "Sin datos",
-      text: marcaFiltro 
-        ? `No hay RMA de la marca "${marcaFiltro}" para exportar.`
-        : "No hay información para exportar.",
-      icon: "info",
-      confirmButtonColor: "#3085d6",
-    });
-  }
+  const hayResumenActivo = reporteVisible || reporteGeneralVisible || rmaInforme.length > 0;
 
-  try {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("RMA Mensual");
+  const handleGenerarReporteGeneral = async (desde: string, hasta: string) => {
+    setLoading(true);
+    try {
+      const response = await Axios.get<Array<{ sku: string, marca: string, cantidad: number }>>(
+        `${Urls.rma.reporteGeneral}?desde=${desde}&hasta=${hasta}`
+      );
 
-    worksheet.columns = [
-      { header: "SKU", key: "sku", width: 25 },
-      { header: "Marca", key: "marca", width: 20 },
-      { header: "Cantidad", key: "cantidad", width: 15 }
-    ];
+      if (response.status === 200) {
+        setReporteGeneralResumen(response.data);
+        setReporteFechas({ desde, hasta });
+        setReporteGeneralVisible(true);
 
-    datosFiltrados.forEach(item => {
-      worksheet.addRow({
-        sku: item.idRma,
-        marca: item.marca,
-        cantidad: Number(item.cantidad)
-      });
-    });
-
-    // Estilos
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.getRow(1).fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFE0E0E0" }
-    };
-    worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
-
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.getCell(3).alignment = { horizontal: "right" };
+        sweetAlert.fire({
+          title: response.data.length > 0 ? "✅ Reporte generado" : "Sin datos",
+          text: response.data.length > 0
+            ? `Se encontraron ${response.data.length} SKUs en el período.`
+            : "No hay RMA registrados en el período seleccionado.",
+          icon: response.data.length > 0 ? "success" : "info",
+          timer: 1500,
+          showConfirmButton: false,
+        });
       }
-    });
-
-    // Nombre del archivo con la marca
-    const hoy = new Date();
-    const nombreMarca = marcaFiltro ? `-${marcaFiltro.toLowerCase().replace(/\s+/g, '-')}` : '';
-    const nombreArchivo = `informe-rma${nombreMarca}-${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}.xlsx`;
-
-    await workbook.xlsx.writeBuffer().then(buffer => {
-      const blob = new Blob([buffer], { 
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+    } catch (error) {
+      console.error("Error al generar reporte general:", error);
+      sweetAlert.fire({
+        title: "Error",
+        text: "No se pudo generar el reporte.",
+        icon: "error",
+        confirmButtonColor: "#d33",
       });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = nombreArchivo;
-      link.click();
-      URL.revokeObjectURL(url);
-    });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    sweetAlert.fire({
-      title: "Exportado",
-      text: `Archivo "${nombreArchivo}" generado correctamente.`,
-      icon: "success",
-      confirmButtonColor: "#3085d6",
-      timer: 2000,
-      showConfirmButton: false
-    });
+  const handleExportarExcel = async (marcaFiltro?: string) => {
+    // Filtrar por marca si se especifica, sino usar todos
+    const datosFiltrados = marcaFiltro
+      ? rmaInforme.filter(item => item.marca === marcaFiltro)
+      : rmaInforme;
 
-  } catch (error) {
-    console.error("Error al exportar Excel:", error);
-    sweetAlert.fire({
-      title: "Error",
-      text: "No se pudo generar el archivo Excel.",
-      icon: "error",
-      confirmButtonColor: "#d33",
-    });
-  }
-};
+    if (datosFiltrados.length === 0) {
+      return sweetAlert.fire({
+        title: "Sin datos",
+        text: marcaFiltro
+          ? `No hay RMA de la marca "${marcaFiltro}" para exportar.`
+          : "No hay información para exportar.",
+        icon: "info",
+        confirmButtonColor: "#3085d6",
+      });
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("RMA Mensual");
+
+      worksheet.columns = [
+        { header: "SKU", key: "sku", width: 25 },
+        { header: "Marca", key: "marca", width: 20 },
+        { header: "Cantidad", key: "cantidad", width: 15 }
+      ];
+
+      datosFiltrados.forEach(item => {
+        worksheet.addRow({
+          sku: item.idRma,
+          marca: item.marca,
+          cantidad: Number(item.cantidad)
+        });
+      });
+
+      // Estilos
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" }
+      };
+      worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          row.getCell(3).alignment = { horizontal: "right" };
+        }
+      });
+
+      // Nombre del archivo con la marca
+      const hoy = new Date();
+      const nombreMarca = marcaFiltro ? `-${marcaFiltro.toLowerCase().replace(/\s+/g, '-')}` : '';
+      const nombreArchivo = `informe-rma${nombreMarca}-${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}.xlsx`;
+
+      await workbook.xlsx.writeBuffer().then(buffer => {
+        const blob = new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = nombreArchivo;
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+
+      sweetAlert.fire({
+        title: "Exportado",
+        text: `Archivo "${nombreArchivo}" generado correctamente.`,
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error("Error al exportar Excel:", error);
+      sweetAlert.fire({
+        title: "Error",
+        text: "No se pudo generar el archivo Excel.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
+    }
+  };
 
   const handleActualizarGlobal = async (rmaActualizada: Rma) => {
     // 1. Actualizar en el backend (igual que antes)
@@ -811,27 +811,27 @@ const handleExportarExcel = async (marcaFiltro?: string) => {
               Volver
             </button>
           </div>
-          {  !reporteGeneralVisible && rmaInforme.length === 0 && (
+          {!reporteGeneralVisible && rmaInforme.length === 0 && (
             <div className="space-y-6">
-            {rmasNoEntregados.map((grupo, idx) => (
-              <div key={idx} className="border border-gray-300 rounded-lg p-4">
-                <h3 className="text-lg font-bold text-blue-700 mb-2">
-                  Cliente: {grupo.cliente}
-                </h3>
-                <TablaListarRmas
-                  rmas={grupo.rmas}
-                  handleActualizar={handleActualizarGlobal}
-                  handleEliminar={handleEliminar}
-                />
-              </div>
-            ))}
-          </div>
+              {rmasNoEntregados.map((grupo, idx) => (
+                <div key={idx} className="border border-gray-300 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-blue-700 mb-2">
+                    Cliente: {grupo.cliente}
+                  </h3>
+                  <TablaListarRmas
+                    rmas={grupo.rmas}
+                    handleActualizar={handleActualizarGlobal}
+                    handleEliminar={handleEliminar}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
 
       {/* Tabla por cliente */}
-      {hayResumenActivo === false && !mostrarFormulario && cliente && rmas.length > 0  &&(
+      {hayResumenActivo === false && !mostrarFormulario && cliente && rmas.length > 0 && (
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold text-gray-700">
@@ -865,256 +865,252 @@ const handleExportarExcel = async (marcaFiltro?: string) => {
       )}
 
       {/* 👇 Sección de resumen de reporte */}
-{reporteVisible && reporteResumen.length > 0 && cliente && (
-  <Contenedor>
-    <div className="flex justify-between items-center mb-4">
-      <h3 className="text-lg font-semibold text-gray-700">
-        📋 Resumen: {cliente.nombre} 
-        <span className="text-sm font-normal text-gray-500 ml-2">
-          ({reporteFechas?.desde} al {reporteFechas?.hasta})
-        </span>
-      </h3>
-      <div className="flex gap-2">
-        <button
-          onClick={() => setReporteVisible(false)}
-          className="py-1 px-3 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-        >
-          ✕ Cerrar
-        </button>
-        <button
-          onClick={exportarResumenExcel}
-          className="py-1 px-3 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          📥 Descargar Excel
-        </button>
-      </div>
-    </div>
-    
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border border-gray-300 rounded-lg">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">SKU</th>
-            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Marca</th>
-            <th className="py-2 px-4 border-b text-right text-sm font-semibold text-gray-700">Cantidad</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reporteResumen.map((item, index) => (
-            <tr key={index} className="hover:bg-gray-50">
-              <td className="py-2 px-4 border-b text-sm font-mono">{item.sku}</td>
-              <td className="py-2 px-4 border-b text-sm">{item.marca}</td>
-              <td className="py-2 px-4 border-b text-sm text-right font-bold">{item.cantidad}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot className="bg-gray-50">
-          <tr>
-            <td colSpan={2} className="py-2 px-4 border-t text-right text-sm font-semibold">Total:</td>
-            <td className="py-2 px-4 border-t text-right text-lg font-bold text-blue-700">
-              {reporteResumen.reduce((sum, item) => sum + item.cantidad, 0)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </Contenedor>
-)}
+      {reporteVisible && reporteResumen.length > 0 && cliente && (
+        <Contenedor>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-700">
+              📋 Resumen: {cliente.nombre}
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                ({reporteFechas?.desde} al {reporteFechas?.hasta})
+              </span>
+            </h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setReporteVisible(false)}
+                className="py-1 px-3 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                ✕ Cerrar
+              </button>
+              <button
+                onClick={exportarResumenExcel}
+                className="py-1 px-3 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                📥 Descargar Excel
+              </button>
+            </div>
+          </div>
 
-{/* Caso: reporte generado pero sin resultados */}
-{reporteVisible && reporteResumen.length === 0 && (
-  <Contenedor>
-    <div className="text-center py-8">
-      <p className="text-gray-500">No hay RMA registrados en el período seleccionado.</p>
-      <button
-        onClick={() => setReporteVisible(false)}
-        className="mt-4 py-2 px-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-      >
-        Volver
-      </button>
-    </div>
-  </Contenedor>
-)}
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">SKU</th>
+                  <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Marca</th>
+                  <th className="py-2 px-4 border-b text-right text-sm font-semibold text-gray-700">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reporteResumen.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="py-2 px-4 border-b text-sm font-mono">{item.sku}</td>
+                    <td className="py-2 px-4 border-b text-sm">{item.marca}</td>
+                    <td className="py-2 px-4 border-b text-sm text-right font-bold">{item.cantidad}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-gray-50">
+                <tr>
+                  <td colSpan={2} className="py-2 px-4 border-t text-right text-sm font-semibold">Total:</td>
+                  <td className="py-2 px-4 border-t text-right text-lg font-bold text-blue-700">
+                    {reporteResumen.reduce((sum, item) => sum + item.cantidad, 0)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Contenedor>
+      )}
+
+      {/* Caso: reporte generado pero sin resultados */}
+      {reporteVisible && reporteResumen.length === 0 && (
+        <Contenedor>
+          <div className="text-center py-8">
+            <p className="text-gray-500">No hay RMA registrados en el período seleccionado.</p>
+            <button
+              onClick={() => setReporteVisible(false)}
+              className="mt-4 py-2 px-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Volver
+            </button>
+          </div>
+        </Contenedor>
+      )}
 
       {rmaInforme.length > 0 && (
-  <Contenedor>
-    <h3 className="text-lg font-semibold text-gray-700 mb-4">
-      Resumen del mes ({rmaInforme.length} SKUs)
-    </h3>
-    
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border border-gray-300 rounded-lg">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">SKU</th>
-            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Marca</th>
-            <th className="py-2 px-4 border-b text-right text-sm font-semibold text-gray-700">Cantidad</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rmaInforme.map((item, index) => (
-            <tr key={index} className="hover:bg-gray-50">
-              <td className="py-2 px-4 border-b text-sm">{item.idRma}</td>
-              <td className="py-2 px-4 border-b text-sm">{item.marca}</td>
-              <td className="py-2 px-4 border-b text-sm text-right font-medium">{item.cantidad}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        <Contenedor>
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">
+            Resumen del mes ({rmaInforme.length} SKUs)
+          </h3>
 
-    <div className="mt-4 flex justify-end gap-3">
-  <button
-    onClick={() => handleExportarExcel("BLOW INK")}
-    className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-blue-500"
-  >
-    📥 Descargar Blow
-  </button>
-  
-  <button
-    onClick={() => handleExportarExcel("GNEISS")}
-    className="py-2 px-4 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 focus:outline-black focus:ring focus:ring-purple-500"
-  >
-    📥 Descargar Gneiss
-  </button>
-  <button
-    onClick={() => handleCerrarResumen()}
-    className="py-2 px-4 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 focus:outline-black focus:ring focus:ring-gray-500"
-  >
-    📥 Cerrar Cuadro
-  </button>
-</div>
-  </Contenedor>
-)}
-{/* 🔽 Modal nativo para selección de fechas */}
-{modalFechasVisible && (
-  <div 
-    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-    onClick={cerrarModalFechas}
-  >
-    <div 
-      className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 border border-blue-200"
-      onClick={(e) => e.stopPropagation()} // ✅ Evita que el clic en el modal lo cierre
-    >
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-bold text-gray-800">📅 Generar reporte por período</h3>
-      </div>
-      
-      {/* Body */}
-      <div className="px-6 py-5 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="modalFechaDesde">
-            Desde:
-          </label>
-          <input
-            type="date"
-            id="modalFechaDesde"
-            value={fechaDesde}
-            onChange={(e) => { setFechaDesde(e.target.value); setErrorFechas(''); }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm 
-                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                       transition-colors text-gray-900 bg-white"
-            max={fechaHasta || undefined}
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="modalFechaHasta">
-            Hasta:
-          </label>
-          <input
-            type="date"
-            id="modalFechaHasta"
-            value={fechaHasta}
-            onChange={(e) => { setFechaHasta(e.target.value); setErrorFechas(''); }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm 
-                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                       transition-colors text-gray-900 bg-white"
-            min={fechaDesde || undefined}
-          />
-        </div>
-        
-        {errorFechas && (
-          <p className="text-sm text-red-600 font-medium flex items-center gap-1">
-            ⚠️ {errorFechas}
-          </p>
-        )}
-      </div>
-      
-      {/* Footer */}
-      <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
-        <button
-          type="button"
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">SKU</th>
+                  <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Marca</th>
+                  <th className="py-2 px-4 border-b text-right text-sm font-semibold text-gray-700">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rmaInforme.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="py-2 px-4 border-b text-sm">{item.idRma}</td>
+                    <td className="py-2 px-4 border-b text-sm">{item.marca}</td>
+                    <td className="py-2 px-4 border-b text-sm text-right font-medium">{item.cantidad}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 flex justify-end gap-3">
+            <button
+              onClick={() => handleExportarExcel("BLOW INK")}
+              className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-black focus:ring focus:ring-blue-500"
+            >
+              📥 Descargar Blow
+            </button>
+
+            <button
+              onClick={() => handleExportarExcel("GNEISS")}
+              className="py-2 px-4 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 focus:outline-black focus:ring focus:ring-purple-500"
+            >
+              📥 Descargar Gneiss
+            </button>
+            <button
+              onClick={() => handleCerrarResumen()}
+              className="py-2 px-4 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 focus:outline-black focus:ring focus:ring-gray-500"
+            >
+              📥 Cerrar Cuadro
+            </button>
+          </div>
+        </Contenedor>
+      )}
+      {/* 🔽 Modal nativo para selección de fechas */}
+      {modalFechasVisible && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
           onClick={cerrarModalFechas}
-          className="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition-colors"
         >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          onClick={manejarGenerarReporte}
-          className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors shadow-sm"
-        >
-          Generar reporte
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 border border-blue-200"
+            onClick={(e) => e.stopPropagation()} // ✅ Evita que el clic en el modal lo cierre
+          >
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800">📅 Generar reporte por período</h3>
+            </div>
 
-{/* Reporte general (todos los clientes) */}
-{reporteGeneralVisible && reporteGeneralResumen.length > 0 && (
-  <Contenedor>
-    <div className="flex justify-between items-center mb-4">
-      <h3 className="text-lg font-semibold text-gray-700">
-        📋 Resumen general
-        <span className="text-sm font-normal text-gray-500 ml-2">
-          ({reporteFechas?.desde} al {reporteFechas?.hasta})
-        </span>
-      </h3>
-      <div className="flex gap-2">
-        <button
-          onClick={() => setReporteGeneralVisible(false)}
-          className="py-1 px-3 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-        >
-          ✕ Cerrar
-        </button>
-        <button
-          onClick={exportarReporteGeneralExcel}
-          className="py-1 px-3 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          📥 Descargar Excel
-        </button>
-      </div>
-    </div>
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="modalFechaDesde">
+                  Desde:
+                </label>
+                <input
+                  type="date"
+                  id="modalFechaDesde"
+                  value={fechaDesde}
+                  onChange={(e) => { setFechaDesde(e.target.value); setErrorFechas(''); }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                       transition-colors text-gray-900 bg-white"
+                  max={fechaHasta || undefined}
+                />
+              </div>
 
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border border-gray-300 rounded-lg">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">SKU</th>
-            <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Marca</th>
-            <th className="py-2 px-4 border-b text-right text-sm font-semibold text-gray-700">Cantidad</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reporteGeneralResumen.map((item, index) => (
-            <tr key={index} className="hover:bg-gray-50">
-              <td className="py-2 px-4 border-b text-sm font-mono">{item.sku}</td>
-              <td className="py-2 px-4 border-b text-sm">{item.marca}</td>
-              <td className="py-2 px-4 border-b text-sm text-right font-bold">{item.cantidad}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </Contenedor>
-)}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="modalFechaHasta">
+                  Hasta:
+                </label>
+                <input
+                  type="date"
+                  id="modalFechaHasta"
+                  value={fechaHasta}
+                  onChange={(e) => { setFechaHasta(e.target.value); setErrorFechas(''); }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                       transition-colors text-gray-900 bg-white"
+                  min={fechaDesde || undefined}
+                />
+              </div>
 
+              {errorFechas && (
+                <p className="text-sm text-red-600 font-medium flex items-center gap-1">
+                  ⚠️ {errorFechas}
+                </p>
+              )}
+            </div>
 
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={cerrarModalFechas}
+                className="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={manejarGenerarReporte}
+                className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors shadow-sm"
+              >
+                Generar reporte
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {/* Reporte general (todos los clientes) */}
+      {reporteGeneralVisible && reporteGeneralResumen.length > 0 && (
+        <Contenedor>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-700">
+              📋 Resumen general
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                ({reporteFechas?.desde} al {reporteFechas?.hasta})
+              </span>
+            </h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setReporteGeneralVisible(false)}
+                className="py-1 px-3 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                ✕ Cerrar
+              </button>
+              <button
+                onClick={exportarReporteGeneralExcel}
+                className="py-1 px-3 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                📥 Descargar Excel
+              </button>
+            </div>
+          </div>
 
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">SKU</th>
+                  <th className="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Marca</th>
+                  <th className="py-2 px-4 border-b text-right text-sm font-semibold text-gray-700">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reporteGeneralResumen.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="py-2 px-4 border-b text-sm font-mono">{item.sku}</td>
+                    <td className="py-2 px-4 border-b text-sm">{item.marca}</td>
+                    <td className="py-2 px-4 border-b text-sm text-right font-bold">{item.cantidad}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Contenedor>
+      )}
     </>
   );
 };
