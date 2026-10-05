@@ -10,30 +10,47 @@ dotenv.config();
 // Definición de la función formatFecha
 const formatFecha = (fecha) => {
   if (!fecha) {
-    return ""; // Retorna una cadena vacía si la fecha es null o undefined
+    return ""; 
   }
 
   const date = new Date(fecha);
 
   if (isNaN(date.getTime())) {
-    return ""; // Retorna una cadena vacía si la fecha no es válida
+    return ""; 
   }
 
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0"); // Los meses en JavaScript van de 0 a 11
   const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0"); 
+  const day = String(date.getDate()).padStart(2, "0");
 
-  return `${day}/${month}/${year}`;
+  // ✅ Retornamos YYYY-MM-DD para que <input type="date"> lo lea y muestre correctamente
+  return `${year}-${month}-${day}`;
 };
 
 const convertirFechaParaBackend = (fecha) => {
-  if (!fecha) return null; // Si es null o undefined, retorna null
+  if (!fecha || typeof fecha !== 'string') return null;
 
-  const partes = fecha.split("/");
-  if (partes.length !== 3) return null; // Verifica que tenga tres partes (dd/mm/aaaa)
+  // 1. Si ya viene en formato YYYY-MM-DD (nativo de <input type="date"> y MySQL)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    return fecha; // Ya está en el formato correcto, lo devolvemos tal cual
+  }
 
-  const [dia, mes, anio] = partes;
-  return `${anio}-${mes}-${dia}`; // Retorna en formato aaaa/mm/dd
+  // 2. Si viene en formato DD/MM/YYYY (compatibilidad con datos legacy u otros inputs)
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(fecha)) {
+    const [dia, mes, anio] = fecha.split('/');
+    return `${anio}-${mes}-${dia}`;
+  }
+
+  // 3. Fallback: intentar parsear como objeto Date por si acaso
+  const date = new Date(fecha);
+  if (!isNaN(date.getTime())) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return null; // Formato no reconocido
 };
 
 const clienteController = {

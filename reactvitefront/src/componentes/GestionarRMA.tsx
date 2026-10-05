@@ -68,19 +68,37 @@ export const GestionarRMA = (): JSX.Element => {
   const [fechaHasta, setFechaHasta] = useState<string>('');
   const [errorFechas, setErrorFechas] = useState<string>('');
 
-  // Helper: parsea "DD/MM/YYYY" → Date (para comparar)
+    // Helper: parsea "YYYY-MM-DD" (de FechaInput) o "DD/MM/YYYY" (legacy) → Date (para comparar)
   const parsearFechaSolicita = (fecha: string): Date | null => {
-    if (!fecha || fecha.length !== 10) return null;
-    const [d, m, y] = fecha.split('/');
-    const parsed = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-    return isNaN(parsed.getTime()) ? null : parsed;
+    if (!fecha) return null;
+
+    // Formato YYYY-MM-DD (estándar de <input type="date"> y FechaInput)
+    if (fecha.includes('-')) {
+      const [y, m, d] = fecha.split('-');
+      const parsed = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // Formato DD/MM/YYYY (compatibilidad con datos antiguos)
+    if (fecha.includes('/')) {
+      const [d, m, y] = fecha.split('/');
+      const parsed = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    return null;
   };
 
   const generarResumen = (desde: string, hasta: string) => {
-    // Convertimos las fechas de input (YYYY-MM-DD) a objetos Date para comparar
-    const fechaDesde = new Date(desde);
-    const fechaHasta = new Date(hasta);
-    // Ajustamos hasta para que incluya todo el día (23:59:59)
+    // Parseamos manualmente para evitar problemas de zona horaria (UTC vs Local)
+    // 'desde' y 'hasta' vienen en formato "YYYY-MM-DD" del input type="date"
+    const [yDesde, mDesde, dDesde] = desde.split('-');
+    const fechaDesde = new Date(parseInt(yDesde), parseInt(mDesde) - 1, parseInt(dDesde));
+    
+    const [yHasta, mHasta, dHasta] = hasta.split('-');
+    const fechaHasta = new Date(parseInt(yHasta), parseInt(mHasta) - 1, parseInt(dHasta));
+    
+    // Ajustamos 'hasta' para que incluya todo el día (23:59:59) en hora local
     fechaHasta.setHours(23, 59, 59, 999);
 
     // Filtramos y agrupamos
@@ -251,6 +269,7 @@ export const GestionarRMA = (): JSX.Element => {
 
       if (data.length > 0) {
         setRmas(data);
+
       } else {
         // Si no hay RMA asociados al cliente, mostrar alerta
         sweetAlert
@@ -271,7 +290,6 @@ export const GestionarRMA = (): JSX.Element => {
       setLoading(false);
     }
   };
-
 
   const cambiarCliente = () => {
     setMostrarFormulario(true);
